@@ -24,8 +24,16 @@ import linecache
 import logging
 import os
 import signal
+import threading
+import multiprocessing
 import sys
 import time
+
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse
+
 
 __all__ = []
 __version__ = "1.0.0"  # See https://www.python.org/dev/peps/pep-0396/
@@ -50,10 +58,30 @@ configuration_locator = {
         "env": "SENZING_DEBUG",
         "cli": "debug"
     },
+    "delay_in_seconds": {
+        "default": 0,
+        "env": "SENZING_DELAY_IN_SECONDS",
+        "cli": "delay-in-seconds"
+    },
+    "input_url": {
+        "default": "https://s3.amazonaws.com/public-read-access/TestDataSets/loadtest-dataset-1M.json",
+        "env": "SENZING_INPUT_URL",
+        "cli": "input-url",
+    },
+    "monitoring_period_in_seconds": {
+        "default": 60 * 10,
+        "env": "SENZING_MONITORING_PERIOD_IN_SECONDS",
+        "cli": "monitoring-period-in-seconds",
+    },
     "password": {
         "default": None,
         "env": "SENZING_PASSWORD",
         "cli": "password"
+    },
+    "read_queue_maxsize": {
+        "default": 50,
+        "env": "SENZING_READ_QUEUE_MAXSIZE",
+        "cli": "read-queue-maxsize"
     },
     "senzing_dir": {
         "default": "/opt/senzing",
@@ -68,6 +96,11 @@ configuration_locator = {
     "subcommand": {
         "default": None,
         "env": "SENZING_SUBCOMMAND",
+    },
+    "threads_per_write_process": {
+        "default": 4,
+        "env": "SENZING_THREADS_PER_WRITE_PROCESS",
+        "cli": "threads-per-write-process"
     }
 }
 
@@ -86,33 +119,18 @@ def get_parser():
     ''' Parse commandline arguments. '''
 
     subcommands = {
-        'task1': {
-            "help": 'Example task #1.',
+        'json-to-stdout': {
+            "help": 'Read JSON file and print to STDOUT.',
             "arguments": {
                 "--debug": {
                     "dest": "debug",
                     "action": "store_true",
                     "help": "Enable debugging. (SENZING_DEBUG) Default: False"
                 },
-                "--password": {
-                    "dest": "password",
-                    "metavar": "SENZING_PASSWORD",
-                    "help": "Example of information redacted in the log. Default: None"
-                },
-                "--senzing-dir": {
-                    "dest": "senzing_dir",
-                    "metavar": "SENZING_DIR",
-                    "help": "Location of Senzing. Default: /opt/senzing"
-                },
-            },
-        },
-        'task2': {
-            "help": 'Example task #2.',
-            "arguments": {
-                "--debug": {
-                    "dest": "debug",
-                    "action": "store_true",
-                    "help": "Enable debugging. (SENZING_DEBUG) Default: False"
+                "--input-url": {
+                    "dest": "input_url",
+                    "metavar": "SENZING_INPUT_URL",
+                    "help": "File/URL of input file. Default: None"
                 },
                 "--password": {
                     "dest": "password",
@@ -174,6 +192,7 @@ MESSAGE_DEBUG = 900
 
 message_dictionary = {
     "100": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}I",
+    "129": "{0} is running.",
     "292": "Configuration change detected.  Old: {0} New: {1}",
     "293": "For information on warnings and errors, see https://github.com/Senzing/stream-loader#errors",
     "294": "Version: {0}  Updated: {1}",
@@ -318,6 +337,16 @@ def get_configuration(args):
         integer_string = result.get(integer)
         result[integer] = int(integer_string)
 
+    # Initialize counters.
+
+    counters = [
+        'input-counter',
+        'lines_read_from_input_url',
+        'output-counter',
+    ]
+    for counter in counters:
+        result[counter] = 0
+
     return result
 
 
@@ -387,6 +416,11 @@ def create_signal_handler_function(args):
 
     return result_function
 
+def delay(config):
+    delay_in_seconds = config.get('delay_in_seconds')
+    if delay_in_seconds > 0:
+        logging.info(message_info(120, delay_in_seconds))
+        time.sleep(delay_in_seconds)
 
 def entry_template(config):
     ''' Format of entry message. '''
@@ -426,6 +460,360 @@ def exit_silently():
     sys.exit(0)
 
 # -----------------------------------------------------------------------------
+# Class: MonitorThread
+# -----------------------------------------------------------------------------
+
+
+class MonitorThread(threading.Thread):
+    '''
+    Periodically log operational metrics.
+    '''
+
+    def __init__(self, config=None, g2_engine=None, workers=None):
+        threading.Thread.__init__(self)
+        self.config = config
+        self.workers = workers
+
+    def run(self):
+        '''Periodically monitor what is happening.'''
+
+        # Show that thread is starting in the log.
+
+        logging.info(message_info(129, threading.current_thread().name))
+
+        # Initialize variables.
+
+        last = {
+            "lines_read_from_input_url": 0,
+        }
+
+        # Define monitoring report interval.
+
+        sleep_time_in_seconds = self.config.get('monitoring_period_in_seconds')
+
+        # Sleep-monitor loop.
+
+        active_workers = len(self.workers)
+        for worker in self.workers:
+            if not worker.is_alive():
+                active_workers -= 1
+
+        while active_workers > 0:
+
+            time.sleep(sleep_time_in_seconds)
+
+            # Calculate active Threads.
+
+            active_workers = len(self.workers)
+            for worker in self.workers:
+                if not worker.is_alive():
+                    active_workers -= 1
+
+            # Determine if we're running out of workers.
+
+            if (active_workers / float(len(self.workers))) < 0.5:
+                logging.warning(message_warning(721))
+
+            # Calculate times.
+
+            now = time.time()
+            uptime = now - self.config.get('start_time', now)
+            elapsed_log_license = now - last_log_license
+
+            # Log license periodically to show days left in license.
+
+            if elapsed_log_license > log_license_period_in_seconds:
+                log_license(self.config)
+                last_log_license = now
+
+            # Construct and log monitor statistics.
+
+            stats = {
+                "uptime": int(uptime),
+                "workers_total": len(self.workers),
+                "workers_active": active_workers,
+            }
+
+            # Tricky code.  Avoid modifying dictionary in the loop.
+            # i.e. "for key, value in last.items():" would loop infinitely
+            # because of "last[key] = total".
+
+            keys = last.keys()
+            for key in keys:
+                value = last.get(key)
+                total = self.config.get(key)
+                interval = total - value
+                stats["{0}_total".format(key)] = total
+                stats["{0}_interval".format(key)] = interval
+                last[key] = total
+
+            logging.info(message_info(127, json.dumps(stats, sort_keys=True)))
+        logging.info(message_info(181))
+
+# =============================================================================
+# Mixins: Read*
+#   Methods:
+#   - read() - a Generator that produces one message per iteration
+#   Classes:
+#   - ReadFileMixin - Read from a local file
+#   - ReadQueueMixin - Read from an internal queue
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Class: ReadFileMixin
+# -----------------------------------------------------------------------------
+
+
+class ReadFileMixin():
+
+    def __init__(self, input_url=None, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileMixin"))
+        self.input_url = input_url
+
+    def read(self):
+        with open(self.input_url) as input_file:
+            for line in input_file:
+                yield line
+
+
+class ReadQueueMixin():
+
+    def __init__(self, read_queue=None, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadQueueMixin"))
+        self.read_queue = read_queue
+
+    def read(self):
+        while True:
+            message = self.read_queue.get()
+            yield message
+
+# =============================================================================
+# Mixins: Evaluate*
+#   Methods:
+#   - evaluate(message) -> transformed-message
+#   Classes:
+#   - EvaluateDictToJsonMixin - Transform Python dictionary to JSON string
+#   - EvaluateJsonToDictMixin - Transform JSON string to Python dictionary
+# =============================================================================
+
+
+class EvaluateJsonToDictMixin():
+
+    def __init__(self, input_url=None, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "EvaluateJsonToDictMixin"))
+
+    def evaluate(self, message):
+        return json.loads(message)
+
+
+class EvaluateDictToJsonMixin():
+
+    def __init__(self, input_url=None, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "EvaluateJsonToDictMixin"))
+
+    def evaluate(self, message):
+        return json.dumps(message)
+
+# =============================================================================
+# Mixins: Print*
+#   Methods:
+#   - print()
+#   Classes:
+#   - PrintQueueMixin - Send to internal queue
+#   - PrintStdoutMixin - Send to STDOUT
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Class: PrintQueueMixin
+# -----------------------------------------------------------------------------
+
+
+class PrintQueueMixin():
+
+    def __init__(self, print_queue=None, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "PrintQueueMixin"))
+        self.print_queue = print_queue
+
+    def print(self, message):
+        assert type(message) == dict
+        self.print_queue.put(message)
+
+
+class PrintStdoutMixin():
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "PrintStdoutMixin"))
+
+    def print(self, message):
+        assert type(message) == str
+        print(message)
+
+# =============================================================================
+# Threads: Read*, Write*
+#   Methods:
+#   - run
+#   Classes:
+#   - ReadThread - Transfer messages from input to internal queue.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Class: ReadEvaluatePrintLoopThread
+# -----------------------------------------------------------------------------
+
+
+class ReadEvaluatePrintLoopThread(threading.Thread):
+
+    def __init__(self, config=None, counter_name=None, *args, **kwargs):
+        threading.Thread.__init__(self)
+        logging.debug(message_debug(997, threading.current_thread().name, "ReadThread"))
+        self.config = config
+        self.counter_name = counter_name
+
+    def run(self):
+        '''Read-Evaluate-Print Loop (REPL).'''
+
+        # Show that thread is starting in the log.
+
+        logging.info(message_info(129, threading.current_thread().name))
+
+        # Read-Evaluate-Print Loop  (REPL)
+
+        for message in self.read():
+            logging.debug(message_debug(902, threading.current_thread().name, self.counter_name, message))
+            self.config[self.counter_name] += 1
+            self.print(self.evaluate(message))
+
+        # Log message for thread exiting.
+
+        logging.info(message_info(130, threading.current_thread().name))
+
+# =============================================================================
+# Classes created with mixins
+# =============================================================================
+
+# ---- No external queue ------------------------------------------------------
+
+
+class ProcessFileJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileMixin, EvaluateJsonToDictMixin, PrintQueueMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "ProcessFileJsonToDictQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+
+class ProcessQueueDictToJsonStdoutThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintStdoutMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "ProcessQueueDictToJsonStdoutThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+
+# -----------------------------------------------------------------------------
+# *_processor
+# -----------------------------------------------------------------------------
+
+
+def read_write_processor(
+    args=None,
+    options_to_defaults_map={},
+    read_thread=None,
+    write_thread=None,
+    monitor_thread=None
+):
+
+    # Get context from CLI, environment variables, and ini files.
+
+    config = get_configuration(args)
+    validate_configuration(config)
+
+    # If configuration values not specified, use defaults.
+
+    for key, value in options_to_defaults_map.items():
+        if not config.get(key):
+            config[key] = config.get(value)
+
+    # Prolog.
+
+    logging.info(entry_template(config))
+
+    # If requested, delay start.
+
+    delay(config)
+
+    # Pull values from configuration.
+
+    threads_per_write_process = config.get('threads_per_write_process')
+    read_queue_maxsize = config.get('read_queue_maxsize')
+    input_url = config.get('input_url')
+
+    # Create internal Queue.
+
+    read_queue = multiprocessing.Queue(read_queue_maxsize)
+
+    # Create threads for master process.
+
+    threads = []
+
+    # Add a single thread for reading from source and placing on internal queue.
+
+    if read_thread:
+        thread = read_thread(
+            config=config,
+            counter_name="input-counter",
+            input_url=input_url,
+            print_queue=read_queue
+        )
+        thread.name = "Process-0-{0}-0".format(thread.__class__.__name__)
+        threads.append(thread)
+
+    # Add a number of threads for reading from source queue writing to "sink".
+
+    if write_thread:
+        for i in range(0, threads_per_write_process):
+            thread = write_thread(
+                config=config,
+                counter_name="output-counter",
+                read_queue=read_queue,
+            )
+            thread.name = "Process-0-{0}-{1}".format(thread.__class__.__name__, i)
+            threads.append(thread)
+
+    # Add a monitoring thread.
+
+    adminThreads = []
+
+    if monitor_thread:
+        thread = monitor_thread(
+            config=config,
+            workers=threads
+        )
+        thread.name = "Process-0-{0}-0".format(thread.__class__.__name__)
+        adminThreads.append(thread)
+
+    # Start threads.
+
+    for thread in threads:
+        thread.start()
+
+    # Start administrative threads for master process.
+
+    for thread in adminThreads:
+        thread.start()
+
+    # Collect inactive threads from master process.
+
+    for thread in threads:
+        thread.join()
+
+    # Cleanup.
+
+    g2_engine.destroy()
+
+    # Epilog.
+
+    logging.info(exit_template(config))
+
+# -----------------------------------------------------------------------------
 # do_* functions
 #   Common function signature: do_XXX(args)
 # -----------------------------------------------------------------------------
@@ -447,45 +835,40 @@ def do_docker_acceptance_test(args):
     logging.info(exit_template(config))
 
 
-def do_task1(args):
-    ''' Do a task. '''
+def do_json_to_stdout(args):
+    ''' Read file of JSON, print to STDOUT. '''
 
-    # Get context from CLI, environment variables, and ini files.
-
-    config = get_configuration(args)
-
-    # Prolog.
-
-    logging.info(entry_template(config))
-
-    # Do work.
-
-    print("senzing-dir: {senzing_dir}; debug: {debug}".format(**config))
-
-    # Epilog.
-
-    logging.info(exit_template(config))
-
-
-def do_task2(args):
-    ''' Do a task. Print the complete config object'''
-
-    # Get context from CLI, environment variables, and ini files.
+    # Get context variables.
 
     config = get_configuration(args)
+    input_url = config.get("input_url")
+    parsed_file_name = urlparse(input_url)
 
-    # Prolog.
+    # Determine Read thread.
 
-    logging.info(entry_template(config))
+    read_thread = ProcessFileJsonToDictQueueThread
+    if parsed_file_name.scheme in ['http', 'https']:
+        read_thread = None  # TODO:
 
-    # Do work.
+    # Determine Write thread.
 
-    config_json = json.dumps(config, sort_keys=True, indent=4)
-    print(config_json)
+    write_thread = ProcessQueueDictToJsonStdoutThread
 
-    # Epilog.
+    # Cascading defaults.
 
-    logging.info(exit_template(config))
+    options_to_defaults_map = {
+        "xxx": "yyy",
+    }
+
+    # Run command.
+
+    read_write_processor(
+        args=args,
+        options_to_defaults_map=options_to_defaults_map,
+        read_thread=read_thread,
+        write_thread=write_thread,
+        monitor_thread=MonitorThread
+    )
 
 
 def do_sleep(args):
