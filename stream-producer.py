@@ -23,6 +23,7 @@ import json
 import linecache
 import logging
 import os
+import queue
 import signal
 import threading
 import multiprocessing
@@ -34,11 +35,10 @@ try:
 except ImportError:
     from urlparse import urlparse
 
-
 __all__ = []
 __version__ = "1.0.0"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
-__updated__ = '2020-04-07'
+__updated__ = '2020-04-08'
 
 SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -69,7 +69,8 @@ configuration_locator = {
         "cli": "input-url",
     },
     "monitoring_period_in_seconds": {
-        "default": 60 * 10,
+#         "default": 60 * 10,
+        "default": 15,
         "env": "SENZING_MONITORING_PERIOD_IN_SECONDS",
         "cli": "monitoring-period-in-seconds",
     },
@@ -192,7 +193,10 @@ MESSAGE_DEBUG = 900
 
 message_dictionary = {
     "100": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}I",
+    "127": "Monitor: {0}",
     "129": "{0} is running.",
+    "130": "{0} has exited.",
+    "181": "Monitoring halted. No active workers.",
     "292": "Configuration change detected.  Old: {0} New: {1}",
     "293": "For information on warnings and errors, see https://github.com/Senzing/stream-loader#errors",
     "294": "Version: {0}  Updated: {1}",
@@ -210,6 +214,7 @@ message_dictionary = {
     "698": "Program terminated with error.",
     "699": "{0}",
     "700": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}E",
+    "721": "Running low on workers.  May need to restart",
     "885": "License has expired.",
     "886": "G2Engine.addRecord() bad return code: {0}; JSON: {1}",
     "888": "G2Engine.addRecord() G2ModuleNotInitialized: {0}; JSON: {1}",
@@ -225,6 +230,10 @@ message_dictionary = {
     "898": "Could not initialize G2Engine with '{0}'. Error: {1}",
     "899": "{0}",
     "900": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}D",
+    "902": "Thread: {0} Added message to internal queue: {1}",
+    "995": "Thread: {0} Using Class: {1}",
+    "996": "Thread: {0} Using Mixin: {1}",
+    "997": "Thread: {0} Using Thread: {1}",
     "998": "Debugging enabled.",
     "999": "{0}",
 }
@@ -340,9 +349,8 @@ def get_configuration(args):
     # Initialize counters.
 
     counters = [
-        'input-counter',
-        'lines_read_from_input_url',
-        'output-counter',
+        'input_counter',
+        'output_counter',
     ]
     for counter in counters:
         result[counter] = 0
@@ -416,11 +424,13 @@ def create_signal_handler_function(args):
 
     return result_function
 
+
 def delay(config):
     delay_in_seconds = config.get('delay_in_seconds')
     if delay_in_seconds > 0:
         logging.info(message_info(120, delay_in_seconds))
         time.sleep(delay_in_seconds)
+
 
 def entry_template(config):
     ''' Format of entry message. '''
@@ -469,10 +479,11 @@ class MonitorThread(threading.Thread):
     Periodically log operational metrics.
     '''
 
-    def __init__(self, config=None, g2_engine=None, workers=None):
+    def __init__(self, config=None, workers=None, stop_event=None):
         threading.Thread.__init__(self)
         self.config = config
         self.workers = workers
+        self.stop_event = stop_event
 
     def run(self):
         '''Periodically monitor what is happening.'''
@@ -484,7 +495,8 @@ class MonitorThread(threading.Thread):
         # Initialize variables.
 
         last = {
-            "lines_read_from_input_url": 0,
+            "input_counter": 0,
+            "output_counter": 0,
         }
 
         # Define monitoring report interval.
@@ -500,7 +512,16 @@ class MonitorThread(threading.Thread):
 
         while active_workers > 0:
 
-            time.sleep(sleep_time_in_seconds)
+            # Tricky code.  Essentially this is an interruptible
+            # time.sleep(sleep_time_in_seconds)
+
+            interval_in_seconds = 5
+            for step in range(1, sleep_time_in_seconds, interval_in_seconds):
+                time.sleep(interval_in_seconds)
+                if active_workers == 0:
+                    break;
+
+#             self.stop_event.wait(sleep_time_in_seconds)
 
             # Calculate active Threads.
 
@@ -518,13 +539,6 @@ class MonitorThread(threading.Thread):
 
             now = time.time()
             uptime = now - self.config.get('start_time', now)
-            elapsed_log_license = now - last_log_license
-
-            # Log license periodically to show days left in license.
-
-            if elapsed_log_license > log_license_period_in_seconds:
-                log_license(self.config)
-                last_log_license = now
 
             # Construct and log monitor statistics.
 
@@ -566,14 +580,16 @@ class MonitorThread(threading.Thread):
 
 class ReadFileMixin():
 
-    def __init__(self, input_url=None, *args, **kwargs):
+    def __init__(self, input_url=None, file_read_event=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileMixin"))
         self.input_url = input_url
+        self.file_read_event = file_read_event
 
     def read(self):
         with open(self.input_url) as input_file:
             for line in input_file:
                 yield line
+#         self.file_read_event.set()
 
 
 class ReadQueueMixin():
@@ -585,6 +601,25 @@ class ReadQueueMixin():
     def read(self):
         while True:
             message = self.read_queue.get()
+            yield message
+
+
+class ReadQueueTransientMixin():
+
+    def __init__(self, read_queue=None, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadQueueTransientMixin"))
+        self.read_queue = read_queue
+
+    def read(self):
+        block = True
+        timeout = 15
+        while not self.read_queue.empty():
+            try:
+                message = self.read_queue.get(block, timeout)
+            except queue.Empty:
+                continue
+            except ValueError:
+                continue
             yield message
 
 # =============================================================================
@@ -646,7 +681,7 @@ class PrintStdoutMixin():
 
     def print(self, message):
         assert type(message) == str
-        print(message)
+        print("{0} - {1}".format(threading.current_thread().name, message))
 
 # =============================================================================
 # Threads: Read*, Write*
@@ -701,7 +736,8 @@ class ProcessFileJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileMixi
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
-class ProcessQueueDictToJsonStdoutThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintStdoutMixin):
+
+class ProcessQueueDictToJsonStdoutThread(ReadEvaluatePrintLoopThread, ReadQueueTransientMixin, EvaluateDictToJsonMixin, PrintStdoutMixin):
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "ProcessQueueDictToJsonStdoutThread"))
@@ -759,12 +795,17 @@ def read_write_processor(
     if read_thread:
         thread = read_thread(
             config=config,
-            counter_name="input-counter",
+            counter_name="input_counter",
             input_url=input_url,
             print_queue=read_queue
         )
         thread.name = "Process-0-{0}-0".format(thread.__class__.__name__)
         threads.append(thread)
+        thread.start()
+
+    # Let read thread get a head start.
+
+    time.sleep(5)
 
     # Add a number of threads for reading from source queue writing to "sink".
 
@@ -772,32 +813,27 @@ def read_write_processor(
         for i in range(0, threads_per_write_process):
             thread = write_thread(
                 config=config,
-                counter_name="output-counter",
+                counter_name="output_counter",
                 read_queue=read_queue,
             )
             thread.name = "Process-0-{0}-{1}".format(thread.__class__.__name__, i)
             threads.append(thread)
+            thread.start()
 
     # Add a monitoring thread.
 
     adminThreads = []
 
+    stop_event = threading.Event()
     if monitor_thread:
         thread = monitor_thread(
             config=config,
-            workers=threads
+            workers=threads,
+            stop_event=stop_event,
         )
+#         thread.daemon = True  # Make thread stop when threads[] have completed.
         thread.name = "Process-0-{0}-0".format(thread.__class__.__name__)
         adminThreads.append(thread)
-
-    # Start threads.
-
-    for thread in threads:
-        thread.start()
-
-    # Start administrative threads for master process.
-
-    for thread in adminThreads:
         thread.start()
 
     # Collect inactive threads from master process.
@@ -805,9 +841,9 @@ def read_write_processor(
     for thread in threads:
         thread.join()
 
-    # Cleanup.
+    # Signal adminThreads[] of completion.
 
-    g2_engine.destroy()
+    stop_event.set()
 
     # Epilog.
 
