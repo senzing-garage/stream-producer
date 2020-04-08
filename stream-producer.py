@@ -2,14 +2,18 @@
 
 # -----------------------------------------------------------------------------
 # stream-producer.py Create a stream.
+# - Uses a "pipes and filters" design pattern
 # -----------------------------------------------------------------------------
 
 from glob import glob
 import argparse
+import collections
+import csv
 import json
 import linecache
 import logging
 import os
+import pandas
 import queue
 import signal
 import threading
@@ -106,8 +110,58 @@ def get_parser():
     ''' Parse commandline arguments. '''
 
     subcommands = {
+        'csv-to-stdout': {
+            "help": 'Read CSV file and print to STDOUT.',
+            "arguments": {
+                "--debug": {
+                    "dest": "debug",
+                    "action": "store_true",
+                    "help": "Enable debugging. (SENZING_DEBUG) Default: False"
+                },
+                "--input-url": {
+                    "dest": "input_url",
+                    "metavar": "SENZING_INPUT_URL",
+                    "help": "File/URL of input file. Default: None"
+                },
+                "--password": {
+                    "dest": "password",
+                    "metavar": "SENZING_PASSWORD",
+                    "help": "Example of information redacted in the log. Default: None"
+                },
+                "--senzing-dir": {
+                    "dest": "senzing_dir",
+                    "metavar": "SENZING_DIR",
+                    "help": "Location of Senzing. Default: /opt/senzing"
+                },
+            },
+        },
         'json-to-stdout': {
             "help": 'Read JSON file and print to STDOUT.',
+            "arguments": {
+                "--debug": {
+                    "dest": "debug",
+                    "action": "store_true",
+                    "help": "Enable debugging. (SENZING_DEBUG) Default: False"
+                },
+                "--input-url": {
+                    "dest": "input_url",
+                    "metavar": "SENZING_INPUT_URL",
+                    "help": "File/URL of input file. Default: None"
+                },
+                "--password": {
+                    "dest": "password",
+                    "metavar": "SENZING_PASSWORD",
+                    "help": "Example of information redacted in the log. Default: None"
+                },
+                "--senzing-dir": {
+                    "dest": "senzing_dir",
+                    "metavar": "SENZING_DIR",
+                    "help": "Location of Senzing. Default: /opt/senzing"
+                },
+            },
+        },
+        'parquet-to-stdout': {
+            "help": 'Read Parquet file and print to STDOUT.',
             "arguments": {
                 "--debug": {
                     "dest": "debug",
@@ -550,9 +604,30 @@ class MonitorThread(threading.Thread):
 #   Methods:
 #   - read() - a Generator that produces one message per iteration
 #   Classes:
+#   - ReadFileCsvMixin - Read a local CSV file
 #   - ReadFileMixin - Read from a local file
+#   - ReadFileParquetMixin - Read a parquet file
 #   - ReadQueueMixin - Read from an internal queue
 # =============================================================================
+
+# -----------------------------------------------------------------------------
+# Class: ReadFileCsvMixin
+# -----------------------------------------------------------------------------
+
+
+class ReadFileCsvMixin():
+
+    def __init__(self, input_url=None, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileMixin"))
+        self.input_url = input_url
+
+    def read(self):
+        with open(self.input_url, 'r') as input_file:
+            csv_reader = csv.DictReader(input_file, skipinitialspace=True)
+            for dictionary in csv_reader:
+                result = dict(dictionary)
+                assert type(result) == dict
+                yield result
 
 # -----------------------------------------------------------------------------
 # Class: ReadFileMixin
@@ -566,9 +641,31 @@ class ReadFileMixin():
         self.input_url = input_url
 
     def read(self):
-        with open(self.input_url) as input_file:
+        with open(self.input_url, 'r') as input_file:
             for line in input_file:
+                assert isinstance(line, str)
                 yield line
+
+# -----------------------------------------------------------------------------
+# Class: ReadFileParquetMixin
+# -----------------------------------------------------------------------------
+
+
+class ReadFileParquetMixin():
+
+    def __init__(self, input_url=None, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileParquetMixin"))
+        self.input_url = input_url
+
+    def read(self):
+        data_frame = pandas.read_parquet(self.input_url)
+        for row in data_frame.to_dict(orient="records"):
+            assert type(row) == dict
+            yield row
+
+# -----------------------------------------------------------------------------
+# Class: ReadQueueMixin
+# -----------------------------------------------------------------------------
 
 
 class ReadQueueMixin():
@@ -582,6 +679,10 @@ class ReadQueueMixin():
             message = self.read_queue.get()
             yield message
 
+# -----------------------------------------------------------------------------
+# Class: ReadQueueTransientMixin
+# -----------------------------------------------------------------------------
+
 
 class ReadQueueTransientMixin():
 
@@ -591,7 +692,7 @@ class ReadQueueTransientMixin():
 
     def read(self):
         block = True
-        timeout = 15
+        timeout = 10
         while not self.read_queue.empty():
             try:
                 message = self.read_queue.get(block, timeout)
@@ -608,7 +709,26 @@ class ReadQueueTransientMixin():
 #   Classes:
 #   - EvaluateDictToJsonMixin - Transform Python dictionary to JSON string
 #   - EvaluateJsonToDictMixin - Transform JSON string to Python dictionary
+#   - EvaluateNullObjectMixin - Simply pass on the message
+#   - EvaluateMakeSerializeableDictMixin - Make dictionary serializeable
 # =============================================================================
+
+# -----------------------------------------------------------------------------
+# Class: EvaluateDictToJsonMixin
+# -----------------------------------------------------------------------------
+
+
+class EvaluateDictToJsonMixin():
+
+    def __init__(self, input_url=None, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "EvaluateDictToJsonMixin"))
+
+    def evaluate(self, message):
+        return json.dumps(message)
+
+# -----------------------------------------------------------------------------
+# Class: EvaluateJsonToDictMixin
+# -----------------------------------------------------------------------------
 
 
 class EvaluateJsonToDictMixin():
@@ -619,14 +739,39 @@ class EvaluateJsonToDictMixin():
     def evaluate(self, message):
         return json.loads(message)
 
+# -----------------------------------------------------------------------------
+# Class: EvaluateNullObjectMixin
+# -----------------------------------------------------------------------------
 
-class EvaluateDictToJsonMixin():
+
+class EvaluateNullObjectMixin():
 
     def __init__(self, input_url=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "EvaluateDictToJsonMixin"))
 
     def evaluate(self, message):
-        return json.dumps(message)
+        return message
+
+# -----------------------------------------------------------------------------
+# Class: EvaluateMakeSerializeableDictMixin
+# -----------------------------------------------------------------------------
+
+
+class EvaluateMakeSerializeableDictMixin():
+
+    def __init__(self, input_url=None, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "EvaluateMakeSerializeableDictMixin"))
+
+    def evaluate(self, message):
+        new_message = {}
+        for key, value in message.items():
+            new_message[key] = str(value)
+            try:
+                if value.isnumeric():
+                    new_message[key] = value
+            except:
+                pass
+        return new_message
 
 # =============================================================================
 # Mixins: Print*
@@ -649,8 +794,12 @@ class PrintQueueMixin():
         self.print_queue = print_queue
 
     def print(self, message):
-        assert type(message) == dict
+        assert isinstance(message, dict)
         self.print_queue.put(message)
+
+# -----------------------------------------------------------------------------
+# Class: PrintStdoutMixin
+# -----------------------------------------------------------------------------
 
 
 class PrintStdoutMixin():
@@ -702,24 +851,38 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
         logging.info(message_info(130, threading.current_thread().name))
 
 # =============================================================================
-# Classes created with mixins
+# Filter* classes created with mixins
 # =============================================================================
 
-# ---- No external queue ------------------------------------------------------
 
-
-class ProcessFileJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileMixin, EvaluateJsonToDictMixin, PrintQueueMixin):
+class FilterFileCsvToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileCsvMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "ProcessFileJsonToDictQueueThread"))
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterFileCsvToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
 
-class ProcessQueueDictToJsonStdoutThread(ReadEvaluatePrintLoopThread, ReadQueueTransientMixin, EvaluateDictToJsonMixin, PrintStdoutMixin):
+class FilterFileJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileMixin, EvaluateJsonToDictMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "ProcessQueueDictToJsonStdoutThread"))
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterFileJsonToDictQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+
+
+class FilterFileParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileParquetMixin, EvaluateMakeSerializeableDictMixin, PrintQueueMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterFileParquetToDictQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+
+
+class FilterQueueDictToJsonStdoutThread(ReadEvaluatePrintLoopThread, ReadQueueTransientMixin, EvaluateDictToJsonMixin, PrintStdoutMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonStdoutThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -728,7 +891,7 @@ class ProcessQueueDictToJsonStdoutThread(ReadEvaluatePrintLoopThread, ReadQueueT
 # -----------------------------------------------------------------------------
 
 
-def read_write_processor(
+def pipeline_read_write(
     args=None,
     options_to_defaults_map={},
     read_thread=None,
@@ -829,6 +992,42 @@ def read_write_processor(
 # -----------------------------------------------------------------------------
 
 
+def do_csv_to_stdout(args):
+    ''' Read file of JSON, print to STDOUT. '''
+
+    # Get context variables.
+
+    config = get_configuration(args)
+    input_url = config.get("input_url")
+    parsed_file_name = urlparse(input_url)
+
+    # Determine Read thread.
+
+    read_thread = FilterFileCsvToDictQueueThread
+    if parsed_file_name.scheme in ['http', 'https']:
+        read_thread = None  # TODO:
+
+    # Determine Write thread.
+
+    write_thread = FilterQueueDictToJsonStdoutThread
+
+    # Cascading defaults.
+
+    options_to_defaults_map = {
+        "xxx": "yyy",
+    }
+
+    # Run pipeline.
+
+    pipeline_read_write(
+        args=args,
+        options_to_defaults_map=options_to_defaults_map,
+        read_thread=read_thread,
+        write_thread=write_thread,
+        monitor_thread=MonitorThread
+    )
+
+
 def do_docker_acceptance_test(args):
     ''' For use with Docker acceptance testing. '''
 
@@ -856,13 +1055,13 @@ def do_json_to_stdout(args):
 
     # Determine Read thread.
 
-    read_thread = ProcessFileJsonToDictQueueThread
+    read_thread = FilterFileJsonToDictQueueThread
     if parsed_file_name.scheme in ['http', 'https']:
         read_thread = None  # TODO:
 
     # Determine Write thread.
 
-    write_thread = ProcessQueueDictToJsonStdoutThread
+    write_thread = FilterQueueDictToJsonStdoutThread
 
     # Cascading defaults.
 
@@ -870,9 +1069,45 @@ def do_json_to_stdout(args):
         "xxx": "yyy",
     }
 
-    # Run command.
+    # Run pipeline.
 
-    read_write_processor(
+    pipeline_read_write(
+        args=args,
+        options_to_defaults_map=options_to_defaults_map,
+        read_thread=read_thread,
+        write_thread=write_thread,
+        monitor_thread=MonitorThread
+    )
+
+
+def do_parquet_to_stdout(args):
+    ''' Read file of JSON, print to STDOUT. '''
+
+    # Get context variables.
+
+    config = get_configuration(args)
+    input_url = config.get("input_url")
+    parsed_file_name = urlparse(input_url)
+
+    # Determine Read thread.
+
+    read_thread = FilterFileParquetToDictQueueThread
+    if parsed_file_name.scheme in ['http', 'https']:
+        read_thread = None  # TODO:
+
+    # Determine Write thread.
+
+    write_thread = FilterQueueDictToJsonStdoutThread
+
+    # Cascading defaults.
+
+    options_to_defaults_map = {
+        "xxx": "yyy",
+    }
+
+    # Run pipeline.
+
+    pipeline_read_write(
         args=args,
         options_to_defaults_map=options_to_defaults_map,
         read_thread=read_thread,
