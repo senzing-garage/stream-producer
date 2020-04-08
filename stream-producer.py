@@ -9,6 +9,7 @@ from glob import glob
 import argparse
 import collections
 import csv
+import fastavro
 import json
 import linecache
 import logging
@@ -44,6 +45,11 @@ GIGABYTES = 1024 * MEGABYTES
 # 1) Command line options, 2) Environment variables, 3) Configuration files, 4) Default values
 
 configuration_locator = {
+    "avro_schema_url": {
+        "default": None,
+        "env": "SENZING_AVRO_SCHEMA_URL",
+        "cli": "avro-schema-url"
+    },
     "debug": {
         "default": False,
         "env": "SENZING_DEBUG",
@@ -110,78 +116,43 @@ def get_parser():
     ''' Parse commandline arguments. '''
 
     subcommands = {
-        'csv-to-stdout': {
-            "help": 'Read CSV file and print to STDOUT.',
+        'avro-to-stdout': {
+            "help": 'Read Avro file and print to STDOUT.',
             "arguments": {
-                "--debug": {
-                    "dest": "debug",
-                    "action": "store_true",
-                    "help": "Enable debugging. (SENZING_DEBUG) Default: False"
-                },
                 "--input-url": {
                     "dest": "input_url",
                     "metavar": "SENZING_INPUT_URL",
                     "help": "File/URL of input file. Default: None"
                 },
-                "--password": {
-                    "dest": "password",
-                    "metavar": "SENZING_PASSWORD",
-                    "help": "Example of information redacted in the log. Default: None"
-                },
-                "--senzing-dir": {
-                    "dest": "senzing_dir",
-                    "metavar": "SENZING_DIR",
-                    "help": "Location of Senzing. Default: /opt/senzing"
+            },
+        },
+        'csv-to-stdout': {
+            "help": 'Read CSV file and print to STDOUT.',
+            "arguments": {
+                "--input-url": {
+                    "dest": "input_url",
+                    "metavar": "SENZING_INPUT_URL",
+                    "help": "File/URL of input file. Default: None"
                 },
             },
         },
         'json-to-stdout': {
             "help": 'Read JSON file and print to STDOUT.',
             "arguments": {
-                "--debug": {
-                    "dest": "debug",
-                    "action": "store_true",
-                    "help": "Enable debugging. (SENZING_DEBUG) Default: False"
-                },
                 "--input-url": {
                     "dest": "input_url",
                     "metavar": "SENZING_INPUT_URL",
                     "help": "File/URL of input file. Default: None"
-                },
-                "--password": {
-                    "dest": "password",
-                    "metavar": "SENZING_PASSWORD",
-                    "help": "Example of information redacted in the log. Default: None"
-                },
-                "--senzing-dir": {
-                    "dest": "senzing_dir",
-                    "metavar": "SENZING_DIR",
-                    "help": "Location of Senzing. Default: /opt/senzing"
                 },
             },
         },
         'parquet-to-stdout': {
             "help": 'Read Parquet file and print to STDOUT.',
             "arguments": {
-                "--debug": {
-                    "dest": "debug",
-                    "action": "store_true",
-                    "help": "Enable debugging. (SENZING_DEBUG) Default: False"
-                },
                 "--input-url": {
                     "dest": "input_url",
                     "metavar": "SENZING_INPUT_URL",
                     "help": "File/URL of input file. Default: None"
-                },
-                "--password": {
-                    "dest": "password",
-                    "metavar": "SENZING_PASSWORD",
-                    "help": "Example of information redacted in the log. Default: None"
-                },
-                "--senzing-dir": {
-                    "dest": "senzing_dir",
-                    "metavar": "SENZING_DIR",
-                    "help": "Location of Senzing. Default: /opt/senzing"
                 },
             },
         },
@@ -408,7 +379,7 @@ def validate_configuration(config):
 
     subcommand = config.get('subcommand')
 
-    if subcommand in ['task1', 'task2']:
+    if subcommand in ['task1']:
 
         if not config.get('senzing_dir'):
             user_error_messages.append(message_error(414))
@@ -611,6 +582,23 @@ class MonitorThread(threading.Thread):
 # =============================================================================
 
 # -----------------------------------------------------------------------------
+# Class: ReadFileAvroMixin
+# -----------------------------------------------------------------------------
+
+
+class ReadFileAvroMixin():
+
+    def __init__(self, input_url=None, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileAvroMixin"))
+        self.input_url = input_url
+
+    def read(self):
+        with open(self.input_url, 'rb') as input_file:
+            avro_reader = fastavro.reader(input_file)
+            for record in avro_reader:
+                yield record
+
+# -----------------------------------------------------------------------------
 # Class: ReadFileCsvMixin
 # -----------------------------------------------------------------------------
 
@@ -618,7 +606,7 @@ class MonitorThread(threading.Thread):
 class ReadFileCsvMixin():
 
     def __init__(self, input_url=None, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileMixin"))
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileCsvMixin"))
         self.input_url = input_url
 
     def read(self):
@@ -855,6 +843,14 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
 # =============================================================================
 
 
+class FilterFileAvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileAvroMixin, EvaluateNullObjectMixin, PrintQueueMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterFileAvroToDictQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+
+
 class FilterFileCsvToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileCsvMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
@@ -896,7 +892,7 @@ def pipeline_read_write(
     options_to_defaults_map={},
     read_thread=None,
     write_thread=None,
-    monitor_thread=None
+    monitor_thread=None,
 ):
 
     # Get context from CLI, environment variables, and ini files.
@@ -990,6 +986,41 @@ def pipeline_read_write(
 # do_* functions
 #   Common function signature: do_XXX(args)
 # -----------------------------------------------------------------------------
+
+
+def do_avro_to_stdout(args):
+    ''' Read file of JSON, print to STDOUT. '''
+
+    # Get context variables.
+
+    config = get_configuration(args)
+    input_url = config.get("input_url")
+    avro_schema_url = config.get("avro_schema_url")
+    parsed_file_name = urlparse(input_url)
+
+    # Determine Read thread.
+
+    read_thread = FilterFileAvroToDictQueueThread
+    if parsed_file_name.scheme in ['http', 'https']:
+        read_thread = None  # TODO:
+
+    # Determine Write thread.
+
+    write_thread = FilterQueueDictToJsonStdoutThread
+
+    # Cascading defaults.
+
+    options_to_defaults_map = {}
+
+    # Run pipeline.
+
+    pipeline_read_write(
+        args=args,
+        options_to_defaults_map=options_to_defaults_map,
+        read_thread=read_thread,
+        write_thread=write_thread,
+        monitor_thread=MonitorThread
+    )
 
 
 def do_csv_to_stdout(args):
