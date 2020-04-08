@@ -1,20 +1,7 @@
 #! /usr/bin/env python3
 
 # -----------------------------------------------------------------------------
-# template-python.py Example python skeleton.
-# Can be used as a boiler-plate to build new python scripts.
-# This skeleton implements the following features:
-#   1) "command subcommand" command line.
-#   2) A structured command line parser and "-help"
-#   3) Configuration via:
-#      3.1) Command line options
-#      3.2) Environment variables
-#      3.3) Configuration file
-#      3.4) Default
-#   4) Messages dictionary
-#   5) Logging and Log Level support.
-#   6) Entry / Exit log messages.
-#   7) Docker support.
+# stream-producer.py Create a stream.
 # -----------------------------------------------------------------------------
 
 from glob import glob
@@ -69,8 +56,7 @@ configuration_locator = {
         "cli": "input-url",
     },
     "monitoring_period_in_seconds": {
-#         "default": 60 * 10,
-        "default": 15,
+        "default": 60 * 10,
         "env": "SENZING_MONITORING_PERIOD_IN_SECONDS",
         "cli": "monitoring-period-in-seconds",
     },
@@ -479,11 +465,10 @@ class MonitorThread(threading.Thread):
     Periodically log operational metrics.
     '''
 
-    def __init__(self, config=None, workers=None, stop_event=None):
+    def __init__(self, config=None, workers=None):
         threading.Thread.__init__(self)
         self.config = config
         self.workers = workers
-        self.stop_event = stop_event
 
     def run(self):
         '''Periodically monitor what is happening.'''
@@ -516,23 +501,19 @@ class MonitorThread(threading.Thread):
             # time.sleep(sleep_time_in_seconds)
 
             interval_in_seconds = 5
+            active_workers = len(self.workers)
             for step in range(1, sleep_time_in_seconds, interval_in_seconds):
                 time.sleep(interval_in_seconds)
+                active_workers = len(self.workers)
+                for worker in self.workers:
+                    if not worker.is_alive():
+                        active_workers -= 1
                 if active_workers == 0:
                     break;
 
-#             self.stop_event.wait(sleep_time_in_seconds)
-
-            # Calculate active Threads.
-
-            active_workers = len(self.workers)
-            for worker in self.workers:
-                if not worker.is_alive():
-                    active_workers -= 1
-
             # Determine if we're running out of workers.
 
-            if (active_workers / float(len(self.workers))) < 0.5:
+            if active_workers and (active_workers / float(len(self.workers))) < 0.5:
                 logging.warning(message_warning(721))
 
             # Calculate times.
@@ -580,16 +561,14 @@ class MonitorThread(threading.Thread):
 
 class ReadFileMixin():
 
-    def __init__(self, input_url=None, file_read_event=None, *args, **kwargs):
+    def __init__(self, input_url=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileMixin"))
         self.input_url = input_url
-        self.file_read_event = file_read_event
 
     def read(self):
         with open(self.input_url) as input_file:
             for line in input_file:
                 yield line
-#         self.file_read_event.set()
 
 
 class ReadQueueMixin():
@@ -644,7 +623,7 @@ class EvaluateJsonToDictMixin():
 class EvaluateDictToJsonMixin():
 
     def __init__(self, input_url=None, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "EvaluateJsonToDictMixin"))
+        logging.debug(message_debug(996, threading.current_thread().name, "EvaluateDictToJsonMixin"))
 
     def evaluate(self, message):
         return json.dumps(message)
@@ -681,14 +660,14 @@ class PrintStdoutMixin():
 
     def print(self, message):
         assert type(message) == str
-        print("{0} - {1}".format(threading.current_thread().name, message))
+        print(message)
 
 # =============================================================================
-# Threads: Read*, Write*
+# Threads: *Thread
 #   Methods:
 #   - run
 #   Classes:
-#   - ReadThread - Transfer messages from input to internal queue.
+#   - ReadEvaluatePrintLoopThread - Simple REPL
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -700,7 +679,7 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
 
     def __init__(self, config=None, counter_name=None, *args, **kwargs):
         threading.Thread.__init__(self)
-        logging.debug(message_debug(997, threading.current_thread().name, "ReadThread"))
+        logging.debug(message_debug(997, threading.current_thread().name, "ReadEvaluatePrintLoopThread"))
         self.config = config
         self.counter_name = counter_name
 
@@ -824,26 +803,21 @@ def read_write_processor(
 
     adminThreads = []
 
-    stop_event = threading.Event()
     if monitor_thread:
         thread = monitor_thread(
             config=config,
             workers=threads,
-            stop_event=stop_event,
         )
-#         thread.daemon = True  # Make thread stop when threads[] have completed.
         thread.name = "Process-0-{0}-0".format(thread.__class__.__name__)
         adminThreads.append(thread)
         thread.start()
 
-    # Collect inactive threads from master process.
+    # Collect inactive threads.
 
     for thread in threads:
         thread.join()
-
-    # Signal adminThreads[] of completion.
-
-    stop_event.set()
+    for thread in adminThreads:
+        thread.join()
 
     # Epilog.
 
