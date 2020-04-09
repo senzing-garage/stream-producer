@@ -87,7 +87,8 @@ configuration_locator = {
         "cli": "kafka-topic",
     },
     "monitoring_period_in_seconds": {
-        "default": 60 * 10,
+#         "default": 60 * 10,
+        "default": 30,
         "env": "SENZING_MONITORING_PERIOD_IN_SECONDS",
         "cli": "monitoring-period-in-seconds",
     },
@@ -841,20 +842,24 @@ class EvaluateMakeSerializeableDictMixin():
 
 class PrintKafkaMixin():
 
-    def __init__(self, kafka_bootstrap_server=None, kafka_topic=None, kafka_group_id=None, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "PrintKafkaMixin"))
-        self.kafka_topic = kafka_topic
+        self.kafka_topic = config.get('kafka_topic')
         self.counter = 0
 
         kafka_configuration = {
-            'bootstrap.servers': kafka_bootstrap_server
+            'bootstrap.servers':  config.get('kafka_bootstrap_server')
         }
-        if kafka_group_id:
-            kafka_configuration['group.id'] = kafka_group_id
+        if config.get('kafka_group_id'):
+            kafka_configuration['group.id'] = config.get('kafka_group_id')
 
         self.kafka_producer = confluent_kafka.Producer(kafka_configuration)
 
-    def on_kafka_delivery(error, message):
+    def on_kafka_delivery(self, error, message):
+
+        logging.info(message_info(299, ">>>>> DELIVERED: {0} {1}".format(threading.current_thread().name, message)))
+
+
         logging.debug(message_debug(103, message.topic(), message.value(), message.error(), error))
         if error is not None:
             logging.warning(message_warn(408, message.topic(), message.value(), message.error(), error))
@@ -862,16 +867,18 @@ class PrintKafkaMixin():
     def print(self, message):
         assert isinstance(message, str)
         self.counter += 1
+
         try:
             self.kafka_producer.produce(self.kafka_topic, message, on_delivery=self.on_kafka_delivery)
         except BufferError as err:
             logging.warning(message_warn(404, err, self.counter, message))
-        except KafkaException as err:
+        except confluent_kafka.KafkaException as err:
             logging.warning(message_warn(405, err, self.counter, message))
         except NotImplemented as err:
             logging.warning(message_warn(406, err, self.counter, message))
         except:
             logging.warning(message_warn(407, err, self.counter, message))
+        logging.info(message_info(299, ">>>>> {0} {1}".format(threading.current_thread().name, message)))
 
     def close(self):
         self.kafka_producer.flush()
@@ -943,8 +950,8 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
 
         for message in self.read():
             logging.debug(message_debug(902, threading.current_thread().name, self.counter_name, message))
-            self.config[self.counter_name] += 1
             self.print(self.evaluate(message))
+            self.config[self.counter_name] += 1
 
         self.close()
 
