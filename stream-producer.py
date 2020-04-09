@@ -11,6 +11,7 @@ import collections
 import csv
 import fastavro
 import json
+import confluent_kafka
 import linecache
 import logging
 import os
@@ -30,7 +31,7 @@ except ImportError:
 __all__ = []
 __version__ = "1.0.0"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
-__updated__ = '2020-04-08'
+__updated__ = '2020-04-09'
 
 SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -55,6 +56,16 @@ configuration_locator = {
         "env": "SENZING_DEBUG",
         "cli": "debug"
     },
+    "default_data_source": {
+        "default": None,
+        "env": "SENZING_DEFAULT_DATA_SOURCE",
+        "cli": "default-data-source",
+    },
+    "default_entity_type": {
+        "default": None,
+        "env": "SENZING_DEFAULT_ENTITY_TYPE",
+        "cli": "default-entity-type"
+    },
     "delay_in_seconds": {
         "default": 0,
         "env": "SENZING_DELAY_IN_SECONDS",
@@ -64,6 +75,16 @@ configuration_locator = {
         "default": "https://s3.amazonaws.com/public-read-access/TestDataSets/loadtest-dataset-1M.json",
         "env": "SENZING_INPUT_URL",
         "cli": "input-url",
+    },
+    "kafka_bootstrap_server": {
+        "default": "localhost:9092",
+        "env": "SENZING_KAFKA_BOOTSTRAP_SERVER",
+        "cli": "kafka-bootstrap-server",
+    },
+    "kafka_topic": {
+        "default": "senzing-kafka-topic",
+        "env": "SENZING_KAFKA_TOPIC",
+        "cli": "kafka-topic",
     },
     "monitoring_period_in_seconds": {
         "default": 60 * 10,
@@ -80,10 +101,15 @@ configuration_locator = {
         "env": "SENZING_READ_QUEUE_MAXSIZE",
         "cli": "read-queue-maxsize"
     },
-    "senzing_dir": {
-        "default": "/opt/senzing",
-        "env": "SENZING_DIR",
-        "cli": "senzing-dir"
+    "record_max": {
+        "default": None,
+        "env": "SENZING_RECORD_MAX",
+        "cli": "record-max",
+    },
+    "record_min": {
+        "default": None,
+        "env": "SENZING_RECORD_MIN",
+        "cli": "record-min",
     },
     "sleep_time_in_seconds": {
         "default": 0,
@@ -118,43 +144,23 @@ def get_parser():
     subcommands = {
         'avro-to-stdout': {
             "help": 'Read Avro file and print to STDOUT.',
-            "arguments": {
-                "--input-url": {
-                    "dest": "input_url",
-                    "metavar": "SENZING_INPUT_URL",
-                    "help": "File/URL of input file. Default: None"
-                },
-            },
+            "argument_aspects": ["input-url", "avro", "stdout"]
         },
         'csv-to-stdout': {
             "help": 'Read CSV file and print to STDOUT.',
-            "arguments": {
-                "--input-url": {
-                    "dest": "input_url",
-                    "metavar": "SENZING_INPUT_URL",
-                    "help": "File/URL of input file. Default: None"
-                },
-            },
+            "argument_aspects": ["input-url", "csv", "stdout"]
+        },
+        'json-to-kafka': {
+            "help": 'Read JSON file and send to Kafka.',
+            "argument_aspects": ["input-url", "json", "kafka"]
         },
         'json-to-stdout': {
             "help": 'Read JSON file and print to STDOUT.',
-            "arguments": {
-                "--input-url": {
-                    "dest": "input_url",
-                    "metavar": "SENZING_INPUT_URL",
-                    "help": "File/URL of input file. Default: None"
-                },
-            },
+            "argument_aspects": ["input-url", "json", "stdout"]
         },
         'parquet-to-stdout': {
             "help": 'Read Parquet file and print to STDOUT.',
-            "arguments": {
-                "--input-url": {
-                    "dest": "input_url",
-                    "metavar": "SENZING_INPUT_URL",
-                    "help": "File/URL of input file. Default: None"
-                },
-            },
+            "argument_aspects": ["input-url", "parquet", "stdout"]
         },
         'sleep': {
             "help": 'Do nothing but sleep. For Docker testing.',
@@ -173,6 +179,63 @@ def get_parser():
             "help": 'For Docker acceptance testing.',
         },
     }
+
+    # Define argument_aspects.
+
+    argument_aspects = {
+        "input-url": {
+            "--default-data-source": {
+                "dest": "default_data_source",
+                "metavar": "SENZING_DEFAULT_DATA_SOURCE",
+                "help": "Used when record does not have a `DATA_SOURCE` key. Default: None"
+            },
+            "--default-entity-type": {
+                "dest": "default_entity_type",
+                "metavar": "SENZING_DEFAULT_ENTITY_TYPE",
+                "help": "Used when record does not have a `ENTITY_TYPE` key. Default: None"
+            },
+            "--input-url": {
+                "dest": "input_url",
+                "metavar": "SENZING_INPUT_URL",
+                "help": "File/URL of input file. Default: None"
+            },
+            "--record-max": {
+                "dest": "record_max",
+                "metavar": "SENZING_RECORD_MAX",
+                "help": "Highest record id. Default: None."
+            },
+            "--record-min": {
+                "dest": "record_min",
+                "metavar": "SENZING_RECORD_MIN",
+                "help": "Lowest record id. Default: None"
+            },
+        },
+        "kafka": {
+            "--kafka-bootstrap-server": {
+                "dest": "kafka_bootstrap_server",
+                "metavar": "SENZING_KAFKA_BOOTSTRAP_SERVER",
+                "help": "Kafka bootstrap server. Default: localhost:9092"
+            },
+            "--kafka-topic": {
+                "dest": "kafka_topic",
+                "metavar": "SENZING_KAFKA_TOPIC",
+                "help": "Kafka topic. Default: senzing-kafka-topic"
+            },
+        },
+    }
+
+    # Augment "subcommands" variable with arguments specified by aspects.
+
+    for subcommand, subcommand_value in subcommands.items():
+        if 'argument_aspects' in subcommand_value:
+            for aspect in subcommand_value['argument_aspects']:
+                if 'arguments' not in subcommands[subcommand]:
+                    subcommands[subcommand]['arguments'] = {}
+                arguments = argument_aspects.get(aspect, {})
+                for argument, argument_value in arguments.items():
+                    subcommands[subcommand]['arguments'][argument] = argument_value
+
+    # Parse command line arguments.
 
     parser = argparse.ArgumentParser(prog="template-python.py", description="Example python skeleton. For more information, see https://github.com/Senzing/template-python")
     subparsers = parser.add_subparsers(dest='subcommand', help='Subcommands (SENZING_SUBCOMMAND):')
@@ -381,7 +444,7 @@ def validate_configuration(config):
 
     if subcommand in ['task1']:
 
-        if not config.get('senzing_dir'):
+        if not config.get('example'):
             user_error_messages.append(message_error(414))
 
     # Log warning messages.
@@ -764,11 +827,54 @@ class EvaluateMakeSerializeableDictMixin():
 # =============================================================================
 # Mixins: Print*
 #   Methods:
+#   - close()
 #   - print()
 #   Classes:
 #   - PrintQueueMixin - Send to internal queue
 #   - PrintStdoutMixin - Send to STDOUT
 # =============================================================================
+
+# -----------------------------------------------------------------------------
+# Class: PrintKafkaMixin
+# -----------------------------------------------------------------------------
+
+
+class PrintKafkaMixin():
+
+    def __init__(self, kafka_bootstrap_server=None, kafka_topic=None, kafka_group_id=None, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "PrintKafkaMixin"))
+        self.kafka_topic = kafka_topic
+        self.counter = 0
+
+        kafka_configuration = {
+            'bootstrap.servers': kafka_bootstrap_server
+        }
+        if kafka_group_id:
+            kafka_configuration['group.id'] = kafka_group_id
+
+        self.kafka_producer = confluent_kafka.Producer(kafka_configuration)
+
+    def on_kafka_delivery(error, message):
+        logging.debug(message_debug(103, message.topic(), message.value(), message.error(), error))
+        if error is not None:
+            logging.warning(message_warn(408, message.topic(), message.value(), message.error(), error))
+
+    def print(self, message):
+        assert isinstance(message, str)
+        self.counter += 1
+        try:
+            self.kafka_producer.produce(self.kafka_topic, message, on_delivery=self.on_kafka_delivery)
+        except BufferError as err:
+            logging.warning(message_warn(404, err, self.counter, message))
+        except KafkaException as err:
+            logging.warning(message_warn(405, err, self.counter, message))
+        except NotImplemented as err:
+            logging.warning(message_warn(406, err, self.counter, message))
+        except:
+            logging.warning(message_warn(407, err, self.counter, message))
+
+    def close(self):
+        self.kafka_producer.flush()
 
 # -----------------------------------------------------------------------------
 # Class: PrintQueueMixin
@@ -785,6 +891,9 @@ class PrintQueueMixin():
         assert isinstance(message, dict)
         self.print_queue.put(message)
 
+    def close(self):
+        pass
+
 # -----------------------------------------------------------------------------
 # Class: PrintStdoutMixin
 # -----------------------------------------------------------------------------
@@ -798,6 +907,9 @@ class PrintStdoutMixin():
     def print(self, message):
         assert type(message) == str
         print(message)
+
+    def close(self):
+        pass
 
 # =============================================================================
 # Threads: *Thread
@@ -833,6 +945,8 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
             logging.debug(message_debug(902, threading.current_thread().name, self.counter_name, message))
             self.config[self.counter_name] += 1
             self.print(self.evaluate(message))
+
+        self.close()
 
         # Log message for thread exiting.
 
@@ -871,6 +985,14 @@ class FilterFileParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFilePa
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "FilterFileParquetToDictQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+
+
+class FilterQueueDictToJsonKafkaThread(ReadEvaluatePrintLoopThread, ReadQueueTransientMixin, EvaluateDictToJsonMixin, PrintKafkaMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonStdoutThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -1073,6 +1195,42 @@ def do_docker_acceptance_test(args):
     # Epilog.
 
     logging.info(exit_template(config))
+
+
+def do_json_to_kafka(args):
+    ''' Read file of JSON, print to STDOUT. '''
+
+    # Get context variables.
+
+    config = get_configuration(args)
+    input_url = config.get("input_url")
+    parsed_file_name = urlparse(input_url)
+
+    # Determine Read thread.
+
+    read_thread = FilterFileJsonToDictQueueThread
+    if parsed_file_name.scheme in ['http', 'https']:
+        read_thread = None  # TODO:
+
+    # Determine Write thread.
+
+    write_thread = FilterQueueDictToJsonKafkaThread
+
+    # Cascading defaults.
+
+    options_to_defaults_map = {
+        "xxx": "yyy",
+    }
+
+    # Run pipeline.
+
+    pipeline_read_write(
+        args=args,
+        options_to_defaults_map=options_to_defaults_map,
+        read_thread=read_thread,
+        write_thread=write_thread,
+        monitor_thread=MonitorThread
+    )
 
 
 def do_json_to_stdout(args):
