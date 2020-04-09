@@ -16,6 +16,7 @@ import linecache
 import logging
 import os
 import pandas
+import pika
 import queue
 import signal
 import threading
@@ -97,6 +98,36 @@ configuration_locator = {
         "env": "SENZING_PASSWORD",
         "cli": "password"
     },
+    "rabbitmq_exchange": {
+        "default": "",
+        "env": "SENZING_RABBITMQ_EXCHANGE",
+        "cli": "rabbitmq-exchange",
+    },
+    "rabbitmq_host": {
+        "default": "localhost",
+        "env": "SENZING_RABBITMQ_HOST",
+        "cli": "rabbitmq-host",
+    },
+    "rabbitmq_password": {
+        "default": "bitnami",
+        "env": "SENZING_RABBITMQ_PASSWORD",
+        "cli": "rabbitmq-password",
+    },
+    "rabbitmq_port": {
+        "default": "5672",
+        "env": "SENZING_RABBITMQ_PORT",
+        "cli": "rabbitmq-port",
+    },
+    "rabbitmq_queue": {
+        "default": "senzing-rabbitmq-queue",
+        "env": "SENZING_RABBITMQ_QUEUE",
+        "cli": "rabbitmq-queue",
+    },
+    "rabbitmq_username": {
+        "default": "user",
+        "env": "SENZING_RABBITMQ_USERNAME",
+        "cli": "rabbitmq-username",
+    },
     "read_queue_maxsize": {
         "default": 50,
         "env": "SENZING_READ_QUEUE_MAXSIZE",
@@ -154,6 +185,10 @@ def get_parser():
         'json-to-kafka': {
             "help": 'Read JSON file and send to Kafka.',
             "argument_aspects": ["input-url", "json", "kafka"]
+        },
+        'json-to-rabbitmq': {
+            "help": 'Read JSON file and send to RabbitMQ.',
+            "argument_aspects": ["input-url", "json", "rabbitmq"]
         },
         'json-to-stdout': {
             "help": 'Read JSON file and print to STDOUT.',
@@ -223,6 +258,38 @@ def get_parser():
                 "help": "Kafka topic. Default: senzing-kafka-topic"
             },
         },
+        "rabbitmq": {
+            "--rabbitmq-host": {
+                "dest": "rabbitmq_host",
+                "metavar": "SENZING_RABBITMQ_HOST",
+                "help": "RabbitMQ host. Default: localhost"
+            },
+            "--rabbitmq-port": {
+                "dest": "rabbitmq_port",
+                "metavar": "SENZING_RABBITMQ_PORT",
+                "help": "RabbitMQ port. Default: 5672"
+            },
+            "--rabbitmq-queue": {
+                "dest": "rabbitmq_queue",
+                "metavar": "SENZING_RABBITMQ_QUEUE",
+                "help": "RabbitMQ queue. Default: senzing-rabbitmq-queue"
+            },
+            "--rabbitmq-username": {
+                "dest": "rabbitmq_username",
+                "metavar": "SENZING_RABBITMQ_USERNAME",
+                "help": "RabbitMQ username. Default: user"
+            },
+            "--rabbitmq-password": {
+                "dest": "rabbitmq_password",
+                "metavar": "SENZING_RABBITMQ_PASSWORD",
+                "help": "RabbitMQ password. Default: bitnami"
+            },
+            "--rabbitmq-exchange": {
+                "dest": "rabbitmq_exchange",
+                "metavar": "SENZING_RABBITMQ_EXCHANGE",
+                "help": "RabbitMQ exchange name. Default: empty string"
+            },
+        },
     }
 
     # Augment "subcommands" variable with arguments specified by aspects.
@@ -281,6 +348,7 @@ message_dictionary = {
     "298": "Exit {0}",
     "299": "{0}",
     "300": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}W",
+    "410": "Unknown RabbitMQ error when connecting: {0}.",
     "499": "{0}",
     "500": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}E",
     "695": "Unknown database scheme '{0}' in database url '{1}'",
@@ -845,7 +913,6 @@ class PrintKafkaMixin():
     def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "PrintKafkaMixin"))
         self.kafka_topic = config.get('kafka_topic')
-        self.counter = 0
 
         kafka_configuration = {
             'bootstrap.servers':  config.get('kafka_bootstrap_server')
@@ -856,32 +923,90 @@ class PrintKafkaMixin():
         self.kafka_producer = confluent_kafka.Producer(kafka_configuration)
 
     def on_kafka_delivery(self, error, message):
-
-        logging.info(message_info(299, ">>>>> DELIVERED: {0} {1}".format(threading.current_thread().name, message)))
-
-
         logging.debug(message_debug(103, message.topic(), message.value(), message.error(), error))
         if error is not None:
-            logging.warning(message_warn(408, message.topic(), message.value(), message.error(), error))
+            logging.warning(message_warning(408, message.topic(), message.value(), message.error(), error))
 
     def print(self, message):
         assert isinstance(message, str)
-        self.counter += 1
 
         try:
-            self.kafka_producer.produce(self.kafka_topic, message, on_delivery=self.on_kafka_delivery)
+            self.kafka_producer.produce(
+                self.kafka_topic,
+                message,
+                on_delivery=self.on_kafka_delivery
+            )
         except BufferError as err:
-            logging.warning(message_warn(404, err, self.counter, message))
+            logging.warning(message_warning(404, err, message))
         except confluent_kafka.KafkaException as err:
-            logging.warning(message_warn(405, err, self.counter, message))
+            logging.warning(message_warning(405, err, message))
         except NotImplemented as err:
-            logging.warning(message_warn(406, err, self.counter, message))
+            logging.warning(message_warning(406, err, message))
         except:
-            logging.warning(message_warn(407, err, self.counter, message))
-        logging.info(message_info(299, ">>>>> {0} {1}".format(threading.current_thread().name, message)))
+            logging.warning(message_warning(407, err, message))
 
     def close(self):
         self.kafka_producer.flush()
+
+# -----------------------------------------------------------------------------
+# Class: PrintRabbitmqMixin
+# -----------------------------------------------------------------------------
+
+
+class PrintRabbitmqMixin():
+
+    def __init__(self, config=None, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "PrintRabbitmqMixin"))
+
+        rabbitmq_delivery_mode = 2
+        rabbitmq_host = config.get("rabbitmq_host")
+        rabbitmq_port = config.get("rabbitmq_port")
+        rabbitmq_username = config.get("rabbitmq_username")
+        rabbitmq_password = config.get("rabbitmq_password")
+        self.counter = 0
+        self.rabbitmq_exchange = config.get("rabbitmq_exchange")
+        self.rabbitmq_queue = config.get("rabbitmq_queue")
+
+        # Construct Pika objects.
+
+        self.rabbitmq_properties = pika.BasicProperties(
+            delivery_mode=rabbitmq_delivery_mode
+        )
+        credentials = pika.PlainCredentials(
+            username=rabbitmq_username,
+            password=rabbitmq_password
+        )
+        rabbitmq_connection_parameters = pika.ConnectionParameters(
+            host=rabbitmq_host,
+            port=rabbitmq_port,
+            credentials=credentials
+        )
+
+        # Open connection to RabbitMQ.
+
+        try:
+            self.connection = pika.BlockingConnection(rabbitmq_connection_parameters)
+            self.channel = self.connection.channel()
+            self.channel.queue_declare(queue=self.rabbitmq_queue)
+        except (pika.exceptions.AMQPConnectionError) as err:
+            exit_error(412, err, rabbitmq_host)
+        except BaseException as err:
+            exit_error(410, err)
+
+    def print(self, message):
+        assert isinstance(message, str)
+        try:
+            self.channel.basic_publish(
+                exchange=self.rabbitmq_exchange,
+                routing_key=self.rabbitmq_queue,
+                body=message,
+                properties=self.rabbitmq_properties
+            )
+        except BaseException as err:
+            logging.warn(message_warning(411, err, message))
+
+    def close(self):
+        self.connection.close()
 
 # -----------------------------------------------------------------------------
 # Class: PrintQueueMixin
@@ -997,6 +1122,14 @@ class FilterFileParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFilePa
 
 
 class FilterQueueDictToJsonKafkaThread(ReadEvaluatePrintLoopThread, ReadQueueTransientMixin, EvaluateDictToJsonMixin, PrintKafkaMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonStdoutThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+
+
+class FilterQueueDictToJsonRabbitmqThread(ReadEvaluatePrintLoopThread, ReadQueueTransientMixin, EvaluateDictToJsonMixin, PrintRabbitmqMixin):
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonStdoutThread"))
@@ -1205,7 +1338,7 @@ def do_docker_acceptance_test(args):
 
 
 def do_json_to_kafka(args):
-    ''' Read file of JSON, print to STDOUT. '''
+    ''' Read file of JSON, print to Kafka. '''
 
     # Get context variables.
 
@@ -1222,6 +1355,42 @@ def do_json_to_kafka(args):
     # Determine Write thread.
 
     write_thread = FilterQueueDictToJsonKafkaThread
+
+    # Cascading defaults.
+
+    options_to_defaults_map = {
+        "xxx": "yyy",
+    }
+
+    # Run pipeline.
+
+    pipeline_read_write(
+        args=args,
+        options_to_defaults_map=options_to_defaults_map,
+        read_thread=read_thread,
+        write_thread=write_thread,
+        monitor_thread=MonitorThread
+    )
+
+
+def do_json_to_rabbitmq(args):
+    ''' Read file of JSON, print to RabbitMQ. '''
+
+    # Get context variables.
+
+    config = get_configuration(args)
+    input_url = config.get("input_url")
+    parsed_file_name = urlparse(input_url)
+
+    # Determine Read thread.
+
+    read_thread = FilterFileJsonToDictQueueThread
+    if parsed_file_name.scheme in ['http', 'https']:
+        read_thread = None  # TODO:
+
+    # Determine Write thread.
+
+    write_thread = FilterQueueDictToJsonRabbitmqThread
 
     # Cascading defaults.
 
