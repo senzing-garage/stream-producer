@@ -24,6 +24,14 @@ import multiprocessing
 import sys
 import time
 
+# Python 2 / 3 migration.
+
+try:
+    from urllib.request import urlopen
+except ImportError:
+    from urllib2 import urlopen
+
+
 try:
     from urllib.parse import urlparse
 except ImportError:
@@ -42,6 +50,11 @@ log_format = '%(asctime)s %(message)s'
 KILOBYTES = 1024
 MEGABYTES = 1024 * KILOBYTES
 GIGABYTES = 1024 * MEGABYTES
+
+
+# Sentinal to indicate end of service
+
+QUEUE_SENTINEL = "?xyzzy!"
 
 # The "configuration_locator" describes where configuration variables are in:
 # 1) Command line options, 2) Environment variables, 3) Configuration files, 4) Default values
@@ -152,10 +165,10 @@ configuration_locator = {
         "default": None,
         "env": "SENZING_SUBCOMMAND",
     },
-    "threads_per_write_process": {
+    "threads_per_print": {
         "default": 4,
-        "env": "SENZING_THREADS_PER_WRITE_PROCESS",
-        "cli": "threads-per-write-process"
+        "env": "SENZING_THREADS_PER_PRINT",
+        "cli": "threads-per-print"
     }
 }
 
@@ -244,6 +257,11 @@ def get_parser():
                 "dest": "record_min",
                 "metavar": "SENZING_RECORD_MIN",
                 "help": "Lowest record id. Default: None"
+            },
+            "--threads-per-print": {
+                "dest": "threads_per_print",
+                "metavar": "SENZING_THREADS_PER_PRINT",
+                "help": "Threads for print phase. Default: 4"
             },
         },
         "kafka": {
@@ -348,7 +366,14 @@ message_dictionary = {
     "298": "Exit {0}",
     "299": "{0}",
     "300": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}W",
+    "404": "Buffer error: {0} for line #{1} '{2}'.",
+    "405": "Kafka error: {0} for line #{1} '{2}'.",
+    "406": "Not implemented error: {0} for line #{1} '{2}'.",
+    "407": "Unknown kafka error: {0} for line #{1} '{2}'.",
+    "408": "Kafka topic: {0}; message: {1}; error: {2}; error: {3}",
     "410": "Unknown RabbitMQ error when connecting: {0}.",
+    "411": "Unknown RabbitMQ error when adding record to queue: {0} for line {1}.",
+    "412": "Could not connect to RabbitMQ host at {1}. The host name maybe wrong, it may not be ready, or your credentials are incorrect. See the RabbitMQ log for more details.",
     "499": "{0}",
     "500": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}E",
     "695": "Unknown database scheme '{0}' in database url '{1}'",
@@ -483,7 +508,8 @@ def get_configuration(args):
     # Special case: Change integer strings to integers.
 
     integers = [
-        'sleep_time_in_seconds'
+        'sleep_time_in_seconds',
+        'threads_per_print',
     ]
     for integer in integers:
         integer_string = result.get(integer)
@@ -763,6 +789,9 @@ class ReadFileMixin():
     def read(self):
         with open(self.input_url, 'r') as input_file:
             for line in input_file:
+                line = line.strip()
+                if not line:
+                    continue
                 assert isinstance(line, str)
                 yield line
 
@@ -783,6 +812,7 @@ class ReadFileParquetMixin():
             assert type(row) == dict
             yield row
 
+
 # -----------------------------------------------------------------------------
 # Class: ReadQueueMixin
 # -----------------------------------------------------------------------------
@@ -797,14 +827,25 @@ class ReadQueueMixin():
     def read(self):
         while True:
             message = self.read_queue.get()
+
+            # Tricky code. If end-of-task,
+            # repeat message for next queue consumer thread.
+
+            if message == QUEUE_SENTINEL:
+                self.read_queue.put(QUEUE_SENTINEL)
+                break;
+
+            # Yield message.
+
             yield message
+
 
 # -----------------------------------------------------------------------------
 # Class: ReadQueueTransientMixin
 # -----------------------------------------------------------------------------
 
 
-class ReadQueueTransientMixin():
+class XReadQueueTransientMixin():
 
     def __init__(self, read_queue=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadQueueTransientMixin"))
@@ -821,6 +862,57 @@ class ReadQueueTransientMixin():
             except ValueError:
                 continue
             yield message
+
+
+# -----------------------------------------------------------------------------
+# Class: ReadUrlMixin
+# -----------------------------------------------------------------------------
+
+
+class ReadUrlMixin():
+
+    def __init__(self, input_url=None, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadUrlMixin"))
+        self.input_url = input_url
+        self.counter = 0
+
+    def read(self):
+
+        data = urlopen(self.input_url, timeout=5)
+        for line in data:
+            self.counter += 1
+
+            line = line.strip()
+            if not line:
+                continue
+            result = json.loads(line)
+            assert isinstance(result, dict)
+            yield result
+
+        logging.info(message_info(299, ">>>> Broken at read count: {0}".format(self.counter)))
+
+
+
+
+class X1ReadUrlMixin():
+
+    def __init__(self, input_url=None, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadUrlMixin"))
+        self.input_url = input_url
+
+    def read(self):
+
+        with urlopen(self.input_url) as input_file:
+            for line in input_file:
+                line = str(line)
+
+                logging.info(message_info(299, ">>>>>>> {0}".format(line)))
+
+                line = line.strip()
+                if not line:
+                    continue
+                assert isinstance(line, str)
+                yield line
 
 # =============================================================================
 # Mixins: Evaluate*
@@ -920,6 +1012,10 @@ class PrintKafkaMixin():
         if config.get('kafka_group_id'):
             kafka_configuration['group.id'] = config.get('kafka_group_id')
 
+
+        logging.info(message_info(299, "{0} {1}".format(threading.current_thread().name, json.dumps(kafka_configuration))))
+
+
         self.kafka_producer = confluent_kafka.Producer(kafka_configuration)
 
     def on_kafka_delivery(self, error, message):
@@ -929,6 +1025,8 @@ class PrintKafkaMixin():
 
     def print(self, message):
         assert isinstance(message, str)
+
+        self.kafka_producer.poll(0)
 
         try:
             self.kafka_producer.produce(
@@ -1024,7 +1122,7 @@ class PrintQueueMixin():
         self.print_queue.put(message)
 
     def close(self):
-        pass
+        self.print_queue.put(QUEUE_SENTINEL)
 
 # -----------------------------------------------------------------------------
 # Class: PrintStdoutMixin
@@ -1121,26 +1219,33 @@ class FilterFileParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFilePa
             base.__init__(self, *args, **kwargs)
 
 
-class FilterQueueDictToJsonKafkaThread(ReadEvaluatePrintLoopThread, ReadQueueTransientMixin, EvaluateDictToJsonMixin, PrintKafkaMixin):
+class FilterQueueDictToJsonKafkaThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintKafkaMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonKafkaThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+
+
+class FilterQueueDictToJsonRabbitmqThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintRabbitmqMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonRabbitmqThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+
+
+class FilterQueueDictToJsonStdoutThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintStdoutMixin):
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonStdoutThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
-
-class FilterQueueDictToJsonRabbitmqThread(ReadEvaluatePrintLoopThread, ReadQueueTransientMixin, EvaluateDictToJsonMixin, PrintRabbitmqMixin):
-
-    def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonStdoutThread"))
-        for base in type(self).__bases__:
-            base.__init__(self, *args, **kwargs)
-
-
-class FilterQueueDictToJsonStdoutThread(ReadEvaluatePrintLoopThread, ReadQueueTransientMixin, EvaluateDictToJsonMixin, PrintStdoutMixin):
+class FilterUrlJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonStdoutThread"))
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterUrlJsonToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -1178,7 +1283,7 @@ def pipeline_read_write(
 
     # Pull values from configuration.
 
-    threads_per_write_process = config.get('threads_per_write_process')
+    threads_per_print = config.get('threads_per_print')
     read_queue_maxsize = config.get('read_queue_maxsize')
     input_url = config.get('input_url')
 
@@ -1210,7 +1315,7 @@ def pipeline_read_write(
     # Add a number of threads for reading from source queue writing to "sink".
 
     if write_thread:
-        for i in range(0, threads_per_write_process):
+        for i in range(0, threads_per_print):
             thread = write_thread(
                 config=config,
                 counter_name="output_counter",
@@ -1350,7 +1455,7 @@ def do_json_to_kafka(args):
 
     read_thread = FilterFileJsonToDictQueueThread
     if parsed_file_name.scheme in ['http', 'https']:
-        read_thread = None  # TODO:
+        read_thread = FilterUrlJsonToDictQueueThread
 
     # Determine Write thread.
 
@@ -1386,7 +1491,7 @@ def do_json_to_rabbitmq(args):
 
     read_thread = FilterFileJsonToDictQueueThread
     if parsed_file_name.scheme in ['http', 'https']:
-        read_thread = None  # TODO:
+        read_thread = FilterUrlJsonToDictQueueThread
 
     # Determine Write thread.
 
@@ -1422,7 +1527,7 @@ def do_json_to_stdout(args):
 
     read_thread = FilterFileJsonToDictQueueThread
     if parsed_file_name.scheme in ['http', 'https']:
-        read_thread = None  # TODO:
+        read_thread = FilterUrlJsonToDictQueueThread
 
     # Determine Write thread.
 
@@ -1458,7 +1563,7 @@ def do_parquet_to_stdout(args):
 
     read_thread = FilterFileParquetToDictQueueThread
     if parsed_file_name.scheme in ['http', 'https']:
-        read_thread = None  # TODO:
+        read_thread = FilterUrlJsonToDictQueueThread
 
     # Determine Write thread.
 
