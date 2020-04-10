@@ -772,24 +772,30 @@ class ReadFileCsvMixin():
     def __init__(self, config={}, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileCsvMixin"))
         self.input_url = config.get('input_url')
+        self.record_min = config.get('record_min')
+        self.record_max = config.get('record_max')
+        self.counter = 0
 
     def read(self):
-        with open(self.input_url, 'r') as input_file:
-            csv_reader = csv.DictReader(input_file, skipinitialspace=True)
-            for dictionary in csv_reader:
-                result = dict(dictionary)
-                assert type(result) == dict
-                yield result
+        data_frame = pandas.read_csv(self.input_url, skipinitialspace=True)
+        for row in data_frame.to_dict(orient="records"):
+            self.counter += 1
+            if self.record_min and self.counter < self.record_min:
+                continue
+            if self.record_max and self.counter > self.record_max:
+                break
+            assert type(row) == dict
+            yield row
 
 # -----------------------------------------------------------------------------
-# Class: ReadFileLimitedMixin
+# Class: ReadFileMixin
 # -----------------------------------------------------------------------------
 
 
-class ReadFileLimitedMixin():
+class ReadFileMixin():
 
     def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileLimitedMixin"))
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
@@ -803,26 +809,6 @@ class ReadFileLimitedMixin():
                     continue
                 if self.record_max and self.counter > self.record_max:
                     break
-                line = line.strip()
-                if not line:
-                    continue
-                assert isinstance(line, str)
-                yield line
-
-# -----------------------------------------------------------------------------
-# Class: ReadFileMixin
-# -----------------------------------------------------------------------------
-
-
-class ReadFileMixin():
-
-    def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileMixin"))
-        self.input_url = config.get('input_url')
-
-    def read(self):
-        with open(self.input_url, 'r') as input_file:
-            for line in input_file:
                 line = line.strip()
                 if not line:
                     continue
@@ -877,7 +863,7 @@ class ReadQueueMixin():
 # -----------------------------------------------------------------------------
 
 
-class ReadUrlLimitedMixin():
+class ReadUrlMixin():
 
     def __init__(self, config={}, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadUrlMixin"))
@@ -895,103 +881,6 @@ class ReadUrlLimitedMixin():
                 continue
             if self.record_max and self.counter > self.record_max:
                 break
-            line = line.strip()
-            if not line:
-                continue
-            result = json.loads(line)
-            assert isinstance(result, dict)
-            yield result
-
-# -----------------------------------------------------------------------------
-# Class: ReadFileCsvMixin
-# -----------------------------------------------------------------------------
-
-
-class ReadUrlCsvMixin():
-
-    def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileCsvMixin"))
-        self.input_url = config.get('input_url')
-
-    def read(self):
-        data_frame = pandas.read_csv(self.input_url, skipinitialspace=True)
-        for row in data_frame.to_dict(orient="records"):
-            assert type(row) == dict
-            yield row
-
-
-#         site = requests.get(self.input_url)
-#         with open(site.text) as csvfile:
-#             reader = csv.DictReader(csvfile)
-#             for row in reader:
-#                 result = dict(row)
-#                 assert type(result) == dict
-#                 yield row
-
-
-
-#         data = input_file.read()
-#         read = csv.DictReader(data)
-#
-#         logging.info(message_info(129, ">>>>> type: {0} {1}".format(type(read), read)))
-
-#         csv_reader = csv.DictReader(data, skipinitialspace=True)
-#         for dictionary in csv_reader:
-
-#         for dictionary in read:
-#             logging.info(message_info(129, ">>>>> type: {0} {1}".format(type(dictionary), dictionary)))
-#
-#             result = dict(dictionary)
-#             assert type(result) == dict
-#             yield result
-
-
-class X1ReadUrlCsvMixin():
-
-    def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileCsvMixin"))
-        self.input_url = config.get('input_url')
-
-    def read(self):
-        input_file = urllib.request.urlopen(self.input_url)
-        with open(input_file.read().decode()) as csv_file:
-            dictionaries = csv.DictReader(csv_file)
-            for dictionary in dictionaries:
-                result = dict(dictionary)
-                assert type(result) == dict
-                yield result
-
-
-
-#         data = input_file.read()
-#         read = csv.DictReader(data)
-#
-#         logging.info(message_info(129, ">>>>> type: {0} {1}".format(type(read), read)))
-
-#         csv_reader = csv.DictReader(data, skipinitialspace=True)
-#         for dictionary in csv_reader:
-
-#         for dictionary in read:
-#             logging.info(message_info(129, ">>>>> type: {0} {1}".format(type(dictionary), dictionary)))
-#
-#             result = dict(dictionary)
-#             assert type(result) == dict
-#             yield result
-
-# -----------------------------------------------------------------------------
-# Class: ReadUrlMixin
-# -----------------------------------------------------------------------------
-
-
-class ReadUrlMixin():
-
-    def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadUrlMixin"))
-        self.input_url = config.get('input_url')
-
-    def read(self):
-        input_file = urlopen(self.input_url, timeout=5)
-        for line in input_file:
             line = line.strip()
             if not line:
                 continue
@@ -1291,14 +1180,6 @@ class FilterFileJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileMixin
             base.__init__(self, *args, **kwargs)
 
 
-class FilterFileJsonLimitedToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileLimitedMixin, EvaluateJsonToDictMixin, PrintQueueMixin):
-
-    def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterFileJsonLimitedToDictQueueThread"))
-        for base in type(self).__bases__:
-            base.__init__(self, *args, **kwargs)
-
-
 class FilterFileParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileParquetMixin, EvaluateMakeSerializeableDictMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
@@ -1327,22 +1208,6 @@ class FilterQueueDictToJsonStdoutThread(ReadEvaluatePrintLoopThread, ReadQueueMi
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonStdoutThread"))
-        for base in type(self).__bases__:
-            base.__init__(self, *args, **kwargs)
-
-
-class FilterUrlCsvToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlCsvMixin, EvaluateNullObjectMixin, PrintQueueMixin):
-
-    def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterUrlCsvToDictQueueThread"))
-        for base in type(self).__bases__:
-            base.__init__(self, *args, **kwargs)
-
-
-class FilterUrlJsonLimitedToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlLimitedMixin, EvaluateNullObjectMixin, PrintQueueMixin):
-
-    def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterUrlJsonLimitedToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -1505,8 +1370,6 @@ def do_csv_to_stdout(args):
     # Determine Read thread.
 
     read_thread = FilterFileCsvToDictQueueThread
-    if parsed_file_name.scheme in ['http', 'https']:
-        read_thread = FilterUrlCsvToDictQueueThread
 
     # Determine Write thread.
 
@@ -1550,22 +1413,13 @@ def do_json_to_kafka(args):
 
     config = get_configuration(args)
     input_url = config.get("input_url")
-    record_min = config.get("record_min")
-    record_max = config.get("record_max")
-
     parsed_file_name = urllib.parse.urlparse(input_url)
 
     # Determine Read thread.
 
     read_thread = FilterFileJsonToDictQueueThread  # Default.
     if parsed_file_name.scheme in ['http', 'https']:
-        if record_min or record_max:
-            read_thread = FilterUrlJsonLimitedToDictQueueThread
-        else:
-            read_thread = FilterUrlJsonToDictQueueThread
-    else:
-        if record_min or record_max:
-            read_thread = FilterFileJsonLimitedToDictQueueThread
+        read_thread = FilterUrlJsonToDictQueueThread
 
     # Determine Write thread.
 
@@ -1593,22 +1447,13 @@ def do_json_to_rabbitmq(args):
 
     config = get_configuration(args)
     input_url = config.get("input_url")
-    record_min = config.get("record_min")
-    record_max = config.get("record_max")
-
     parsed_file_name = urllib.parse.urlparse(input_url)
 
     # Determine Read thread.
 
     read_thread = FilterFileJsonToDictQueueThread  # Default.
     if parsed_file_name.scheme in ['http', 'https']:
-        if record_min or record_max:
-            read_thread = FilterUrlJsonLimitedToDictQueueThread
-        else:
-            read_thread = FilterUrlJsonToDictQueueThread
-    else:
-        if record_min or record_max:
-            read_thread = FilterFileJsonLimitedToDictQueueThread
+        read_thread = FilterUrlJsonToDictQueueThread
 
     # Determine Write thread.
 
@@ -1636,22 +1481,13 @@ def do_json_to_stdout(args):
 
     config = get_configuration(args)
     input_url = config.get("input_url")
-    record_min = config.get("record_min")
-    record_max = config.get("record_max")
-
     parsed_file_name = urllib.parse.urlparse(input_url)
 
     # Determine Read thread.
 
     read_thread = FilterFileJsonToDictQueueThread  # Default.
     if parsed_file_name.scheme in ['http', 'https']:
-        if record_min or record_max:
-            read_thread = FilterUrlJsonLimitedToDictQueueThread
-        else:
-            read_thread = FilterUrlJsonToDictQueueThread
-    else:
-        if record_min or record_max:
-            read_thread = FilterFileJsonLimitedToDictQueueThread
+        read_thread = FilterUrlJsonToDictQueueThread
 
     # Determine Write thread.
 
