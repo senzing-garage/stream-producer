@@ -63,11 +63,6 @@ QUEUE_SENTINEL = ".{0}.".format(''.join([random.choice(string.ascii_letters + st
 # 1) Command line options, 2) Environment variables, 3) Configuration files, 4) Default values
 
 configuration_locator = {
-    "avro_schema_url": {
-        "default": None,
-        "env": "SENZING_AVRO_SCHEMA_URL",
-        "cli": "avro-schema-url"
-    },
     "debug": {
         "default": False,
         "env": "SENZING_DEBUG",
@@ -755,11 +750,19 @@ class ReadFileAvroMixin():
     def __init__(self, config={}, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileAvroMixin"))
         self.input_url = config.get('input_url')
+        self.record_min = config.get('record_min')
+        self.record_max = config.get('record_max')
+        self.counter = 0
 
     def read(self):
         with open(self.input_url, 'rb') as input_file:
             avro_reader = fastavro.reader(input_file)
             for record in avro_reader:
+                self.counter += 1
+                if self.record_min and self.counter < self.record_min:
+                    continue
+                if self.record_max and self.counter > self.record_max:
+                    break
                 yield record
 
 # -----------------------------------------------------------------------------
@@ -825,10 +828,18 @@ class ReadFileParquetMixin():
     def __init__(self, config={}, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileParquetMixin"))
         self.input_url = config.get('input_url')
+        self.record_min = config.get('record_min')
+        self.record_max = config.get('record_max')
+        self.counter = 0
 
     def read(self):
         data_frame = pandas.read_parquet(self.input_url)
         for row in data_frame.to_dict(orient="records"):
+            self.counter += 1
+            if self.record_min and self.counter < self.record_min:
+                continue
+            if self.record_max and self.counter > self.record_max:
+                break
             assert type(row) == dict
             yield row
 
@@ -859,6 +870,31 @@ class ReadQueueMixin():
             yield message
 
 # -----------------------------------------------------------------------------
+# Class: ReadUrlAvroMixin
+# -----------------------------------------------------------------------------
+
+
+class ReadUrlAvroMixin():
+
+    def __init__(self, config={}, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileAvroMixin"))
+        self.input_url = config.get('input_url')
+        self.record_min = config.get('record_min')
+        self.record_max = config.get('record_max')
+        self.counter = 0
+
+    def read(self):
+        with urllib.request.urlopen(self.input_url) as input_file:
+            avro_reader = fastavro.reader(input_file)
+            for record in avro_reader:
+                self.counter += 1
+                if self.record_min and self.counter < self.record_min:
+                    continue
+                if self.record_max and self.counter > self.record_max:
+                    break
+                yield record
+
+# -----------------------------------------------------------------------------
 # Class: ReadUrlMixin
 # -----------------------------------------------------------------------------
 
@@ -874,7 +910,7 @@ class ReadUrlMixin():
 
     def read(self):
 
-        data = urlopen(self.input_url, timeout=5)
+        data = urllib.request.urlopen(self.input_url, timeout=5)
         for line in data:
             self.counter += 1
             if self.record_min and self.counter < self.record_min:
@@ -1212,6 +1248,14 @@ class FilterQueueDictToJsonStdoutThread(ReadEvaluatePrintLoopThread, ReadQueueMi
             base.__init__(self, *args, **kwargs)
 
 
+class FilterUrlAvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlAvroMixin, EvaluateNullObjectMixin, PrintQueueMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterUrlAvroToDictQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+
+
 class FilterUrlJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
@@ -1318,30 +1362,25 @@ def pipeline_read_write(
     logging.info(exit_template(config))
 
 # -----------------------------------------------------------------------------
-# do_* functions
+# dohelper_* functions
 #   Common function signature: do_XXX(args)
 # -----------------------------------------------------------------------------
 
 
-def do_avro_to_stdout(args):
-    ''' Read file of JSON, print to STDOUT. '''
+def dohelper_avro(args, write_thread):
+    ''' Read file of AVRO, print to write_thread. '''
 
     # Get context variables.
 
     config = get_configuration(args)
     input_url = config.get("input_url")
-    avro_schema_url = config.get("avro_schema_url")
     parsed_file_name = urllib.parse.urlparse(input_url)
 
     # Determine Read thread.
 
     read_thread = FilterFileAvroToDictQueueThread
     if parsed_file_name.scheme in ['http', 'https']:
-        read_thread = None  # TODO:
-
-    # Determine Write thread.
-
-    write_thread = FilterQueueDictToJsonStdoutThread
+        read_thread = FilterUrlAvroToDictQueueThread
 
     # Cascading defaults.
 
@@ -1358,8 +1397,8 @@ def do_avro_to_stdout(args):
     )
 
 
-def do_csv_to_stdout(args):
-    ''' Read file of JSON, print to STDOUT. '''
+def dohelper_csv(args, write_thread):
+    ''' Read file of CSV, print to write_thread. '''
 
     # Get context variables.
 
@@ -1371,9 +1410,35 @@ def do_csv_to_stdout(args):
 
     read_thread = FilterFileCsvToDictQueueThread
 
-    # Determine Write thread.
+    # Cascading defaults.
 
-    write_thread = FilterQueueDictToJsonStdoutThread
+    options_to_defaults_map = {}
+
+    # Run pipeline.
+
+    pipeline_read_write(
+        args=args,
+        options_to_defaults_map=options_to_defaults_map,
+        read_thread=read_thread,
+        write_thread=write_thread,
+        monitor_thread=MonitorThread
+    )
+
+
+def dohelper_json(args, write_thread):
+    ''' Read file of JSON, print to write_thread. '''
+
+    # Get context variables.
+
+    config = get_configuration(args)
+    input_url = config.get("input_url")
+    parsed_file_name = urllib.parse.urlparse(input_url)
+
+    # Determine Read thread.
+
+    read_thread = FilterFileJsonToDictQueueThread  # Default.
+    if parsed_file_name.scheme in ['http', 'https']:
+        read_thread = FilterUrlJsonToDictQueueThread
 
     # Cascading defaults.
 
@@ -1388,6 +1453,75 @@ def do_csv_to_stdout(args):
         write_thread=write_thread,
         monitor_thread=MonitorThread
     )
+
+
+def dohelper_parquet(args, write_thread):
+    ''' Read file of Parquet, print to write_thread. '''
+
+    # Get context variables.
+
+    config = get_configuration(args)
+    input_url = config.get("input_url")
+    parsed_file_name = urllib.parse.urlparse(input_url)
+
+    # Determine Read thread.
+
+    read_thread = FilterFileParquetToDictQueueThread
+
+    # Cascading defaults.
+
+    options_to_defaults_map = {}
+
+    # Run pipeline.
+
+    pipeline_read_write(
+        args=args,
+        options_to_defaults_map=options_to_defaults_map,
+        read_thread=read_thread,
+        write_thread=write_thread,
+        monitor_thread=MonitorThread
+    )
+
+# -----------------------------------------------------------------------------
+# do_* functions
+#   Common function signature: do_XXX(args)
+# -----------------------------------------------------------------------------
+
+
+def do_avro_to_kafka(args):
+    ''' Read file of JSON, print to Kafka. '''
+    write_thread = FilterQueueDictToJsonKafkaThread
+    dohelper_avro(args, write_thread)
+
+
+def do_avro_to_rabbitmq(args):
+    ''' Read file of JSON, print to RabbitMQ. '''
+    write_thread = FilterQueueDictToJsonRabbitmqThread
+    dohelper_avro(args, write_thread)
+
+
+def do_avro_to_stdout(args):
+    ''' Read file of AVRO, print to STDOUT. '''
+    write_thread = FilterQueueDictToJsonStdoutThread
+    dohelper_avro(args, write_thread)
+
+
+def do_csv_to_kafka(args):
+    ''' Read file of CSV, print to Kafka. '''
+    write_thread = FilterQueueDictToJsonKafkaThread
+    dohelper_csv(args, write_thread)
+
+
+def do_csv_to_rabbitmq(args):
+    ''' Read file of CSV, print to RabbitMQ. '''
+    write_thread = FilterQueueDictToJsonRabbitmqThread
+    dohelper_csv(args, write_thread)
+
+
+def do_csv_to_stdout(args):
+    ''' Read file of CSV, print to STDOUT. '''
+    write_thread = FilterQueueDictToJsonStdoutThread
+    dohelper_csv(args, write_thread)
 
 
 def do_docker_acceptance_test(args):
@@ -1408,138 +1542,38 @@ def do_docker_acceptance_test(args):
 
 def do_json_to_kafka(args):
     ''' Read file of JSON, print to Kafka. '''
-
-    # Get context variables.
-
-    config = get_configuration(args)
-    input_url = config.get("input_url")
-    parsed_file_name = urllib.parse.urlparse(input_url)
-
-    # Determine Read thread.
-
-    read_thread = FilterFileJsonToDictQueueThread  # Default.
-    if parsed_file_name.scheme in ['http', 'https']:
-        read_thread = FilterUrlJsonToDictQueueThread
-
-    # Determine Write thread.
-
     write_thread = FilterQueueDictToJsonKafkaThread
-
-    # Cascading defaults.
-
-    options_to_defaults_map = {}
-
-    # Run pipeline.
-
-    pipeline_read_write(
-        args=args,
-        options_to_defaults_map=options_to_defaults_map,
-        read_thread=read_thread,
-        write_thread=write_thread,
-        monitor_thread=MonitorThread
-    )
+    dohelper_json(args, write_thread)
 
 
 def do_json_to_rabbitmq(args):
     ''' Read file of JSON, print to RabbitMQ. '''
-
-    # Get context variables.
-
-    config = get_configuration(args)
-    input_url = config.get("input_url")
-    parsed_file_name = urllib.parse.urlparse(input_url)
-
-    # Determine Read thread.
-
-    read_thread = FilterFileJsonToDictQueueThread  # Default.
-    if parsed_file_name.scheme in ['http', 'https']:
-        read_thread = FilterUrlJsonToDictQueueThread
-
-    # Determine Write thread.
-
     write_thread = FilterQueueDictToJsonRabbitmqThread
-
-    # Cascading defaults.
-
-    options_to_defaults_map = {}
-
-    # Run pipeline.
-
-    pipeline_read_write(
-        args=args,
-        options_to_defaults_map=options_to_defaults_map,
-        read_thread=read_thread,
-        write_thread=write_thread,
-        monitor_thread=MonitorThread
-    )
+    dohelper_json(args, write_thread)
 
 
 def do_json_to_stdout(args):
     ''' Read file of JSON, print to STDOUT. '''
-
-    # Get context variables.
-
-    config = get_configuration(args)
-    input_url = config.get("input_url")
-    parsed_file_name = urllib.parse.urlparse(input_url)
-
-    # Determine Read thread.
-
-    read_thread = FilterFileJsonToDictQueueThread  # Default.
-    if parsed_file_name.scheme in ['http', 'https']:
-        read_thread = FilterUrlJsonToDictQueueThread
-
-    # Determine Write thread.
-
     write_thread = FilterQueueDictToJsonStdoutThread
+    dohelper_json(args, write_thread)
 
-    # Cascading defaults.
 
-    options_to_defaults_map = {}
+def do_parquet_to_kafka(args):
+    ''' Read file of Parquet, print to Kafka. '''
+    write_thread = FilterQueueDictToJsonKafkaThread
+    dohelper_parquet(args, write_thread)
 
-    # Run pipeline.
 
-    pipeline_read_write(
-        args=args,
-        options_to_defaults_map=options_to_defaults_map,
-        read_thread=read_thread,
-        write_thread=write_thread,
-        monitor_thread=MonitorThread
-    )
+def do_parquet_to_rabbitmq(args):
+    ''' Read file of Parquet, print to RabbitMQ. '''
+    write_thread = FilterQueueDictToJsonRabbitmqThread
+    dohelper_parquet(args, write_thread)
 
 
 def do_parquet_to_stdout(args):
-    ''' Read file of JSON, print to STDOUT. '''
-
-    # Get context variables.
-
-    config = get_configuration(args)
-    input_url = config.get("input_url")
-    parsed_file_name = urllib.parse.urlparse(input_url)
-
-    # Determine Read thread.
-
-    read_thread = FilterFileParquetToDictQueueThread
-    if parsed_file_name.scheme in ['http', 'https']:
-        read_thread = None  # TODO:
-
-    # Determine Write thread.
-
+    ''' Read file of Parquet, print to STDOUT. '''
     write_thread = FilterQueueDictToJsonStdoutThread
-
-    # Cascading defaults.
-
-    options_to_defaults_map = {}
-
-    # Run pipeline.
-
-    pipeline_read_write(
-        args=args,
-        options_to_defaults_map=options_to_defaults_map,
-        read_thread=read_thread,
-        write_thread=write_thread,
-        monitor_thread=MonitorThread
-    )
+    dohelper_parquet(args, write_thread)
 
 
 def do_sleep(args):
