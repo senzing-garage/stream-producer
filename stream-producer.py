@@ -18,7 +18,9 @@ import os
 import pandas
 import pika
 import queue
+import random
 import signal
+import string
 import threading
 import multiprocessing
 import sys
@@ -30,7 +32,6 @@ try:
     from urllib.request import urlopen
 except ImportError:
     from urllib2 import urlopen
-
 
 try:
     from urllib.parse import urlparse
@@ -51,10 +52,9 @@ KILOBYTES = 1024
 MEGABYTES = 1024 * KILOBYTES
 GIGABYTES = 1024 * MEGABYTES
 
+# Random sentinel to indicate end of service
 
-# Sentinal to indicate end of service
-
-QUEUE_SENTINEL = "?xyzzy!"
+QUEUE_SENTINEL = ".{0}.".format(''.join([random.choice(string.ascii_letters + string.digits) for n in range(32)]))
 
 # The "configuration_locator" describes where configuration variables are in:
 # 1) Command line options, 2) Environment variables, 3) Configuration files, 4) Default values
@@ -508,12 +508,15 @@ def get_configuration(args):
     # Special case: Change integer strings to integers.
 
     integers = [
+        'record_max',
+        'record_min',
         'sleep_time_in_seconds',
         'threads_per_print',
     ]
     for integer in integers:
         integer_string = result.get(integer)
-        result[integer] = int(integer_string)
+        if integer_string:
+            result[integer] = int(integer_string)
 
     # Initialize counters.
 
@@ -746,9 +749,9 @@ class MonitorThread(threading.Thread):
 
 class ReadFileAvroMixin():
 
-    def __init__(self, input_url=None, *args, **kwargs):
+    def __init__(self, config={}, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileAvroMixin"))
-        self.input_url = input_url
+        self.input_url = config.get('input_url')
 
     def read(self):
         with open(self.input_url, 'rb') as input_file:
@@ -763,9 +766,9 @@ class ReadFileAvroMixin():
 
 class ReadFileCsvMixin():
 
-    def __init__(self, input_url=None, *args, **kwargs):
+    def __init__(self, config={}, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileCsvMixin"))
-        self.input_url = input_url
+        self.input_url = config.get('input_url')
 
     def read(self):
         with open(self.input_url, 'r') as input_file:
@@ -776,15 +779,43 @@ class ReadFileCsvMixin():
                 yield result
 
 # -----------------------------------------------------------------------------
+# Class: ReadFileLimitedMixin
+# -----------------------------------------------------------------------------
+
+
+class ReadFileLimitedMixin():
+
+    def __init__(self, config={}, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileLimitedMixin"))
+        self.input_url = config.get('input_url')
+        self.record_min = config.get('record_min')
+        self.record_max = config.get('record_max')
+        self.counter = 0
+
+    def read(self):
+        with open(self.input_url, 'r') as input_file:
+            for line in input_file:
+                self.counter += 1
+                if self.record_min and self.counter < self.record_min:
+                    continue
+                if self.record_max and self.counter > self.record_max:
+                    break
+                line = line.strip()
+                if not line:
+                    continue
+                assert isinstance(line, str)
+                yield line
+
+# -----------------------------------------------------------------------------
 # Class: ReadFileMixin
 # -----------------------------------------------------------------------------
 
 
 class ReadFileMixin():
 
-    def __init__(self, input_url=None, *args, **kwargs):
+    def __init__(self, config={}, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileMixin"))
-        self.input_url = input_url
+        self.input_url = config.get('input_url')
 
     def read(self):
         with open(self.input_url, 'r') as input_file:
@@ -802,16 +833,15 @@ class ReadFileMixin():
 
 class ReadFileParquetMixin():
 
-    def __init__(self, input_url=None, *args, **kwargs):
+    def __init__(self, config={}, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileParquetMixin"))
-        self.input_url = input_url
+        self.input_url = config.get('input_url')
 
     def read(self):
         data_frame = pandas.read_parquet(self.input_url)
         for row in data_frame.to_dict(orient="records"):
             assert type(row) == dict
             yield row
-
 
 # -----------------------------------------------------------------------------
 # Class: ReadQueueMixin
@@ -839,30 +869,35 @@ class ReadQueueMixin():
 
             yield message
 
-
 # -----------------------------------------------------------------------------
-# Class: ReadQueueTransientMixin
+# Class: ReadUrlMixin
 # -----------------------------------------------------------------------------
 
 
-class XReadQueueTransientMixin():
+class ReadUrlLimitedMixin():
 
-    def __init__(self, read_queue=None, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadQueueTransientMixin"))
-        self.read_queue = read_queue
+    def __init__(self, config={}, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadUrlMixin"))
+        self.input_url = config.get('input_url')
+        self.record_min = config.get('record_min')
+        self.record_max = config.get('record_max')
+        self.counter = 0
 
     def read(self):
-        block = True
-        timeout = 10
-        while not self.read_queue.empty():
-            try:
-                message = self.read_queue.get(block, timeout)
-            except queue.Empty:
-                continue
-            except ValueError:
-                continue
-            yield message
 
+        data = urlopen(self.input_url, timeout=5)
+        for line in data:
+            self.counter += 1
+            if self.record_min and self.counter < self.record_min:
+                continue
+            if self.record_max and self.counter > self.record_max:
+                break
+            line = line.strip()
+            if not line:
+                continue
+            result = json.loads(line)
+            assert isinstance(result, dict)
+            yield result
 
 # -----------------------------------------------------------------------------
 # Class: ReadUrlMixin
@@ -871,48 +906,20 @@ class XReadQueueTransientMixin():
 
 class ReadUrlMixin():
 
-    def __init__(self, input_url=None, *args, **kwargs):
+    def __init__(self, config={}, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadUrlMixin"))
-        self.input_url = input_url
-        self.counter = 0
+        self.input_url = config.get('input_url')
 
     def read(self):
 
         data = urlopen(self.input_url, timeout=5)
         for line in data:
-            self.counter += 1
-
             line = line.strip()
             if not line:
                 continue
             result = json.loads(line)
             assert isinstance(result, dict)
             yield result
-
-        logging.info(message_info(299, ">>>> Broken at read count: {0}".format(self.counter)))
-
-
-
-
-class X1ReadUrlMixin():
-
-    def __init__(self, input_url=None, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadUrlMixin"))
-        self.input_url = input_url
-
-    def read(self):
-
-        with urlopen(self.input_url) as input_file:
-            for line in input_file:
-                line = str(line)
-
-                logging.info(message_info(299, ">>>>>>> {0}".format(line)))
-
-                line = line.strip()
-                if not line:
-                    continue
-                assert isinstance(line, str)
-                yield line
 
 # =============================================================================
 # Mixins: Evaluate*
@@ -932,7 +939,7 @@ class X1ReadUrlMixin():
 
 class EvaluateDictToJsonMixin():
 
-    def __init__(self, input_url=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "EvaluateDictToJsonMixin"))
 
     def evaluate(self, message):
@@ -945,7 +952,7 @@ class EvaluateDictToJsonMixin():
 
 class EvaluateJsonToDictMixin():
 
-    def __init__(self, input_url=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "EvaluateJsonToDictMixin"))
 
     def evaluate(self, message):
@@ -958,7 +965,7 @@ class EvaluateJsonToDictMixin():
 
 class EvaluateNullObjectMixin():
 
-    def __init__(self, input_url=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "EvaluateDictToJsonMixin"))
 
     def evaluate(self, message):
@@ -971,7 +978,7 @@ class EvaluateNullObjectMixin():
 
 class EvaluateMakeSerializeableDictMixin():
 
-    def __init__(self, input_url=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "EvaluateMakeSerializeableDictMixin"))
 
     def evaluate(self, message):
@@ -1002,7 +1009,7 @@ class EvaluateMakeSerializeableDictMixin():
 
 class PrintKafkaMixin():
 
-    def __init__(self, config=None, *args, **kwargs):
+    def __init__(self, config={}, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "PrintKafkaMixin"))
         self.kafka_topic = config.get('kafka_topic')
 
@@ -1011,10 +1018,6 @@ class PrintKafkaMixin():
         }
         if config.get('kafka_group_id'):
             kafka_configuration['group.id'] = config.get('kafka_group_id')
-
-
-        logging.info(message_info(299, "{0} {1}".format(threading.current_thread().name, json.dumps(kafka_configuration))))
-
 
         self.kafka_producer = confluent_kafka.Producer(kafka_configuration)
 
@@ -1053,7 +1056,7 @@ class PrintKafkaMixin():
 
 class PrintRabbitmqMixin():
 
-    def __init__(self, config=None, *args, **kwargs):
+    def __init__(self, config={}, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "PrintRabbitmqMixin"))
 
         rabbitmq_delivery_mode = 2
@@ -1061,7 +1064,6 @@ class PrintRabbitmqMixin():
         rabbitmq_port = config.get("rabbitmq_port")
         rabbitmq_username = config.get("rabbitmq_username")
         rabbitmq_password = config.get("rabbitmq_password")
-        self.counter = 0
         self.rabbitmq_exchange = config.get("rabbitmq_exchange")
         self.rabbitmq_queue = config.get("rabbitmq_queue")
 
@@ -1211,6 +1213,14 @@ class FilterFileJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileMixin
             base.__init__(self, *args, **kwargs)
 
 
+class FilterFileJsonLimitedToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileLimitedMixin, EvaluateJsonToDictMixin, PrintQueueMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterFileJsonLimitedToDictQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+
+
 class FilterFileParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileParquetMixin, EvaluateMakeSerializeableDictMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
@@ -1241,6 +1251,15 @@ class FilterQueueDictToJsonStdoutThread(ReadEvaluatePrintLoopThread, ReadQueueMi
         logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonStdoutThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
+
+
+class FilterUrlJsonLimitedToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlLimitedMixin, EvaluateNullObjectMixin, PrintQueueMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterUrlJsonLimitedToDictQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+
 
 class FilterUrlJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
@@ -1285,7 +1304,6 @@ def pipeline_read_write(
 
     threads_per_print = config.get('threads_per_print')
     read_queue_maxsize = config.get('read_queue_maxsize')
-    input_url = config.get('input_url')
 
     # Create internal Queue.
 
@@ -1301,7 +1319,6 @@ def pipeline_read_write(
         thread = read_thread(
             config=config,
             counter_name="input_counter",
-            input_url=input_url,
             print_queue=read_queue
         )
         thread.name = "Process-0-{0}-0".format(thread.__class__.__name__)
@@ -1411,9 +1428,7 @@ def do_csv_to_stdout(args):
 
     # Cascading defaults.
 
-    options_to_defaults_map = {
-        "xxx": "yyy",
-    }
+    options_to_defaults_map = {}
 
     # Run pipeline.
 
@@ -1449,13 +1464,22 @@ def do_json_to_kafka(args):
 
     config = get_configuration(args)
     input_url = config.get("input_url")
+    record_min = config.get("record_min")
+    record_max = config.get("record_max")
+
     parsed_file_name = urlparse(input_url)
 
     # Determine Read thread.
 
-    read_thread = FilterFileJsonToDictQueueThread
+    read_thread = FilterFileJsonToDictQueueThread  # Default.
     if parsed_file_name.scheme in ['http', 'https']:
-        read_thread = FilterUrlJsonToDictQueueThread
+        if record_min or record_max:
+            read_thread = FilterUrlJsonLimitedToDictQueueThread
+        else:
+            read_thread = FilterUrlJsonToDictQueueThread
+    else:
+        if record_min or record_max:
+            read_thread = FilterFileJsonLimitedToDictQueueThread
 
     # Determine Write thread.
 
@@ -1463,9 +1487,7 @@ def do_json_to_kafka(args):
 
     # Cascading defaults.
 
-    options_to_defaults_map = {
-        "xxx": "yyy",
-    }
+    options_to_defaults_map = {}
 
     # Run pipeline.
 
@@ -1485,13 +1507,22 @@ def do_json_to_rabbitmq(args):
 
     config = get_configuration(args)
     input_url = config.get("input_url")
+    record_min = config.get("record_min")
+    record_max = config.get("record_max")
+
     parsed_file_name = urlparse(input_url)
 
     # Determine Read thread.
 
-    read_thread = FilterFileJsonToDictQueueThread
+    read_thread = FilterFileJsonToDictQueueThread  # Default.
     if parsed_file_name.scheme in ['http', 'https']:
-        read_thread = FilterUrlJsonToDictQueueThread
+        if record_min or record_max:
+            read_thread = FilterUrlJsonLimitedToDictQueueThread
+        else:
+            read_thread = FilterUrlJsonToDictQueueThread
+    else:
+        if record_min or record_max:
+            read_thread = FilterFileJsonLimitedToDictQueueThread
 
     # Determine Write thread.
 
@@ -1499,9 +1530,7 @@ def do_json_to_rabbitmq(args):
 
     # Cascading defaults.
 
-    options_to_defaults_map = {
-        "xxx": "yyy",
-    }
+    options_to_defaults_map = {}
 
     # Run pipeline.
 
@@ -1521,13 +1550,22 @@ def do_json_to_stdout(args):
 
     config = get_configuration(args)
     input_url = config.get("input_url")
+    record_min = config.get("record_min")
+    record_max = config.get("record_max")
+
     parsed_file_name = urlparse(input_url)
 
     # Determine Read thread.
 
-    read_thread = FilterFileJsonToDictQueueThread
+    read_thread = FilterFileJsonToDictQueueThread  # Default.
     if parsed_file_name.scheme in ['http', 'https']:
-        read_thread = FilterUrlJsonToDictQueueThread
+        if record_min or record_max:
+            read_thread = FilterUrlJsonLimitedToDictQueueThread
+        else:
+            read_thread = FilterUrlJsonToDictQueueThread
+    else:
+        if record_min or record_max:
+            read_thread = FilterFileJsonLimitedToDictQueueThread
 
     # Determine Write thread.
 
@@ -1535,9 +1573,7 @@ def do_json_to_stdout(args):
 
     # Cascading defaults.
 
-    options_to_defaults_map = {
-        "xxx": "yyy",
-    }
+    options_to_defaults_map = {}
 
     # Run pipeline.
 
@@ -1563,7 +1599,7 @@ def do_parquet_to_stdout(args):
 
     read_thread = FilterFileParquetToDictQueueThread
     if parsed_file_name.scheme in ['http', 'https']:
-        read_thread = FilterUrlJsonToDictQueueThread
+        read_thread = None  # TODO:
 
     # Determine Write thread.
 
@@ -1571,9 +1607,7 @@ def do_parquet_to_stdout(args):
 
     # Cascading defaults.
 
-    options_to_defaults_map = {
-        "xxx": "yyy",
-    }
+    options_to_defaults_map = {}
 
     # Run pipeline.
 
