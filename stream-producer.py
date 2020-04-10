@@ -19,7 +19,6 @@ import pandas
 import pika
 import queue
 import random
-import requests
 import signal
 import string
 import threading
@@ -351,6 +350,7 @@ MESSAGE_DEBUG = 900
 
 message_dictionary = {
     "100": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}I",
+    "120": "Sleeping for requested delay of {0} seconds.",
     "127": "Monitor: {0}",
     "129": "{0} is running.",
     "130": "{0} has exited.",
@@ -506,6 +506,7 @@ def get_configuration(args):
     # Special case: Change integer strings to integers.
 
     integers = [
+        'delay_in_seconds',
         'record_max',
         'record_min',
         'sleep_time_in_seconds',
