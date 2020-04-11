@@ -92,6 +92,11 @@ configuration_locator = {
         "env": "SENZING_KAFKA_BOOTSTRAP_SERVER",
         "cli": "kafka-bootstrap-server",
     },
+    "kafka_poll_interval": {
+        "default": 100,
+        "env": "SENZING_KAFKA_POLL_INTERVAL",
+        "cli": "kafka-poll-interval",
+    },
     "kafka_topic": {
         "default": "senzing-kafka-topic",
         "env": "SENZING_KAFKA_TOPIC",
@@ -152,6 +157,11 @@ configuration_locator = {
         "default": None,
         "env": "SENZING_RECORD_MIN",
         "cli": "record-min",
+    },
+    "record_monitor": {
+        "default": "10000",
+        "env": "SENZING_RECORD_MONITOR",
+        "cli": "record-monitor",
     },
     "sleep_time_in_seconds": {
         "default": 0,
@@ -350,6 +360,10 @@ MESSAGE_DEBUG = 900
 
 message_dictionary = {
     "100": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}I",
+    "103": "Kafka topic: {0}; message: {1}; error: {2}; error: {3}",
+    "104": "Records sent to Kafka: {0}",
+    "105": "Records sent to STDOUT: {0}",
+    "106": "Records sent to RabbitMQ: {0}",
     "120": "Sleeping for requested delay of {0} seconds.",
     "127": "Monitor: {0}",
     "129": "{0} is running.",
@@ -507,8 +521,10 @@ def get_configuration(args):
 
     integers = [
         'delay_in_seconds',
+        'kafka_poll_interval',
         'record_max',
         'record_min',
+        'record_monitor',
         'sleep_time_in_seconds',
         'threads_per_print',
     ]
@@ -522,6 +538,7 @@ def get_configuration(args):
     counters = [
         'input_counter',
         'output_counter',
+        'output_counter_reported',
     ]
     for counter in counters:
         result[counter] = 0
@@ -1015,7 +1032,10 @@ class PrintKafkaMixin():
 
     def __init__(self, config={}, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "PrintKafkaMixin"))
+        self.config = config
         self.kafka_topic = config.get('kafka_topic')
+        self.record_monitor = config.get("record_monitor")
+        self.kafka_poll_interval = config.get("kafka_poll_interval")
 
         kafka_configuration = {
             'bootstrap.servers':  config.get('kafka_bootstrap_server')
@@ -1033,7 +1053,7 @@ class PrintKafkaMixin():
     def print(self, message):
         assert isinstance(message, str)
 
-        self.kafka_producer.poll(0)
+        # Send message to Kafka.
 
         try:
             self.kafka_producer.produce(
@@ -1049,6 +1069,19 @@ class PrintKafkaMixin():
             logging.warning(message_warning(406, err, message))
         except:
             logging.warning(message_warning(407, err, message))
+
+        # Log progress. Using a "cheap" serialization technique.
+
+        output_counter = self.config.get('output_counter')
+        if output_counter % self.record_monitor == 0:
+            if output_counter != self.config.get('output_counter_reported'):
+                self.config['output_counter_reported'] = output_counter
+                logging.info(message_debug(104, output_counter))
+
+        # Poll Kafka for callbacks.
+
+        if output_counter % self.kafka_poll_interval == 0:
+            self.kafka_producer.poll(0)
 
     def close(self):
         self.kafka_producer.flush()
@@ -1070,6 +1103,8 @@ class PrintRabbitmqMixin():
         rabbitmq_password = config.get("rabbitmq_password")
         self.rabbitmq_exchange = config.get("rabbitmq_exchange")
         self.rabbitmq_queue = config.get("rabbitmq_queue")
+        self.record_monitor = config.get("record_monitor")
+        self.record_monitor = config.get("record_monitor")
 
         # Construct Pika objects.
 
@@ -1099,6 +1134,9 @@ class PrintRabbitmqMixin():
 
     def print(self, message):
         assert isinstance(message, str)
+
+        # Send message to RabbitMQ.
+
         try:
             self.channel.basic_publish(
                 exchange=self.rabbitmq_exchange,
@@ -1108,6 +1146,14 @@ class PrintRabbitmqMixin():
             )
         except BaseException as err:
             logging.warn(message_warning(411, err, message))
+
+        # Log progress. Using a "cheap" serialization technique.
+
+        output_counter = self.config.get('output_counter')
+        if output_counter % self.record_monitor == 0:
+            if output_counter != self.config.get('output_counter_reported'):
+                self.config['output_counter_reported'] = output_counter
+                logging.info(message_debug(106, output_counter))
 
     def close(self):
         self.connection.close()
@@ -1139,10 +1185,15 @@ class PrintStdoutMixin():
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "PrintStdoutMixin"))
+        self.record_monitor = config.get("record_monitor")
+        self.counter = 0
 
     def print(self, message):
+        self.counter += 1
         assert type(message) == str
         print(message)
+        if self.counter % self.record_monitor == 0:
+            logging.info(message_debug(105, counter))
 
     def close(self):
         pass
