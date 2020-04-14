@@ -43,7 +43,7 @@ import urllib.parse
 __all__ = []
 __version__ = "1.0.0"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
-__updated__ = '2020-04-10'
+__updated__ = '2020-04-13'
 
 SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -1319,6 +1319,102 @@ class FilterUrlJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlMixin, 
 # *_processor
 # -----------------------------------------------------------------------------
 
+def pipeline_runner(
+    args=None,
+    options_to_defaults_map={},
+    pipeline=[],
+    monitor_thread=None,
+):
+
+    # Get context from CLI, environment variables, and ini files.
+
+    config = get_configuration(args)
+    validate_configuration(config)
+
+    # If configuration values not specified, use defaults.
+
+    for key, value in options_to_defaults_map.items():
+        if not config.get(key):
+            config[key] = config.get(value)
+
+    # Prolog.
+
+    logging.info(entry_template(config))
+
+    # If requested, delay start.
+
+    delay(config)
+
+    # Pull values from configuration.
+
+    default_queue_maxsize = config.get('read_queue_maxsize')
+
+    # Create threads for master process.
+
+    threads = []
+    input_queue = None
+
+    # Create pipeline segments.
+
+    for filter in pipeline:
+
+        # Get metadata about the filter.
+
+        filter_class = filter.get("class")
+        filter_threads = filter.get("threads", 1)
+        filter_queue_max_size = filter.get("queue_max_size", default_queue_maxsize)
+        filter_counter_name = filter.get("counter_name")
+        filter_delay = filter.get("delay", 1)
+
+        # Give prior filter a head start
+
+        time.sleep(filter_delay)
+
+        # Create internal Queue.
+
+        output_queue = multiprocessing.Queue(filter_queue_max_size)
+
+        # Start threads.
+
+        for i in range(0, filter_threads):
+            thread = filter_class(
+                config=config,
+                counter_name=filter_counter_name,
+                input_queue=input_queue,
+                output_queue=output_queue,
+            )
+            thread.name = "Process-0-{0}-{1}".format(thread.__class__.__name__, i)
+            threads.append(thread)
+            thread.start()
+
+        # Prepare for next filter.
+
+        input_queue = output_queue
+
+
+    # Add a monitoring thread.
+
+    adminThreads = []
+
+    if monitor_thread:
+        thread = monitor_thread(
+            config=config,
+            workers=threads,
+        )
+        thread.name = "Process-0-{0}-0".format(thread.__class__.__name__)
+        adminThreads.append(thread)
+        thread.start()
+
+    # Collect inactive threads.
+
+    for thread in threads:
+        thread.join()
+    for thread in adminThreads:
+        thread.join()
+
+    # Epilog.
+
+    logging.info(exit_template(config))
 
 def pipeline_read_write(
     args=None,
