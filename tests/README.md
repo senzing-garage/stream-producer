@@ -102,7 +102,7 @@
     cd ${GIT_REPOSITORY_DIR}
     sudo \
       --preserve-env \
-      docker-compose --file tests/simple/docker-compose-rabbitmq.yaml up
+      docker-compose --file tests/simple/docker-compose-rabbitmq-100k.yaml up
     ```
 
 1. RabbitMQ is viewable at
@@ -114,7 +114,7 @@
 
     ```console
     cd ${GIT_REPOSITORY_DIR}
-    sudo docker-compose --file tests/simple/docker-compose-rabbitmq.yaml down
+    sudo docker-compose --file tests/simple/docker-compose-rabbitmq-100k.yaml down
     ```
 
 ## Test Kafka
@@ -126,7 +126,7 @@
     cd ${GIT_REPOSITORY_DIR}
     sudo \
       --preserve-env \
-      docker-compose --file tests/simple/docker-compose-kafka.yaml up
+      docker-compose --file tests/simple/docker-compose-kafka-100k.yaml up
     ```
 
 1. Kafdrop is viewable at
@@ -137,5 +137,5 @@
 
     ```console
     cd ${GIT_REPOSITORY_DIR}
-    sudo docker-compose --file tests/simple/docker-compose-kafka.yaml down
+    sudo docker-compose --file tests/simple/docker-compose-kafka-100k.yaml down
     ```
