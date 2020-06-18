@@ -1,6 +1,5 @@
 # Tests
 
-
 ## Environment variables
 
 1. Set these environment variable values:
@@ -32,10 +31,21 @@
     ```console
     cd ${GIT_REPOSITORY_DIR}
 
-    ./stream-producer.py json-to-stdout    --input-url "http://senzing.dockter.com/files/stream-producer/simple.json"       2>/dev/null
-    ./stream-producer.py csv-to-stdout     --input-url "http://senzing.dockter.com/files/stream-producer/simple.csv"        2>/dev/null
-    ./stream-producer.py avro-to-stdout    --input-url "http://senzing.dockter.com/files/stream-producer/twitter.avro"      2>/dev/null
-    ./stream-producer.py parquet-to-stdout --input-url "http://senzing.dockter.com/files/stream-producer/userdata1.parquet" 2>/dev/null
+    ./stream-producer.py json-to-stdout \
+      --input-url "http://senzing.dockter.com/files/stream-producer/simple.json" \
+      2>/dev/null
+
+    ./stream-producer.py csv-to-stdout \
+      --input-url "http://senzing.dockter.com/files/stream-producer/simple.csv" \
+      2>/dev/null
+
+    ./stream-producer.py avro-to-stdout \
+      --input-url "http://senzing.dockter.com/files/stream-producer/twitter.avro" \
+      2>/dev/null
+
+    ./stream-producer.py parquet-to-stdout \
+      --input-url "http://senzing.dockter.com/files/stream-producer/userdata1.parquet" \
+       2>/dev/null
     ```
 
 ## Test limiters
@@ -46,11 +56,25 @@
     ```console
     cd ${GIT_REPOSITORY_DIR}
 
-    ./stream-producer.py json-to-stdout --input-url tests/simple/simple.json
-    ./stream-producer.py json-to-stdout --input-url tests/simple/simple.json --record-min 40
-    ./stream-producer.py json-to-stdout --input-url tests/simple/simple.json --record-max 10
-    ./stream-producer.py json-to-stdout --input-url tests/simple/simple.json --record-min 10 --record-max 20
-    ./stream-producer.py json-to-stdout --input-url "https://s3.amazonaws.com/public-read-access/TestDataSets/loadtest-dataset-1M.json" --record-max 10
+    ./stream-producer.py json-to-stdout \
+      --input-url tests/simple/simple.json
+
+    ./stream-producer.py json-to-stdout \
+      --input-url tests/simple/simple.json \
+      --record-min 40
+
+    ./stream-producer.py json-to-stdout \
+      --input-url tests/simple/simple.json \
+      --record-max 10
+
+    ./stream-producer.py json-to-stdout \
+      --input-url tests/simple/simple.json \
+      --record-min 10 \
+      --record-max 20
+
+    ./stream-producer.py json-to-stdout \
+      --input-url "https://s3.amazonaws.com/public-read-access/TestDataSets/loadtest-dataset-1M.json" \
+      --record-max 10
     ```
 
 ## Test RabbitMQ
