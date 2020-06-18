@@ -93,7 +93,7 @@
 
     ```
 
-## Test RabbitMQ
+## Test RabbitMQ 100K
 
 1. Run docker-compose test.
    Example:
@@ -117,7 +117,7 @@
     sudo docker-compose --file tests/simple/docker-compose-rabbitmq-100k.yaml down
     ```
 
-## Test Kafka
+## Test Kafka 100K
 
 1. Run docker-compose test.
    Example:
