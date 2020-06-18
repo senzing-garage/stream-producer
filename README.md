@@ -192,7 +192,7 @@ see [Environment Variables](https://github.com/Senzing/knowledge-base/blob/maste
 
     ```console
     export GIT_ACCOUNT=senzing
-    export GIT_REPOSITORY=template-docker
+    export GIT_REPOSITORY=stream-producer
     export GIT_ACCOUNT_DIR=~/${GIT_ACCOUNT}.git
     export GIT_REPOSITORY_DIR="${GIT_ACCOUNT_DIR}/${GIT_REPOSITORY}"
     ```
@@ -206,7 +206,7 @@ see [Environment Variables](https://github.com/Senzing/knowledge-base/blob/maste
     ```console
     sudo docker build \
       --tag senzing/stream-producer \
-      https://github.com/Senzing/stream-producer.git
+      https://github.com/senzing/stream-producer.git
     ```
 
 1. **Option #2:** Using `docker` command and local repository.
