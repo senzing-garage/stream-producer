@@ -60,7 +60,6 @@
       --input-url tests/simple/simple.json \
        2>/dev/null
 
-
     ./stream-producer.py json-to-stdout \
       --input-url tests/simple/simple.json \
       --record-min 40 \
