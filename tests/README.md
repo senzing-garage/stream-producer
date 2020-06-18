@@ -57,24 +57,31 @@
     cd ${GIT_REPOSITORY_DIR}
 
     ./stream-producer.py json-to-stdout \
-      --input-url tests/simple/simple.json
+      --input-url tests/simple/simple.json \
+       2>/dev/null
+
 
     ./stream-producer.py json-to-stdout \
       --input-url tests/simple/simple.json \
-      --record-min 40
+      --record-min 40 \
+       2>/dev/null
 
     ./stream-producer.py json-to-stdout \
       --input-url tests/simple/simple.json \
-      --record-max 10
+      --record-max 10 \
+       2>/dev/null
 
     ./stream-producer.py json-to-stdout \
       --input-url tests/simple/simple.json \
       --record-min 10 \
-      --record-max 20
+      --record-max 20 \
+       2>/dev/null
 
     ./stream-producer.py json-to-stdout \
       --input-url "https://s3.amazonaws.com/public-read-access/TestDataSets/loadtest-dataset-1M.json" \
-      --record-max 10
+      --record-max 10 \
+       2>/dev/null
+
     ```
 
 ## Test RabbitMQ
