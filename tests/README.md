@@ -127,26 +127,53 @@
         ```
 
 1. Run docker-compose test.
+1. :thinking: Choose one of the following sets of [`SENZING_INPUT_FORMAT`,`SENZING_INPUT_URL`] to test.
+
    Example:
 
-    ```console
-    cd ${GIT_REPOSITORY_DIR}
-    sudo \
-      --preserve-env \
-      docker-compose --file tests/simple/docker-compose-rabbitmq.yaml up
-    ```
+    1. RabbitMQ
 
-1. RabbitMQ is viewable at
-   [localhost:15672](http://localhost:15672).
-    1. **Defaults:** username: `user` password: `bitnami`
+        ```console
+        cd ${GIT_REPOSITORY_DIR}
+        sudo \
+          --preserve-env \
+          docker-compose --file tests/simple/docker-compose-rabbitmq.yaml up
+        ```
 
-1. Bring down docker formation.
-   Example:
+    1. Kafka
 
-    ```console
-    cd ${GIT_REPOSITORY_DIR}
-    sudo docker-compose --file tests/simple/docker-compose-rabbitmq.yaml down
-    ```
+        ```console
+        cd ${GIT_REPOSITORY_DIR}
+        sudo \
+          --preserve-env \
+          docker-compose --file tests/simple/docker-compose-kafka.yaml up
+        ```
+
+1. :thinking: View results, depending on queue type.
+
+    1. **RabbitMQ:** RabbitMQ is viewable at
+       [localhost:15672](http://localhost:15672).
+        1. **Defaults:** username: `user` password: `bitnami`
+
+    1. **Kafka:** Kafdrop is viewable at
+       [localhost:9179](http://localhost:9179).
+
+1. :thinking: Bring down docker formation.
+   Choose one of the following, depending one queue type.
+
+    1. RabbitMQ
+
+        ```console
+        cd ${GIT_REPOSITORY_DIR}
+        sudo docker-compose --file tests/simple/docker-compose-rabbitmq.yaml down
+        ```
+
+    1. Kafka
+
+        ```console
+        cd ${GIT_REPOSITORY_DIR}
+        sudo docker-compose --file tests/simple/docker-compose-kafka.yaml down
+        ```
 
 ## Test RabbitMQ 100K
 
