@@ -90,7 +90,6 @@
 
     ```console
     cd ${GIT_REPOSITORY_DIR}
-
     make docker-build
     ```
 
@@ -99,9 +98,22 @@
 
     ```console
     cd ${GIT_REPOSITORY_DIR}
-
     sudo \
       --preserve-env \
       docker-compose --file tests/simple/docker-compose-rabbitmq.yaml up
     ```
 
+1. RabbitMQ is viewable at
+   [localhost:15672](http://localhost:15672).
+    1. **Defaults:** username: `user` password: `bitnami`
+    1. See
+       [additional tips](https://github.com/Senzing/knowledge-base/blob/master/lists/docker-compose-demo-tips.md#rabbitmq)
+       for working with RabbitMQ.
+
+1. Bring down docker formation.
+   Example:
+
+    ```console
+    cd ${GIT_REPOSITORY_DIR}
+    sudo docker-compose --file tests/simple/docker-compose-rabbitmq.yaml down
+    ```
