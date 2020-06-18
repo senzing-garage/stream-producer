@@ -255,10 +255,16 @@ see [Environment Variables](https://github.com/Senzing/knowledge-base/blob/maste
 The following examples require initialization described in
 [Demonstrate using Command Line Interface](#demonstrate-using-command-line-interface).
 
+1. Example CLI invocations can be seen in
+   [Tests](tests/README.md#test-cli)
+
 ### Examples of Docker
 
 The following examples require initialization described in
 [Demonstrate using Docker](#demonstrate-using-docker).
+
+1. Example docker and docker-compose invocations can be seen in
+   [Tests](tests/README.md#test-docker)
 
 ## Advanced
 
