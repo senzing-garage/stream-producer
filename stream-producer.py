@@ -194,6 +194,10 @@ def get_parser():
     ''' Parse commandline arguments. '''
 
     subcommands = {
+        'avro-to-kafka': {
+            "help": 'Read Avro file and send to Kafka.',
+            "argument_aspects": ["input-url", "avro", "kafka"]
+        },
         'avro-to-rabbitmq': {
             "help": 'Read Avro file and send to RabbitMQ.',
             "argument_aspects": ["input-url", "avro", "rabbitmq"]
@@ -201,6 +205,10 @@ def get_parser():
         'avro-to-stdout': {
             "help": 'Read Avro file and print to STDOUT.',
             "argument_aspects": ["input-url", "avro", "stdout"]
+        },
+        'csv-to-kafka': {
+            "help": 'Read CSV file and send to Kafka.',
+            "argument_aspects": ["input-url", "csv", "kafka"]
         },
         'csv-to-rabbitmq': {
             "help": 'Read CSV file and send to RabbitMQ.',
@@ -221,6 +229,10 @@ def get_parser():
         'json-to-stdout': {
             "help": 'Read JSON file and print to STDOUT.',
             "argument_aspects": ["input-url", "json", "stdout"]
+        },
+        'parquet-to-kafka': {
+            "help": 'Read Parquet file and send to Kafka.',
+            "argument_aspects": ["input-url", "parquet", "kafka"]
         },
         'parquet-to-rabbitmq': {
             "help": 'Read Parquet file and send to RabbitMQ.',
@@ -1332,6 +1344,7 @@ class FilterUrlJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlMixin, 
 # *_processor
 # -----------------------------------------------------------------------------
 
+
 def pipeline_runner(
     args=None,
     options_to_defaults_map={},
@@ -1404,7 +1417,6 @@ def pipeline_runner(
 
         input_queue = output_queue
 
-
     # Add a monitoring thread.
 
     adminThreads = []
@@ -1428,6 +1440,7 @@ def pipeline_runner(
     # Epilog.
 
     logging.info(exit_template(config))
+
 
 def pipeline_read_write(
     args=None,

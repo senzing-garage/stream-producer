@@ -96,8 +96,6 @@
 ## Test RabbitMQ
 
 1. :thinking: Choose one of the following sets of [`SENZING_INPUT_FORMAT`,`SENZING_INPUT_URL`] to test.
-   Example:
-
     1. JSON
 
         ```console
@@ -127,9 +125,6 @@
         ```
 
 1. :thinking: Choose one of the docker-compose formations to test.
-
-   Example:
-
     1. RabbitMQ
 
         ```console
@@ -149,7 +144,6 @@
         ```
 
 1. :thinking: View results, depending on queue type.
-
     1. RabbitMQ
         1. RabbitMQ is viewable at
            [localhost:15672](http://localhost:15672).
@@ -157,7 +151,6 @@
     1. Kafka
         1. Kafdrop is viewable at
            [localhost:9179](http://localhost:9179).
-
 1. :thinking: Bring down docker formation.
    Choose one of the following, depending one queue type.
 
