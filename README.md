@@ -64,26 +64,9 @@ describing where we can improve.   Now on with the show...
 :thinking: The following tasks need to be complete before proceeding.
 These are "one-time tasks" which may already have been completed.
 
-1. Install system dependencies:
-    1. Use `apt` based installation for Debian, Ubuntu and
-       [others](https://en.wikipedia.org/wiki/List_of_Linux_distributions#Debian-based)
-        1. See [apt-packages.txt](src/apt-packages.txt) for list
-    1. Use `yum` based installation for Red Hat, CentOS, openSuse and
-       [others](https://en.wikipedia.org/wiki/List_of_Linux_distributions#RPM-based).
-        1. See [yum-packages.txt](src/yum-packages.txt) for list
 1. Install Python dependencies:
     1. See [requirements.txt](requirements.txt) for list
         1. [Installation hints](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/install-python-dependencies.md)
-1. The following software programs need to be installed:
-    1. [senzingapi](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/install-senzing-api.md)
-1. :thinking: **Optional:**  Some databases need additional support.
-   For other databases, this step may be skipped.
-    1. **Db2:** See
-       [Support Db2](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/support-db2.md).
-    1. **MS SQL:** See
-       [Support MS SQL](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/support-mssql.md).
-1. [Configure Senzing database](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/configure-senzing-database.md)
-1. [Configure Senzing](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/configure-senzing.md)
 
 ### Download
 
@@ -222,15 +205,15 @@ see [Environment Variables](https://github.com/Senzing/knowledge-base/blob/maste
 
     ```console
     sudo docker build \
-      --tag senzing/template \
-      https://github.com/senzing/template-docker.git
+      --tag senzing/stream-producer \
+      https://github.com/Senzing/stream-producer.git
     ```
 
 1. **Option #2:** Using `docker` command and local repository.
 
     ```console
     cd ${GIT_REPOSITORY_DIR}
-    sudo docker build --tag senzing/template .
+    sudo docker build --tag senzing/stream-producer .
     ```
 
 1. **Option #3:** Using `make` command.
