@@ -1,0 +1,67 @@
+version: '3'
+services:
+
+  zookeeper:
+    container_name: senzing-zookeeper
+    environment:
+#     See https://github.com/bitnami/bitnami-docker-zookeeper#configuration
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+    image: bitnami/zookeeper:3.5.6
+    networks:
+      - backend
+    ports:
+      - 2181:2181
+    restart: always
+
+  kafka:
+    container_name: senzing-kafka
+    depends_on:
+      - zookeeper
+    environment:
+#     See https://github.com/bitnami/bitnami-docker-kafka#configuration
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_NUM_PARTITIONS: 5
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    image: bitnami/kafka:2.4.0
+    networks:
+      - backend
+    ports:
+      - 9092:9092
+    restart: always
+
+  kafdrop:
+    container_name: senzing-kafdrop
+    depends_on:
+      - kafka
+    environment:
+#     See https://github.com/obsidiandynamics/kafdrop#environment-variables
+      KAFKA_BROKERCONNECT: "senzing-kafka:9092"
+      JVM_OPTS: "-Xms32M -Xmx64M"
+      SERVER_SERVLET_CONTEXTPATH: "/"
+    image: obsidiandynamics/kafdrop:3.23.0
+    networks:
+      - backend
+    ports:
+      - 9179:9000
+    restart: always
+
+  mockdata:
+    container_name: senzing-mock-data-generator
+    depends_on:
+      - kafka
+    environment:
+#     See https://github.com/Senzing/docker-mock-data-generator#configuration
+      SENZING_DELAY_IN_SECONDS: 60
+      SENZING_KAFKA_BOOTSTRAP_SERVER: senzing-kafka:9092
+      SENZING_KAFKA_TOPIC: senzing-kafka-topic
+      SENZING_INPUT_URL: "https://s3.amazonaws.com/public-read-access/TestDataSets/loadtest-dataset-1M.json"
+      SENZING_RECORD_MAX: 20
+      SENZING_RECORD_MONITOR: 1000
+      SENZING_SUBCOMMAND: json-to-kafka
+    image: senzing/stream-producer:${SENZING_MOCK_DATA_GENERATOR_VERSION:-latest}
+    networks:
+      - backend
+    restart: on-failure
+
+networks:
+  backend:

@@ -43,7 +43,7 @@ import urllib.parse
 __all__ = []
 __version__ = "1.0.0"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
-__updated__ = '2020-04-13'
+__updated__ = '2020-06-18'
 
 SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -1185,6 +1185,7 @@ class PrintStdoutMixin():
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "PrintStdoutMixin"))
+        config = kwargs.get("config", {})
         self.record_monitor = config.get("record_monitor")
         self.counter = 0
 
