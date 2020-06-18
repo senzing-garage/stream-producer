@@ -98,25 +98,33 @@
 1. :thinking: Choose one of the following sets of [`SENZING_INPUT_FORMAT`,`SENZING_INPUT_URL`] to test.
    Example:
 
-    ```console
-    export SENZING_INPUT_FORMAT=json
-    export SENZING_INPUT_URL="http://senzing.dockter.com/files/stream-producer/simple.json"
-    ```
+    1. JSON
 
-    ```console
-    export SENZING_INPUT_FORMAT=csv
-    export SENZING_INPUT_URL="http://senzing.dockter.com/files/stream-producer/simple.csv"
-    ```
+        ```console
+        export SENZING_INPUT_FORMAT=json
+        export SENZING_INPUT_URL="http://senzing.dockter.com/files/stream-producer/simple.json"
+        ```
 
-    ```console
-    export SENZING_INPUT_FORMAT=avro
-    export SENZING_INPUT_URL="http://senzing.dockter.com/files/stream-producer/twitter.avro"
-    ```
+    1. CSV
 
-    ```console
-    export SENZING_INPUT_FORMAT=parquet
-    export SENZING_INPUT_URL="http://senzing.dockter.com/files/stream-producer/userdata1.parquet"
-    ```
+        ```console
+        export SENZING_INPUT_FORMAT=csv
+        export SENZING_INPUT_URL="http://senzing.dockter.com/files/stream-producer/simple.csv"
+        ```
+
+    1. Avro
+
+        ```console
+        export SENZING_INPUT_FORMAT=avro
+        export SENZING_INPUT_URL="http://senzing.dockter.com/files/stream-producer/twitter.avro"
+        ```
+
+    1. Parquet
+
+        ```console
+        export SENZING_INPUT_FORMAT=parquet
+        export SENZING_INPUT_URL="http://senzing.dockter.com/files/stream-producer/userdata1.parquet"
+        ```
 
 1. Run docker-compose test.
    Example:
