@@ -93,6 +93,53 @@
 
     ```
 
+## Test RabbitMQ
+
+1. :thinking: Choose a set of [`SENZING_INPUT_FORMAT`,`SENZING_INPUT_URL`].
+   Example:
+
+    ```console
+    export SENZING_INPUT_FORMAT=json
+    export SENZING_INPUT_URL="http://senzing.dockter.com/files/stream-producer/simple.json"
+    ```
+
+    ```console
+    export SENZING_INPUT_FORMAT=csv
+    export SENZING_INPUT_URL="http://senzing.dockter.com/files/stream-producer/simple.csv"
+    ```
+
+    ```console
+    export SENZING_INPUT_FORMAT=avro
+    export SENZING_INPUT_URL="http://senzing.dockter.com/files/stream-producer/twitter.avro"
+    ```
+
+    ```console
+    export SENZING_INPUT_FORMAT=parquet
+    export SENZING_INPUT_URL="http://senzing.dockter.com/files/stream-producer/userdata1.parquet"
+    ```
+
+1. Run docker-compose test.
+   Example:
+
+    ```console
+    cd ${GIT_REPOSITORY_DIR}
+    sudo \
+      --preserve-env \
+      docker-compose --file tests/simple/docker-compose-rabbitmq.yaml up
+    ```
+
+1. RabbitMQ is viewable at
+   [localhost:15672](http://localhost:15672).
+    1. **Defaults:** username: `user` password: `bitnami`
+
+1. Bring down docker formation.
+   Example:
+
+    ```console
+    cd ${GIT_REPOSITORY_DIR}
+    sudo docker-compose --file tests/simple/docker-compose-rabbitmq.yaml down
+    ```
+
 ## Test RabbitMQ 100K
 
 1. Run docker-compose test.
