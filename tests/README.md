@@ -11,17 +11,9 @@
     export GIT_REPOSITORY_DIR="${GIT_ACCOUNT_DIR}/${GIT_REPOSITORY}"
     ```
 
-## Build docker image
+## Test CLI
 
-1. Make Docker image.
-   Example:
-
-    ```console
-    cd ${GIT_REPOSITORY_DIR}
-    make docker-build
-    ```
-
-## Test input formats to STDOUT
+### Test input formats to STDOUT
 
 1. Test file-based input.
    Example:
@@ -58,7 +50,7 @@
        2>/dev/null
     ```
 
-## Test limiters
+### Test limiters
 
 1. Test file-based input.
    Example:
@@ -93,7 +85,19 @@
 
     ```
 
-## Test RabbitMQ
+## Test Docker
+
+### Build docker image
+
+1. Make Docker image.
+   Example:
+
+    ```console
+    cd ${GIT_REPOSITORY_DIR}
+    make docker-build
+    ```
+
+### Choose input
 
 1. :thinking: Choose one of the following sets of [`SENZING_INPUT_FORMAT`,`SENZING_INPUT_URL`] to test.
     1. JSON
@@ -124,6 +128,8 @@
         export SENZING_INPUT_URL="http://senzing.dockter.com/files/stream-producer/userdata1.parquet"
         ```
 
+### Choose docker-compose formation
+
 1. :thinking: Choose one of the docker-compose formations to test.
     1. RabbitMQ
 
@@ -143,6 +149,8 @@
           docker-compose --file tests/simple/docker-compose-kafka.yaml up
         ```
 
+### View results
+
 1. :thinking: View results, depending on queue type.
     1. RabbitMQ
         1. RabbitMQ is viewable at
@@ -151,6 +159,9 @@
     1. Kafka
         1. Kafdrop is viewable at
            [localhost:9179](http://localhost:9179).
+
+### Cleanup
+
 1. :thinking: Bring down docker formation.
    Choose one of the following, depending one queue type.
 

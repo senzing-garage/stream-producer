@@ -123,15 +123,6 @@ These are "one-time tasks" which may already have been completed.
 1. :thinking: **Alternative:** The entire git repository can be downloaded by following instructions at
    [Clone repository](#clone-repository)
 
-### Environment variables for CLI
-
-1. Set common environment variables
-   Example:
-
-    ```console
-    export XXXXXXXXXX=${SENZING_G2_DIR}/python
-    ```
-
 ### Run command
 
 1. Run the command.
@@ -152,56 +143,6 @@ These are "one-time tasks" which may already have been completed.
 
 1. The following software programs need to be installed:
     1. [docker](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/install-docker.md)
-1. [Install Senzing using Docker](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/install-senzing-using-docker.md)
-    1. If using Docker with a previous "system install" of Senzing,
-       see [how to use Docker with system install](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/use-docker-with-system-install.md).
-1. [Configure Senzing database using Docker](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/configure-senzing-database-using-docker.md)
-1. [Configure Senzing using Docker](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/configure-senzing-using-docker.md)
-
-### Docker volumes
-
-Senzing Docker images follow the [Linux File Hierarchy Standard](https://refspecs.linuxfoundation.org/FHS_3.0/fhs-3.0.pdf).
-Inside the Docker container, Senzing artifacts will be located in `/opt/senzing`, `/etc/opt/senzing`, and `/var/opt/senzing`.
-
-1. :pencil2: Specify the directory containing the Senzing installation on the host system
-   (i.e. *outside* the Docker container).
-   Use the same `SENZING_VOLUME` value used when performing
-   [Prerequisites for Docker](#prerequisites-for-docker).
-   Example:
-
-    ```console
-    export SENZING_VOLUME=/opt/my-senzing
-    ```
-
-    1. :warning:
-       **macOS** - [File sharing](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/share-directories-with-docker.md#macos)
-       must be enabled for `SENZING_VOLUME`.
-    1. :warning:
-       **Windows** - [File sharing](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/share-directories-with-docker.md#windows)
-       must be enabled for `SENZING_VOLUME`.
-
-1. Identify the `data_version`, `etc`, `g2`, and `var` directories.
-   Example:
-
-    ```console
-    export SENZING_DATA_VERSION_DIR=${SENZING_VOLUME}/data/1.0.0
-    export SENZING_ETC_DIR=${SENZING_VOLUME}/etc
-    export SENZING_G2_DIR=${SENZING_VOLUME}/g2
-    export SENZING_VAR_DIR=${SENZING_VOLUME}/var
-    ```
-
-    *Note:* If using a "system install",
-    see [how to use Docker with system install](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/use-docker-with-system-install.md).
-    for how to set environment variables.
-
-1. Here's a simple test to see if `SENZING_G2_DIR` and `SENZING_DATA_VERSION_DIR` are correct.
-   The following commands should return file contents.
-   Example:
-
-    ```console
-    cat ${SENZING_G2_DIR}/g2BuildVersion.json
-    cat ${SENZING_DATA_VERSION_DIR}/libpostal/data_version
-    ```
 
 ### Docker network
 
@@ -229,74 +170,6 @@ Inside the Docker container, Senzing artifacts will be located in `/opt/senzing`
     export SENZING_NETWORK_PARAMETER="--net ${SENZING_NETWORK}"
     ```
 
-### Docker user
-
-:thinking: **Optional:**  The Docker container runs as "USER 1001".
-Use if a different userid (UID) is required.
-
-1. :pencil2: Identify user.
-    1. **Example #1:** Use specific UID. User "0" is `root`.
-
-        ```console
-        export SENZING_RUNAS_USER="0"
-        ```
-
-    1. **Example #2:** Use current user.
-
-        ```console
-        export SENZING_RUNAS_USER=$(id -u)
-        ```
-
-1. Construct parameter for `docker run`.
-   Example:
-
-    ```console
-    export SENZING_RUNAS_USER_PARAMETER="--user ${SENZING_RUNAS_USER}"
-    ```
-
-### Database support
-
-:thinking: **Optional:**  Some databases need additional support.
-For other databases, these steps may be skipped.
-
-1. **Db2:** See
-   [Support Db2](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/support-db2.md)
-   instructions to set `SENZING_OPT_IBM_DIR_PARAMETER`.
-1. **MS SQL:** See
-   [Support MS SQL](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/support-mssql.md)
-   instructions to set `SENZING_OPT_MICROSOFT_DIR_PARAMETER`.
-
-### External database
-
-:thinking: **Optional:**  Use if storing data in an external database.
-If not specified, the internal SQLite database will be used.
-
-1. :pencil2: Specify database.
-   Example:
-
-    ```console
-    export DATABASE_PROTOCOL=postgresql
-    export DATABASE_USERNAME=postgres
-    export DATABASE_PASSWORD=postgres
-    export DATABASE_HOST=senzing-postgresql
-    export DATABASE_PORT=5432
-    export DATABASE_DATABASE=G2
-    ```
-
-1. Construct Database URL.
-   Example:
-
-    ```console
-    export SENZING_DATABASE_URL="${DATABASE_PROTOCOL}://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_DATABASE}"
-    ```
-
-1. Construct parameter for `docker run`.
-   Example:
-
-    ```console
-    export SENZING_DATABASE_URL_PARAMETER="--env SENZING_DATABASE_URL=${SENZING_DATABASE_URL}"
-    ```
-
 ### Run Docker container
 
 Although the `Docker run` command looks complex,
@@ -305,6 +178,7 @@ Unset environment variables have no effect on the
 `docker run` command and may be removed or remain.
 
 1. Run Docker container.
+   This command will print the `--help`, then sleep.
    Example:
 
     ```console
@@ -312,16 +186,8 @@ Unset environment variables have no effect on the
       --interactive \
       --rm \
       --tty \
-      --volume ${SENZING_DATA_VERSION_DIR}:/opt/senzing/data \
-      --volume ${SENZING_ETC_DIR}:/etc/opt/senzing \
-      --volume ${SENZING_G2_DIR}:/opt/senzing/g2 \
-      --volume ${SENZING_VAR_DIR}:/var/opt/senzing \
-      ${SENZING_DATABASE_URL_PARAMETER} \
       ${SENZING_NETWORK_PARAMETER} \
-      ${SENZING_OPT_IBM_DIR_PARAMETER} \
-      ${SENZING_OPT_MICROSOFT_DIR_PARAMETER} \
-      ${SENZING_RUNAS_USER_PARAMETER} \
-      senzing/template
+      senzing/stream-producer
     ```
 
 1. For more examples of use, see [Examples of Docker](#examples-of-docker).
@@ -400,14 +266,7 @@ The following examples require initialization described in
 
 Configuration values specified by environment variable or command line parameter.
 
-- **[SENZING_DATA_VERSION_DIR](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md#senzing_data_version_dir)**
-- **[SENZING_DATABASE_URL](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md#senzing_database_url)**
-- **[SENZING_DEBUG](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md#senzing_debug)**
-- **[SENZING_ETC_DIR](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md#senzing_etc_dir)**
-- **[SENZING_G2_DIR](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md#senzing_g2_dir)**
 - **[SENZING_NETWORK](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md#senzing_network)**
-- **[SENZING_RUNAS_USER](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md#senzing_runas_user)**
-- **[SENZING_VAR_DIR](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md#senzing_var_dir)**
 
 ## Errors
 
