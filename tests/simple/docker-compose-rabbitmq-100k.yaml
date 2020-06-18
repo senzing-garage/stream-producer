@@ -1,0 +1,39 @@
+version: '3'
+services:
+
+  rabbitmq:
+    container_name: senzing-rabbitmq
+    environment:
+#     See https://github.com/bitnami/bitnami-docker-rabbitmq#configuration
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-user}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-bitnami}
+    image: bitnami/rabbitmq:3.8.2
+    networks:
+      - backend
+    ports:
+      - 15672:15672
+      - 5672:5672
+    restart: always
+
+  streamproducer:
+    container_name: senzing-stream-producer
+    depends_on:
+      - rabbitmq
+    environment:
+#     See https://github.com/Senzing/docker-mock-data-generator#configuration
+      SENZING_DELAY_IN_SECONDS: 30
+      SENZING_INPUT_URL: "https://s3.amazonaws.com/public-read-access/TestDataSets/loadtest-dataset-1M.json"
+      SENZING_RABBITMQ_HOST: senzing-rabbitmq
+      SENZING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-bitnami}
+      SENZING_RABBITMQ_QUEUE: senzing-rabbitmq-queue
+      SENZING_RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-user}
+      SENZING_RECORD_MAX: 100000
+      SENZING_RECORD_MONITOR: 1000
+      SENZING_SUBCOMMAND: json-to-rabbitmq
+    image: senzing/stream-producer:${SENZING_STREAM_PRODUCER_VERSION:-latest}
+    networks:
+      - backend
+    restart: on-failure
+
+networks:
+  backend:

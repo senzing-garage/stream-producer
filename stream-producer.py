@@ -28,18 +28,6 @@ import time
 import urllib.request
 import urllib.parse
 
-# Python 2 / 3 migration.
-
-# try:
-#     from urllib.request import urlopen
-# except ImportError:
-#     from urllib2 import urlopen
-#
-# try:
-#     from urllib.parse import urlparse
-# except ImportError:
-#     from urlparse import urlparse
-
 __all__ = []
 __version__ = "1.0.0"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
@@ -103,8 +91,7 @@ configuration_locator = {
         "cli": "kafka-topic",
     },
     "monitoring_period_in_seconds": {
-#         "default": 60 * 10,
-        "default": 30,
+        "default": 60 * 10,
         "env": "SENZING_MONITORING_PERIOD_IN_SECONDS",
         "cli": "monitoring-period-in-seconds",
     },
