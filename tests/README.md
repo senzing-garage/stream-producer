@@ -11,6 +11,16 @@
     export GIT_REPOSITORY_DIR="${GIT_ACCOUNT_DIR}/${GIT_REPOSITORY}"
     ```
 
+## Build docker image
+
+1. Make Docker image.
+   Example:
+
+    ```console
+    cd ${GIT_REPOSITORY_DIR}
+    make docker-build
+    ```
+
 ## Test input formats to STDOUT
 
 1. Test file-based input.
@@ -85,14 +95,6 @@
 
 ## Test RabbitMQ
 
-1. Make Docker image.
-   Example:
-
-    ```console
-    cd ${GIT_REPOSITORY_DIR}
-    make docker-build
-    ```
-
 1. Run docker-compose test.
    Example:
 
@@ -113,4 +115,27 @@
     ```console
     cd ${GIT_REPOSITORY_DIR}
     sudo docker-compose --file tests/simple/docker-compose-rabbitmq.yaml down
+    ```
+
+## Test Kafka
+
+1. Run docker-compose test.
+   Example:
+
+    ```console
+    cd ${GIT_REPOSITORY_DIR}
+    sudo \
+      --preserve-env \
+      docker-compose --file tests/simple/docker-compose-kafka.yaml up
+    ```
+
+1. Kafdrop is viewable at
+   [localhost:9179](http://localhost:9179).
+
+1. Bring down docker formation.
+   Example:
+
+    ```console
+    cd ${GIT_REPOSITORY_DIR}
+    sudo docker-compose --file tests/simple/docker-compose-kafka.yaml down
     ```
