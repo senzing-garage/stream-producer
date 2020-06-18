@@ -94,13 +94,14 @@
     make docker-build
     ```
 
-1. XXx
+1. Run docker-compose test.
    Example:
 
     ```console
+    cd ${GIT_REPOSITORY_DIR}
+
+    sudo \
+      --preserve-env \
+      docker-compose --file tests/simple/docker-compose-rabbitmq.yaml up
     ```
-
-
-
-
 
