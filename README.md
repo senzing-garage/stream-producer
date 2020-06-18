@@ -21,15 +21,10 @@ describing where we can improve.   Now on with the show...
 1. [Demonstrate using Command Line Interface](#demonstrate-using-command-line-interface)
     1. [Prerequisites for CLI](#prerequisites-for-cli)
     1. [Download](#download)
-    1. [Environment variables for CLI](#environment-variables-for-cli)
     1. [Run command](#run-command)
 1. [Demonstrate using Docker](#demonstrate-using-docker)
     1. [Prerequisites for Docker](#prerequisites-for-docker)
-    1. [Docker volumes](#docker-volumes)
     1. [Docker network](#docker-network)
-    1. [Docker user](#docker-user)
-    1. [Database support](#database-support)
-    1. [External database](#external-database)
     1. [Run Docker container](#run-docker-container)
 1. [Develop](#develop)
     1. [Prerequisites for development](#prerequisites-for-development)
@@ -53,8 +48,7 @@ describing where we can improve.   Now on with the show...
 
 ## Related artifacts
 
-1. [DockerHub](https://hub.docker.com/r/senzing/xxxxxxxx)
-1. [Helm Chart](https://github.com/Senzing/charts/tree/master/charts/xxxxxxxx)
+1. [DockerHub](https://hub.docker.com/r/senzing/stream-producer)
 
 ## Expectations
 
