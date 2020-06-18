@@ -222,6 +222,10 @@ def get_parser():
             "help": 'Read JSON file and print to STDOUT.',
             "argument_aspects": ["input-url", "json", "stdout"]
         },
+        'parquet-to-rababitmq': {
+            "help": 'Read Parquet file and send to RabbitMQ.',
+            "argument_aspects": ["input-url", "parquet", "rabbitmq"]
+        },
         'parquet-to-stdout': {
             "help": 'Read Parquet file and print to STDOUT.',
             "argument_aspects": ["input-url", "parquet", "stdout"]

@@ -29,6 +29,7 @@ RUN pip3 install \
       configparser \
       confluent-kafka \
       fastavro \
+      fastparquet \
       pandas \
       psutil \
       pika
