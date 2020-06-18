@@ -194,9 +194,17 @@ def get_parser():
     ''' Parse commandline arguments. '''
 
     subcommands = {
+        'avro-to-rabbitmq': {
+            "help": 'Read Avro file and send to RabbitMQ.',
+            "argument_aspects": ["input-url", "avro", "rabbitmq"]
+        },
         'avro-to-stdout': {
             "help": 'Read Avro file and print to STDOUT.',
             "argument_aspects": ["input-url", "avro", "stdout"]
+        },
+        'csv-to-rabbitmq': {
+            "help": 'Read CSV file and send to RabbitMQ.',
+            "argument_aspects": ["input-url", "csv", "rabbitmq"]
         },
         'csv-to-stdout': {
             "help": 'Read CSV file and print to STDOUT.',

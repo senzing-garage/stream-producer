@@ -95,7 +95,7 @@
 
 ## Test RabbitMQ
 
-1. :thinking: Choose a set of [`SENZING_INPUT_FORMAT`,`SENZING_INPUT_URL`].
+1. :thinking: Choose one of the following sets of [`SENZING_INPUT_FORMAT`,`SENZING_INPUT_URL`] to test.
    Example:
 
     ```console
