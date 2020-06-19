@@ -1,2 +1,5 @@
-parquet
+confluent_kafka
 fastavro
+pandas
+parquet
+pika
