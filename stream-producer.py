@@ -195,6 +195,10 @@ def get_parser():
             "help": 'Read Avro file and send to RabbitMQ.',
             "argument_aspects": ["input-url", "avro", "rabbitmq"]
         },
+        'avro-to-sqs': {
+            "help": 'Read Avro file and print to AWS SQS.',
+            "argument_aspects": ["input-url", "avro", "sqs"]
+        },
         'avro-to-stdout': {
             "help": 'Read Avro file and print to STDOUT.',
             "argument_aspects": ["input-url", "avro", "stdout"]
@@ -206,6 +210,10 @@ def get_parser():
         'csv-to-rabbitmq': {
             "help": 'Read CSV file and send to RabbitMQ.',
             "argument_aspects": ["input-url", "csv", "rabbitmq"]
+        },
+        'csv-to-sqs': {
+            "help": 'Read CSV file and print to SQS.',
+            "argument_aspects": ["input-url", "csv", "sqs"]
         },
         'csv-to-stdout': {
             "help": 'Read CSV file and print to STDOUT.',
@@ -234,6 +242,10 @@ def get_parser():
         'parquet-to-rabbitmq': {
             "help": 'Read Parquet file and send to RabbitMQ.',
             "argument_aspects": ["input-url", "parquet", "rabbitmq"]
+        },
+        'parquet-to-sqs': {
+            "help": 'Read Parquet file and print to AWS SQS.',
+            "argument_aspects": ["input-url", "parquet", "sqs"]
         },
         'parquet-to-stdout': {
             "help": 'Read Parquet file and print to STDOUT.',
@@ -1715,6 +1727,12 @@ def do_avro_to_rabbitmq(args):
     dohelper_avro(args, write_thread)
 
 
+def do_avro_to_sqs(args):
+    ''' Read file of AVRO, print to STDOUT. '''
+    write_thread = FilterQueueDictToJsonSqsThread
+    dohelper_avro(args, write_thread)
+
+
 def do_avro_to_stdout(args):
     ''' Read file of AVRO, print to STDOUT. '''
     write_thread = FilterQueueDictToJsonStdoutThread
@@ -1730,6 +1748,12 @@ def do_csv_to_kafka(args):
 def do_csv_to_rabbitmq(args):
     ''' Read file of CSV, print to RabbitMQ. '''
     write_thread = FilterQueueDictToJsonRabbitmqThread
+    dohelper_csv(args, write_thread)
+
+
+def do_csv_to_sqs(args):
+    ''' Read file of CSV, print to STDOUT. '''
+    write_thread = FilterQueueDictToJsonSqsThread
     dohelper_csv(args, write_thread)
 
 
@@ -1788,6 +1812,12 @@ def do_parquet_to_kafka(args):
 def do_parquet_to_rabbitmq(args):
     ''' Read file of Parquet, print to RabbitMQ. '''
     write_thread = FilterQueueDictToJsonRabbitmqThread
+    dohelper_parquet(args, write_thread)
+
+
+def do_parquet_to_sqs(args):
+    ''' Read file of Parquet, print to STDOUT. '''
+    write_thread = FilterQueueDictToJsonSqsThread
     dohelper_parquet(args, write_thread)
 
 
