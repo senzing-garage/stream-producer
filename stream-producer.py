@@ -7,6 +7,7 @@
 
 from glob import glob
 import argparse
+import boto3
 import collections
 import csv
 import fastavro
@@ -154,6 +155,11 @@ configuration_locator = {
         "default": 0,
         "env": "SENZING_SLEEP_TIME_IN_SECONDS",
         "cli": "sleep-time-in-seconds"
+    },
+    "sqs_queue_url": {
+        "default": None,
+        "env": "SENZING_SQS_QUEUE_URL",
+        "cli": "sqs-queue-url"
     },
     "subcommand": {
         "default": None,
@@ -331,10 +337,10 @@ def get_parser():
             },
         },
         "sqs": {
-            "--sqs-XXX": {
-                "dest": "sqs_xxx",
-                "metavar": "SENZING_SQS_XXXX",
-                "help": "SQS ... Default: XXX"
+            "--sqs-queue-url": {
+                "dest": "sqs_queue_url",
+                "metavar": "SENZING_SQS_QUEUE_URL",
+                "help": "AWS SQS URL. Default: none"
             },
         },
     }
@@ -1055,9 +1061,9 @@ class PrintKafkaMixin():
     def __init__(self, config={}, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "PrintKafkaMixin"))
         self.config = config
+        self.kafka_poll_interval = config.get("kafka_poll_interval")
         self.kafka_topic = config.get('kafka_topic')
         self.record_monitor = config.get("record_monitor")
-        self.kafka_poll_interval = config.get("kafka_poll_interval")
 
         kafka_configuration = {
             'bootstrap.servers':  config.get('kafka_bootstrap_server')
@@ -1120,12 +1126,11 @@ class PrintRabbitmqMixin():
 
         rabbitmq_delivery_mode = 2
         rabbitmq_host = config.get("rabbitmq_host")
+        rabbitmq_password = config.get("rabbitmq_password")
         rabbitmq_port = config.get("rabbitmq_port")
         rabbitmq_username = config.get("rabbitmq_username")
-        rabbitmq_password = config.get("rabbitmq_password")
         self.rabbitmq_exchange = config.get("rabbitmq_exchange")
         self.rabbitmq_queue = config.get("rabbitmq_queue")
-        self.record_monitor = config.get("record_monitor")
         self.record_monitor = config.get("record_monitor")
 
         # Construct Pika objects.
@@ -1208,13 +1213,20 @@ class PrintSqsMixin():
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "PrintSqsMixin"))
         config = kwargs.get("config", {})
-        self.record_monitor = config.get("record_monitor")
         self.counter = 0
+        self.queue_url = config.get("sqs_queue_url")
+        self.record_monitor = config.get("record_monitor")
+        self.sqs = boto3.client("sqs")
 
     def print(self, message):
         self.counter += 1
         assert type(message) == str
-        print(message)
+        response = self.sqs.send_message(
+            QueueUrl=self.queue_url,
+            DelaySeconds=10,
+            MessageAttributes={},
+            MessageBody=(message),
+        )
         if self.counter % self.record_monitor == 0:
             logging.info(message_debug(105, counter))
 
@@ -1231,8 +1243,8 @@ class PrintStdoutMixin():
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "PrintStdoutMixin"))
         config = kwargs.get("config", {})
-        self.record_monitor = config.get("record_monitor")
         self.counter = 0
+        self.record_monitor = config.get("record_monitor")
 
     def print(self, message):
         self.counter += 1
