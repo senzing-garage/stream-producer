@@ -27,8 +27,7 @@ RUN apt-get update \
 RUN pip3 install --upgrade pip
 RUN pip3 install \
       boto3 \
-      configparser \
-      confluent-kafka \
+      confluent_kafka \
       fastavro \
       fastparquet \
       pandas \

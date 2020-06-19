@@ -1,6 +1,8 @@
 boto3
 confluent_kafka
 fastavro
+fastparquet
 pandas
 parquet
 pika
+pyarrow
