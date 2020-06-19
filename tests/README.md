@@ -6,7 +6,7 @@
 
     ```console
     export GIT_ACCOUNT=senzing
-    export GIT_REPOSITORY=template-docker
+    export GIT_REPOSITORY=stream-producer
     export GIT_ACCOUNT_DIR=~/${GIT_ACCOUNT}.git
     export GIT_REPOSITORY_DIR="${GIT_ACCOUNT_DIR}/${GIT_REPOSITORY}"
     ```
