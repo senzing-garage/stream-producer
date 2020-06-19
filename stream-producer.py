@@ -7,6 +7,7 @@
 
 from glob import glob
 import argparse
+import boto3
 import collections
 import csv
 import fastavro
@@ -31,7 +32,7 @@ import urllib.parse
 __all__ = []
 __version__ = "1.0.0"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
-__updated__ = '2020-06-18'
+__updated__ = '2020-06-19'
 
 SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -155,6 +156,11 @@ configuration_locator = {
         "env": "SENZING_SLEEP_TIME_IN_SECONDS",
         "cli": "sleep-time-in-seconds"
     },
+    "sqs_queue_url": {
+        "default": None,
+        "env": "SENZING_SQS_QUEUE_URL",
+        "cli": "sqs-queue-url"
+    },
     "subcommand": {
         "default": None,
         "env": "SENZING_SUBCOMMAND",
@@ -189,6 +195,10 @@ def get_parser():
             "help": 'Read Avro file and send to RabbitMQ.',
             "argument_aspects": ["input-url", "avro", "rabbitmq"]
         },
+        'avro-to-sqs': {
+            "help": 'Read Avro file and print to AWS SQS.',
+            "argument_aspects": ["input-url", "avro", "sqs"]
+        },
         'avro-to-stdout': {
             "help": 'Read Avro file and print to STDOUT.',
             "argument_aspects": ["input-url", "avro", "stdout"]
@@ -200,6 +210,10 @@ def get_parser():
         'csv-to-rabbitmq': {
             "help": 'Read CSV file and send to RabbitMQ.',
             "argument_aspects": ["input-url", "csv", "rabbitmq"]
+        },
+        'csv-to-sqs': {
+            "help": 'Read CSV file and print to SQS.',
+            "argument_aspects": ["input-url", "csv", "sqs"]
         },
         'csv-to-stdout': {
             "help": 'Read CSV file and print to STDOUT.',
@@ -213,6 +227,10 @@ def get_parser():
             "help": 'Read JSON file and send to RabbitMQ.',
             "argument_aspects": ["input-url", "json", "rabbitmq"]
         },
+        'json-to-sqs': {
+            "help": 'Read JSON file and send to AWS SQS.',
+            "argument_aspects": ["input-url", "json", "sqs"]
+        },
         'json-to-stdout': {
             "help": 'Read JSON file and print to STDOUT.',
             "argument_aspects": ["input-url", "json", "stdout"]
@@ -224,6 +242,10 @@ def get_parser():
         'parquet-to-rabbitmq': {
             "help": 'Read Parquet file and send to RabbitMQ.',
             "argument_aspects": ["input-url", "parquet", "rabbitmq"]
+        },
+        'parquet-to-sqs': {
+            "help": 'Read Parquet file and print to AWS SQS.',
+            "argument_aspects": ["input-url", "parquet", "sqs"]
         },
         'parquet-to-stdout': {
             "help": 'Read Parquet file and print to STDOUT.',
@@ -324,6 +346,13 @@ def get_parser():
                 "dest": "rabbitmq_exchange",
                 "metavar": "SENZING_RABBITMQ_EXCHANGE",
                 "help": "RabbitMQ exchange name. Default: empty string"
+            },
+        },
+        "sqs": {
+            "--sqs-queue-url": {
+                "dest": "sqs_queue_url",
+                "metavar": "SENZING_SQS_QUEUE_URL",
+                "help": "AWS SQS URL. Default: none"
             },
         },
     }
@@ -1044,9 +1073,9 @@ class PrintKafkaMixin():
     def __init__(self, config={}, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "PrintKafkaMixin"))
         self.config = config
+        self.kafka_poll_interval = config.get("kafka_poll_interval")
         self.kafka_topic = config.get('kafka_topic')
         self.record_monitor = config.get("record_monitor")
-        self.kafka_poll_interval = config.get("kafka_poll_interval")
 
         kafka_configuration = {
             'bootstrap.servers':  config.get('kafka_bootstrap_server')
@@ -1109,12 +1138,11 @@ class PrintRabbitmqMixin():
 
         rabbitmq_delivery_mode = 2
         rabbitmq_host = config.get("rabbitmq_host")
+        rabbitmq_password = config.get("rabbitmq_password")
         rabbitmq_port = config.get("rabbitmq_port")
         rabbitmq_username = config.get("rabbitmq_username")
-        rabbitmq_password = config.get("rabbitmq_password")
         self.rabbitmq_exchange = config.get("rabbitmq_exchange")
         self.rabbitmq_queue = config.get("rabbitmq_queue")
-        self.record_monitor = config.get("record_monitor")
         self.record_monitor = config.get("record_monitor")
 
         # Construct Pika objects.
@@ -1188,6 +1216,36 @@ class PrintQueueMixin():
         self.print_queue.put(QUEUE_SENTINEL)
 
 # -----------------------------------------------------------------------------
+# Class: PrintSqsMixin
+# -----------------------------------------------------------------------------
+
+
+class PrintSqsMixin():
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "PrintSqsMixin"))
+        config = kwargs.get("config", {})
+        self.counter = 0
+        self.queue_url = config.get("sqs_queue_url")
+        self.record_monitor = config.get("record_monitor")
+        self.sqs = boto3.client("sqs")
+
+    def print(self, message):
+        self.counter += 1
+        assert type(message) == str
+        response = self.sqs.send_message(
+            QueueUrl=self.queue_url,
+            DelaySeconds=10,
+            MessageAttributes={},
+            MessageBody=(message),
+        )
+        if self.counter % self.record_monitor == 0:
+            logging.info(message_debug(105, counter))
+
+    def close(self):
+        pass
+
+# -----------------------------------------------------------------------------
 # Class: PrintStdoutMixin
 # -----------------------------------------------------------------------------
 
@@ -1197,8 +1255,8 @@ class PrintStdoutMixin():
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "PrintStdoutMixin"))
         config = kwargs.get("config", {})
-        self.record_monitor = config.get("record_monitor")
         self.counter = 0
+        self.record_monitor = config.get("record_monitor")
 
     def print(self, message):
         self.counter += 1
@@ -1300,6 +1358,14 @@ class FilterQueueDictToJsonRabbitmqThread(ReadEvaluatePrintLoopThread, ReadQueue
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonRabbitmqThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+
+
+class FilterQueueDictToJsonSqsThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintSqsMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonSqsThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -1661,6 +1727,12 @@ def do_avro_to_rabbitmq(args):
     dohelper_avro(args, write_thread)
 
 
+def do_avro_to_sqs(args):
+    ''' Read file of AVRO, print to STDOUT. '''
+    write_thread = FilterQueueDictToJsonSqsThread
+    dohelper_avro(args, write_thread)
+
+
 def do_avro_to_stdout(args):
     ''' Read file of AVRO, print to STDOUT. '''
     write_thread = FilterQueueDictToJsonStdoutThread
@@ -1676,6 +1748,12 @@ def do_csv_to_kafka(args):
 def do_csv_to_rabbitmq(args):
     ''' Read file of CSV, print to RabbitMQ. '''
     write_thread = FilterQueueDictToJsonRabbitmqThread
+    dohelper_csv(args, write_thread)
+
+
+def do_csv_to_sqs(args):
+    ''' Read file of CSV, print to STDOUT. '''
+    write_thread = FilterQueueDictToJsonSqsThread
     dohelper_csv(args, write_thread)
 
 
@@ -1713,6 +1791,12 @@ def do_json_to_rabbitmq(args):
     dohelper_json(args, write_thread)
 
 
+def do_json_to_sqs(args):
+    ''' Read file of JSON, print to AWS SQS. '''
+    write_thread = FilterQueueDictToJsonSqsThread
+    dohelper_json(args, write_thread)
+
+
 def do_json_to_stdout(args):
     ''' Read file of JSON, print to STDOUT. '''
     write_thread = FilterQueueDictToJsonStdoutThread
@@ -1728,6 +1812,12 @@ def do_parquet_to_kafka(args):
 def do_parquet_to_rabbitmq(args):
     ''' Read file of Parquet, print to RabbitMQ. '''
     write_thread = FilterQueueDictToJsonRabbitmqThread
+    dohelper_parquet(args, write_thread)
+
+
+def do_parquet_to_sqs(args):
+    ''' Read file of Parquet, print to STDOUT. '''
+    write_thread = FilterQueueDictToJsonSqsThread
     dohelper_parquet(args, write_thread)
 
 

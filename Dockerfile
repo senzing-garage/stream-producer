@@ -26,14 +26,14 @@ RUN apt-get update \
 
 RUN pip3 install --upgrade pip
 RUN pip3 install \
-      pyarrow \
-      configparser \
-      confluent-kafka \
+      boto3 \
+      confluent_kafka \
       fastavro \
       fastparquet \
       pandas \
+      pika \
       psutil \
-      pika
+      pyarrow
 
 # Copy files from repository.
 

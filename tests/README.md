@@ -6,7 +6,7 @@
 
     ```console
     export GIT_ACCOUNT=senzing
-    export GIT_REPOSITORY=template-docker
+    export GIT_REPOSITORY=stream-producer
     export GIT_ACCOUNT_DIR=~/${GIT_ACCOUNT}.git
     export GIT_REPOSITORY_DIR="${GIT_ACCOUNT_DIR}/${GIT_REPOSITORY}"
     ```
@@ -86,6 +86,60 @@
     ```
 
 ## Test Docker
+
+1. Test JSON.
+   Example:
+
+    ```console
+    docker run \
+      --env SENZING_INPUT_URL="http://senzing.dockter.com/files/stream-producer/simple.json" \
+      --env SENZING_SUBCOMMAND=json-to-stdout \
+      --interactive \
+      --rm \
+      --tty \
+      senzing/stream-producer:latest
+    ```
+
+1. Test CSV.
+   Example:
+
+    ```console
+    docker run \
+      --env SENZING_INPUT_URL="http://senzing.dockter.com/files/stream-producer/simple.csv" \
+      --env SENZING_SUBCOMMAND=csv-to-stdout \
+      --interactive \
+      --rm \
+      --tty \
+      senzing/stream-producer:latest
+    ```
+
+1. Test Parquet.
+   Example:
+
+    ```console
+    docker run \
+      --env SENZING_INPUT_URL="http://senzing.dockter.com/files/stream-producer/userdata1.parquet" \
+      --env SENZING_SUBCOMMAND=parquet-to-stdout \
+      --interactive \
+      --rm \
+      --tty \
+      senzing/stream-producer:latest
+    ```
+
+1. Test Avro.
+   Example:
+
+    ```console
+    docker run \
+      --env SENZING_INPUT_URL="http://senzing.dockter.com/files/stream-producer/twitter.avro" \
+      --env SENZING_SUBCOMMAND=avro-to-stdout \
+      --interactive \
+      --rm \
+      --tty \
+      senzing/stream-producer:latest
+    ```
+
+## Test Docker-compose
 
 ### Build docker image
 
