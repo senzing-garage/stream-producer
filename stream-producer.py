@@ -32,7 +32,7 @@ import urllib.parse
 __all__ = []
 __version__ = "1.0.0"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
-__updated__ = '2020-06-19'
+__updated__ = '2020-06-22'
 
 SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -1240,7 +1240,7 @@ class PrintSqsMixin():
             MessageBody=(message),
         )
         if self.counter % self.record_monitor == 0:
-            logging.info(message_debug(105, counter))
+            logging.info(message_debug(105, self.counter))
 
     def close(self):
         pass
