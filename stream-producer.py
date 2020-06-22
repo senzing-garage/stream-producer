@@ -370,7 +370,7 @@ def get_parser():
 
     # Parse command line arguments.
 
-    parser = argparse.ArgumentParser(prog="template-python.py", description="Example python skeleton. For more information, see https://github.com/Senzing/template-python")
+    parser = argparse.ArgumentParser(prog="stream-producer.py", description="Queue messages. For more information, see https://github.com/Senzing/stream-producer")
     subparsers = parser.add_subparsers(dest='subcommand', help='Subcommands (SENZING_SUBCOMMAND):')
 
     for subcommand_key, subcommand_values in subcommands.items():
