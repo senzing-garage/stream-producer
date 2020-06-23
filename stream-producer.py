@@ -30,9 +30,9 @@ import urllib.request
 import urllib.parse
 
 __all__ = []
-__version__ = "1.0.0"  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = "1.1.1"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
-__updated__ = '2020-06-19'
+__updated__ = '2020-06-23'
 
 SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -370,7 +370,7 @@ def get_parser():
 
     # Parse command line arguments.
 
-    parser = argparse.ArgumentParser(prog="template-python.py", description="Example python skeleton. For more information, see https://github.com/Senzing/template-python")
+    parser = argparse.ArgumentParser(prog="stream-producer.py", description="Queue messages. For more information, see https://github.com/Senzing/stream-producer")
     subparsers = parser.add_subparsers(dest='subcommand', help='Subcommands (SENZING_SUBCOMMAND):')
 
     for subcommand_key, subcommand_values in subcommands.items():
@@ -1240,7 +1240,7 @@ class PrintSqsMixin():
             MessageBody=(message),
         )
         if self.counter % self.record_monitor == 0:
-            logging.info(message_debug(105, counter))
+            logging.info(message_debug(105, self.counter))
 
     def close(self):
         pass
