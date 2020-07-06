@@ -32,7 +32,7 @@ import urllib.parse
 __all__ = []
 __version__ = "1.1.1"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
-__updated__ = '2020-06-23'
+__updated__ = '2020-06-26'
 
 SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -562,6 +562,7 @@ def get_configuration(args):
     integers = [
         'delay_in_seconds',
         'kafka_poll_interval',
+        'monitoring_period_in_seconds',
         'record_max',
         'record_min',
         'record_monitor',
