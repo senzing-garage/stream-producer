@@ -251,6 +251,24 @@ Configuration values specified by environment variable or command line parameter
 
 - **[SENZING_NETWORK](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md#senzing_network)**
 
+### AWS configuration
+
+[stream-producer.py](stream-producer.py) uses
+[AWS SDK for Python (Boto3)](https://aws.amazon.com/sdk-for-python/)
+to access AWS services.
+This library may be configured via environment variables  or `~/.aws/config` file.
+
+Example environment variables for configuration:
+
+- **[AWS_ACCESS_KEY_ID](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md#aws_access_key_id)**
+- **[AWS_SECRET_ACCESS_KEY](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md#aws_secret_access_key)**
+- **[AWS_DEFAULT_REGION](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md#aws_default_region)**
+
+References:
+
+- Boto3 [Configuration](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html)
+- Boto3 [Credentials](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html)
+
 ## Errors
 
 1. See [docs/errors.md](docs/errors.md).
