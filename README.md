@@ -253,10 +253,9 @@ Configuration values specified by environment variable or command line parameter
 
 ### AWS configuration
 
-[stream-producer.py](stream-producer.py)
-uses the AWS
-[boto3](https://aws.amazon.com/sdk-for-python/)
-python library to access AWS services.
+[stream-producer.py](stream-producer.py) uses
+[AWS SDK for Python (Boto3)](https://aws.amazon.com/sdk-for-python/)
+to access AWS services.
 This library may be configured via environment variables  or `~/.aws/config` file.
 
 Example environment variables for configuration:
