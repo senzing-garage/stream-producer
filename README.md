@@ -35,6 +35,7 @@ describing where we can improve.   Now on with the show...
     1. [Examples of Docker](#examples-of-docker)
 1. [Advanced](#advanced)
     1. [Configuration](#configuration)
+    1. [AWS configuration](#aws-configuration)
 1. [Errors](#errors)
 1. [References](#references)
 
