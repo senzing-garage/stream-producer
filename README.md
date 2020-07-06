@@ -243,6 +243,25 @@ The following examples require initialization described in
 
 1. Example docker and docker-compose invocations can be seen in
    [Tests](tests/README.md#test-docker)
+1. There is a [tutorial](https://github.com/Senzing/docker-compose-demo/tree/master/docs/docker-compose-sqs-postgresql-advanced) showing AWS SQS usage.
+
+1. `docker run` command for populating Amazon SQS.
+   Example:
+
+    ```console
+    docker run \
+      --env AWS_ACCESS_KEY_ID=AAAAAAAAAAAAAAAAAAAA \
+      --env AWS_DEFAULT_REGION=us-east-1 \
+      --env AWS_SECRET_ACCESS_KEY=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+      --env SENZING_INPUT_URL="https://s3.amazonaws.com/public-read-access/TestDataSets/loadtest-dataset-1M.json" \
+      --env SENZING_RECORD_MAX=100 \
+      --env SENZING_SQS_QUEUE_URL="https://sqs.us-east-1.amazonaws.com/000000000000/queue-name" \
+      --env SENZING_SUBCOMMAND=json-to-sqs \
+      --interactive \
+      --rm \
+      --tty \
+      senzing/stream-producer
+    ```
 
 ## Advanced
 
