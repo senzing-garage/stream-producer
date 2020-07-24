@@ -401,7 +401,7 @@ MESSAGE_DEBUG = 900
 message_dictionary = {
     "100": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}I",
     "103": "Kafka topic: {0}; message: {1}; error: {2}; error: {3}",
-    "104": "Records sent to queue: {0}",
+    "104": "Thread: {0} Records sent to queue: {1}",
     "120": "Sleeping for requested delay of {0} seconds.",
     "127": "Monitor: {0}",
     "129": "{0} is running.",
@@ -561,6 +561,7 @@ def get_configuration(args):
         'delay_in_seconds',
         'kafka_poll_interval',
         'monitoring_period_in_seconds',
+        'read_queue_maxsize',
         'record_max',
         'record_min',
         'record_monitor',
@@ -1115,7 +1116,7 @@ class PrintKafkaMixin():
         if output_counter % self.record_monitor == 0:
             if output_counter != self.config.get('output_counter_reported'):
                 self.config['output_counter_reported'] = output_counter
-                logging.info(message_debug(104, output_counter))
+                logging.info(message_debug(104, threading.current_thread().name, output_counter))
 
         # Poll Kafka for callbacks.
 
@@ -1191,7 +1192,7 @@ class PrintRabbitmqMixin():
         if output_counter % self.record_monitor == 0:
             if output_counter != self.config.get('output_counter_reported'):
                 self.config['output_counter_reported'] = output_counter
-                logging.info(message_debug(104, output_counter))
+                logging.info(message_debug(104, threading.current_thread().name, output_counter))
 
     def close(self):
         self.connection.close()
@@ -1239,7 +1240,7 @@ class PrintSqsMixin():
             MessageBody=(message),
         )
         if self.counter % self.record_monitor == 0:
-            logging.info(message_debug(104, self.counter))
+            logging.info(message_debug(104, threading.current_thread().name, self.counter))
 
     def close(self):
         pass
@@ -1262,7 +1263,7 @@ class PrintStdoutMixin():
         assert type(message) == str
         print(message)
         if self.counter % self.record_monitor == 0:
-            logging.info(message_debug(104, counter))
+            logging.info(message_debug(104, threading.current_thread().name, counter))
 
     def close(self):
         pass
