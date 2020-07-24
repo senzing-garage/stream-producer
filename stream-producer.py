@@ -30,9 +30,9 @@ import urllib.request
 import urllib.parse
 
 __all__ = []
-__version__ = "1.1.1"  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = "1.1.2"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
-__updated__ = '2020-06-26'
+__updated__ = '2020-07-24'
 
 SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -401,9 +401,7 @@ MESSAGE_DEBUG = 900
 message_dictionary = {
     "100": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}I",
     "103": "Kafka topic: {0}; message: {1}; error: {2}; error: {3}",
-    "104": "Records sent to Kafka: {0}",
-    "105": "Records sent to STDOUT: {0}",
-    "106": "Records sent to RabbitMQ: {0}",
+    "104": "Records sent to queue: {0}",
     "120": "Sleeping for requested delay of {0} seconds.",
     "127": "Monitor: {0}",
     "129": "{0} is running.",
@@ -1193,7 +1191,7 @@ class PrintRabbitmqMixin():
         if output_counter % self.record_monitor == 0:
             if output_counter != self.config.get('output_counter_reported'):
                 self.config['output_counter_reported'] = output_counter
-                logging.info(message_debug(106, output_counter))
+                logging.info(message_debug(104, output_counter))
 
     def close(self):
         self.connection.close()
@@ -1241,7 +1239,7 @@ class PrintSqsMixin():
             MessageBody=(message),
         )
         if self.counter % self.record_monitor == 0:
-            logging.info(message_debug(105, self.counter))
+            logging.info(message_debug(104, self.counter))
 
     def close(self):
         pass
@@ -1264,7 +1262,7 @@ class PrintStdoutMixin():
         assert type(message) == str
         print(message)
         if self.counter % self.record_monitor == 0:
-            logging.info(message_debug(105, counter))
+            logging.info(message_debug(104, counter))
 
     def close(self):
         pass
