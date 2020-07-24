@@ -156,6 +156,11 @@ configuration_locator = {
         "env": "SENZING_SLEEP_TIME_IN_SECONDS",
         "cli": "sleep-time-in-seconds"
     },
+    "sqs_delay_seconds": {
+        "default": 0,
+        "env": "SENZING_SQS_DELAY_SECONDS",
+        "cli": "sqs-delay-seconds"
+    },
     "sqs_queue_url": {
         "default": None,
         "env": "SENZING_SQS_QUEUE_URL",
@@ -199,6 +204,10 @@ def get_parser():
             "help": 'Read Avro file and print to AWS SQS.',
             "argument_aspects": ["input-url", "avro", "sqs"]
         },
+        'avro-to-sqs-batch': {
+            "help": 'Read Avro file and print to AWS SQS using batch.',
+            "argument_aspects": ["input-url", "avro", "sqs"]
+        },
         'avro-to-stdout': {
             "help": 'Read Avro file and print to STDOUT.',
             "argument_aspects": ["input-url", "avro", "stdout"]
@@ -213,6 +222,10 @@ def get_parser():
         },
         'csv-to-sqs': {
             "help": 'Read CSV file and print to SQS.',
+            "argument_aspects": ["input-url", "csv", "sqs"]
+        },
+        'csv-to-sqs-batch': {
+            "help": 'Read CSV file and print to SQS using batch.',
             "argument_aspects": ["input-url", "csv", "sqs"]
         },
         'csv-to-stdout': {
@@ -231,6 +244,10 @@ def get_parser():
             "help": 'Read JSON file and send to AWS SQS.',
             "argument_aspects": ["input-url", "json", "sqs"]
         },
+        'json-to-sqs-batch': {
+            "help": 'Read JSON file and send to AWS SQS using batch.',
+            "argument_aspects": ["input-url", "json", "sqs"]
+        },
         'json-to-stdout': {
             "help": 'Read JSON file and print to STDOUT.',
             "argument_aspects": ["input-url", "json", "stdout"]
@@ -245,6 +262,10 @@ def get_parser():
         },
         'parquet-to-sqs': {
             "help": 'Read Parquet file and print to AWS SQS.',
+            "argument_aspects": ["input-url", "parquet", "sqs"]
+        },
+        'parquet-to-sqs-batch': {
+            "help": 'Read Parquet file and print to AWS SQS using batch.',
             "argument_aspects": ["input-url", "parquet", "sqs"]
         },
         'parquet-to-stdout': {
@@ -566,6 +587,7 @@ def get_configuration(args):
         'record_min',
         'record_monitor',
         'sleep_time_in_seconds',
+        'sqs_delay_seconds',
         'threads_per_print',
     ]
     for integer in integers:
@@ -711,6 +733,9 @@ class MonitorThread(threading.Thread):
         threading.Thread.__init__(self)
         self.config = config
         self.workers = workers
+        self.record_min = config.get('record_min', 0)
+        if self.record_min is None:
+            self.record_min = 0
 
     def run(self):
         '''Periodically monitor what is happening.'''
@@ -782,6 +807,7 @@ class MonitorThread(threading.Thread):
                 interval = total - value
                 stats["{0}_total".format(key)] = total
                 stats["{0}_interval".format(key)] = interval
+                stats["{0}_line_number_in_file".format(key)] = self.record_min + total
                 last[key] = total
 
             logging.info(message_info(127, json.dumps(stats, sort_keys=True)))
@@ -1229,13 +1255,14 @@ class PrintSqsMixin():
         self.queue_url = config.get("sqs_queue_url")
         self.record_monitor = config.get("record_monitor")
         self.sqs = boto3.client("sqs")
+        self.sqs_delay_seconds = config.get("sqs_delay_seconds")
 
     def print(self, message):
         self.counter += 1
         assert type(message) == str
         response = self.sqs.send_message(
             QueueUrl=self.queue_url,
-            DelaySeconds=10,
+            DelaySeconds=self.sqs_delay_seconds,
             MessageAttributes={},
             MessageBody=(message),
         )
@@ -1244,6 +1271,59 @@ class PrintSqsMixin():
 
     def close(self):
         pass
+
+# -----------------------------------------------------------------------------
+# Class: PrintSqsBatchMixin
+# -----------------------------------------------------------------------------
+
+
+class PrintSqsBatchMixin():
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "PrintSqsMixin"))
+        config = kwargs.get("config", {})
+        self.counter = 0
+        self.queue_url = config.get("sqs_queue_url")
+        self.record_monitor = config.get("record_monitor")
+        self.sqs = boto3.client("sqs")
+        self.sqs_delay_seconds = config.get("sqs_delay_seconds")
+        self.messages = []
+
+    def print(self, message):
+        self.counter += 1
+        assert type(message) == str
+        self.messages.append(message)
+        if len(self.messages) >= 10:
+            entries = []
+            for message in self.messages:
+                entry = {
+                    "Id": str(len(entries)),
+                    "MessageBody": message,
+                    "DelaySeconds": self.sqs_delay_seconds
+                }
+                entries.append(entry)
+            response = self.sqs.send_message_batch(
+                QueueUrl=self.queue_url,
+                Entries=entries,
+            )
+            self.messages = []
+        if self.counter % self.record_monitor == 0:
+            logging.info(message_debug(104, threading.current_thread().name, self.counter))
+
+    def close(self):
+        entries = []
+        for message in self.messages:
+            entry = {
+                "Id": str(len(entries)),
+                "MessageBody": message,
+                "DelaySeconds": self.sqs_delay_seconds
+            }
+            entries.append(entry)
+        response = self.sqs.send_message_batch(
+            QueueUrl=self.queue_url,
+            Entries=entries,
+        )
+        self.messages = []
 
 # -----------------------------------------------------------------------------
 # Class: PrintStdoutMixin
@@ -1366,6 +1446,14 @@ class FilterQueueDictToJsonSqsThread(ReadEvaluatePrintLoopThread, ReadQueueMixin
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonSqsThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+
+
+class FilterQueueDictToJsonSqsBatchThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintSqsBatchMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonSqsBatchThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -1733,6 +1821,12 @@ def do_avro_to_sqs(args):
     dohelper_avro(args, write_thread)
 
 
+def do_avro_to_sqs_batch(args):
+    ''' Read file of AVRO, print to STDOUT. '''
+    write_thread = FilterQueueDictToJsonSqsBatchThread
+    dohelper_avro(args, write_thread)
+
+
 def do_avro_to_stdout(args):
     ''' Read file of AVRO, print to STDOUT. '''
     write_thread = FilterQueueDictToJsonStdoutThread
@@ -1754,6 +1848,12 @@ def do_csv_to_rabbitmq(args):
 def do_csv_to_sqs(args):
     ''' Read file of CSV, print to STDOUT. '''
     write_thread = FilterQueueDictToJsonSqsThread
+    dohelper_csv(args, write_thread)
+
+
+def do_csv_to_sqs_batch(args):
+    ''' Read file of CSV, print to STDOUT. '''
+    write_thread = FilterQueueDictToJsonSqsBatchThread
     dohelper_csv(args, write_thread)
 
 
@@ -1797,6 +1897,12 @@ def do_json_to_sqs(args):
     dohelper_json(args, write_thread)
 
 
+def do_json_to_sqs_batch(args):
+    ''' Read file of JSON, print to AWS SQS. '''
+    write_thread = FilterQueueDictToJsonSqsBatchThread
+    dohelper_json(args, write_thread)
+
+
 def do_json_to_stdout(args):
     ''' Read file of JSON, print to STDOUT. '''
     write_thread = FilterQueueDictToJsonStdoutThread
@@ -1818,6 +1924,12 @@ def do_parquet_to_rabbitmq(args):
 def do_parquet_to_sqs(args):
     ''' Read file of Parquet, print to STDOUT. '''
     write_thread = FilterQueueDictToJsonSqsThread
+    dohelper_parquet(args, write_thread)
+
+
+def do_parquet_to_sqs_batch(args):
+    ''' Read file of Parquet, print to STDOUT. '''
+    write_thread = FilterQueueDictToJsonSqsBatchThread
     dohelper_parquet(args, write_thread)
 
 
