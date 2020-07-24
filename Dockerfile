@@ -1,11 +1,11 @@
 ARG BASE_IMAGE=debian:10.2
 FROM ${BASE_IMAGE}
 
-ENV REFRESHED_AT=2020-03-10
+ENV REFRESHED_AT=2020-07-24
 
 LABEL Name="senzing/stream-producer" \
       Maintainer="support@senzing.com" \
-      Version="1.0.0"
+      Version="1.2.0"
 
 HEALTHCHECK CMD ["/app/healthcheck.sh"]
 

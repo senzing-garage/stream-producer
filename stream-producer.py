@@ -30,7 +30,7 @@ import urllib.request
 import urllib.parse
 
 __all__ = []
-__version__ = "1.1.2"  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = "1.2.0"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
 __updated__ = '2020-07-24'
 
