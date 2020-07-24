@@ -776,7 +776,7 @@ class MonitorThread(threading.Thread):
                     if not worker.is_alive():
                         active_workers -= 1
                 if active_workers == 0:
-                    break;
+                    break
 
             # Determine if we're running out of workers.
 
@@ -947,7 +947,7 @@ class ReadQueueMixin():
 
             if message == QUEUE_SENTINEL:
                 self.read_queue.put(QUEUE_SENTINEL)
-                break;
+                break
 
             # Yield message.
 
