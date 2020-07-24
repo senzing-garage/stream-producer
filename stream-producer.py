@@ -1319,10 +1319,11 @@ class PrintSqsBatchMixin():
                 "DelaySeconds": self.sqs_delay_seconds
             }
             entries.append(entry)
-        response = self.sqs.send_message_batch(
-            QueueUrl=self.queue_url,
-            Entries=entries,
-        )
+        if len(entries) > 0:
+            response = self.sqs.send_message_batch(
+                QueueUrl=self.queue_url,
+                Entries=entries,
+            )
         self.messages = []
 
 # -----------------------------------------------------------------------------
