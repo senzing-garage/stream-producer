@@ -30,7 +30,7 @@ import urllib.request
 import urllib.parse
 
 __all__ = []
-__version__ = "1.2.0"  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = "1.2.1"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
 __updated__ = '2020-07-28'
 
@@ -558,6 +558,11 @@ def get_configuration(args):
         new_key = key.format(subcommand.replace('-', '_'))
         if value:
             result[new_key] = value
+
+    # Add program information.
+
+    result['program_version'] = __version__
+    result['program_updated'] = __updated__
 
     # Special case: subcommand from command-line
 
