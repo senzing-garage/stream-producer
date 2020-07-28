@@ -32,7 +32,7 @@ import urllib.parse
 __all__ = []
 __version__ = "1.2.0"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
-__updated__ = '2020-07-24'
+__updated__ = '2020-07-28'
 
 SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -805,9 +805,11 @@ class MonitorThread(threading.Thread):
                 value = last.get(key)
                 total = self.config.get(key)
                 interval = total - value
-                stats["{0}_total".format(key)] = total
                 stats["{0}_interval".format(key)] = interval
                 stats["{0}_line_number_in_file".format(key)] = self.record_min + total
+                stats["{0}_rate_interval".format(key)] = int(interval / sleep_time_in_seconds)
+                stats["{0}_rate_total".format(key)] = int(total / uptime)
+                stats["{0}_total".format(key)] = total
                 last[key] = total
 
             logging.info(message_info(127, json.dumps(stats, sort_keys=True)))
