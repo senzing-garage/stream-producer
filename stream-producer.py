@@ -700,6 +700,7 @@ def exit_template(config):
     stop_time = time.time()
     config['stop_time'] = stop_time
     config['elapsed_time'] = stop_time - config.get('start_time', stop_time)
+    config['rate'] = int(config.get('output_counter', 0) / config.get('elapsed_time', 1))
     if debug:
         final_config = config
     else:
