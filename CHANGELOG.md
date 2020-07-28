@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 [markdownlint](https://dlaa.me/markdownlint/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2020-07-28
+
+### Added in 1.2.1
+
+- Monitoring metrics:  input_counter_rate_interval, input_counter_rate_total, output_counter_rate_interval, output_counter_rate_total
+- Exit metric: rate
+
 ## [1.2.0] - 2020-07-24
 
 ### Added in 1.2.0
