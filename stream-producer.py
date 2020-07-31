@@ -9,12 +9,14 @@ from glob import glob
 import argparse
 import boto3
 import collections
+import confluent_kafka
 import csv
 import fastavro
+import gzip
 import json
-import confluent_kafka
 import linecache
 import logging
+import multiprocessing
 import os
 import pandas
 import pika
@@ -22,17 +24,16 @@ import queue
 import random
 import signal
 import string
-import threading
-import multiprocessing
 import sys
+import threading
 import time
-import urllib.request
 import urllib.parse
+import urllib.request
 
 __all__ = []
-__version__ = "1.2.1"  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = "1.2.2"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
-__updated__ = '2020-07-28'
+__updated__ = '2020-07-30'
 
 SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -231,6 +232,26 @@ def get_parser():
         'csv-to-stdout': {
             "help": 'Read CSV file and print to STDOUT.',
             "argument_aspects": ["input-url", "csv", "stdout"]
+        },
+        'gzipped-json-to-kafka': {
+            "help": 'Read gzipped JSON file and send to Kafka.',
+            "argument_aspects": ["input-url", "json", "kafka"]
+        },
+        'gzipped-json-to-rabbitmq': {
+            "help": 'Read gzipped JSON file and send to RabbitMQ.',
+            "argument_aspects": ["input-url", "json", "rabbitmq"]
+        },
+        'gzipped-json-to-sqs': {
+            "help": 'Read gzipped JSON file and send to AWS SQS.',
+            "argument_aspects": ["input-url", "json", "sqs"]
+        },
+        'gzipped-json-to-sqs-batch': {
+            "help": 'Read gzipped JSON file and send to AWS SQS using batch.',
+            "argument_aspects": ["input-url", "json", "sqs"]
+        },
+        'gzipped-json-to-stdout': {
+            "help": 'Read gzipped JSON file and print to STDOUT.',
+            "argument_aspects": ["input-url", "json", "stdout"]
         },
         'json-to-kafka': {
             "help": 'Read JSON file and send to Kafka.',
@@ -911,6 +932,65 @@ class ReadFileMixin():
                 yield line
 
 # -----------------------------------------------------------------------------
+# Class: ReadFileGzippedMixin
+# -----------------------------------------------------------------------------
+
+
+class ReadFileGzippedMixin():
+
+    def __init__(self, config={}, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileGzippedMixin"))
+        self.input_url = config.get('input_url')
+        self.record_min = config.get('record_min')
+        self.record_max = config.get('record_max')
+        self.counter = 0
+
+    def read(self):
+        with gzip.open(self.input_url, 'rt') as input_file:
+            for line in input_file:
+                self.counter += 1
+                if self.record_min and self.counter < self.record_min:
+                    continue
+                if self.record_max and self.counter > self.record_max:
+                    break
+                line = line.strip()
+                if not line:
+                    continue
+                assert isinstance(line, str)
+                yield line
+
+# -----------------------------------------------------------------------------
+# Class: ReadUrlGzippedMixin
+# -----------------------------------------------------------------------------
+
+
+class ReadUrlGzippedMixin():
+
+    def __init__(self, config={}, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadUrlGzippedMixin"))
+        self.input_url = config.get('input_url')
+        self.record_min = config.get('record_min')
+        self.record_max = config.get('record_max')
+        self.counter = 0
+
+    def read(self):
+
+        gzipped_data = urllib.request.urlopen(self.input_url, timeout=5)
+        data = gzip.GzipFile(fileobj=gzipped_data)
+        for line in data:
+            self.counter += 1
+            if self.record_min and self.counter < self.record_min:
+                continue
+            if self.record_max and self.counter > self.record_max:
+                break
+            line = line.strip()
+            if not line:
+                continue
+            result = json.loads(line)
+            assert isinstance(result, dict)
+            yield result
+
+# -----------------------------------------------------------------------------
 # Class: ReadFileParquetMixin
 # -----------------------------------------------------------------------------
 
@@ -1352,7 +1432,7 @@ class PrintStdoutMixin():
         assert type(message) == str
         print(message)
         if self.counter % self.record_monitor == 0:
-            logging.info(message_debug(104, threading.current_thread().name, counter))
+            logging.info(message_debug(104, threading.current_thread().name, self.counter))
 
     def close(self):
         pass
@@ -1415,6 +1495,14 @@ class FilterFileCsvToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileCsvMix
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "FilterFileCsvToDictQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+
+
+class FilterFileGzippedJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileGzippedMixin, EvaluateJsonToDictMixin, PrintQueueMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterFileGzippedJsonToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -1483,13 +1571,20 @@ class FilterUrlAvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlAvroMix
             base.__init__(self, *args, **kwargs)
 
 
+class FilterUrlGzippedJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlGzippedMixin, EvaluateNullObjectMixin, PrintQueueMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterUrlGzippedJsonToDictQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+
+
 class FilterUrlJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "FilterUrlJsonToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
-
 # -----------------------------------------------------------------------------
 # *_processor
 # -----------------------------------------------------------------------------
@@ -1749,6 +1844,36 @@ def dohelper_csv(args, write_thread):
     )
 
 
+def dohelper_gzipped_json(args, write_thread):
+    ''' Read file of JSON, print to write_thread. '''
+
+    # Get context variables.
+
+    config = get_configuration(args)
+    input_url = config.get("input_url")
+    parsed_file_name = urllib.parse.urlparse(input_url)
+
+    # Determine Read thread.
+
+    read_thread = FilterFileGzippedJsonToDictQueueThread  # Default.
+    if parsed_file_name.scheme in ['http', 'https']:
+        read_thread = FilterUrlGzippedJsonToDictQueueThread
+
+    # Cascading defaults.
+
+    options_to_defaults_map = {}
+
+    # Run pipeline.
+
+    pipeline_read_write(
+        args=args,
+        options_to_defaults_map=options_to_defaults_map,
+        read_thread=read_thread,
+        write_thread=write_thread,
+        monitor_thread=MonitorThread
+    )
+
+
 def dohelper_json(args, write_thread):
     ''' Read file of JSON, print to write_thread. '''
 
@@ -1886,6 +2011,36 @@ def do_docker_acceptance_test(args):
     # Epilog.
 
     logging.info(exit_template(config))
+
+
+def do_gzipped_json_to_kafka(args):
+    ''' Read file of JSON, print to Kafka. '''
+    write_thread = FilterQueueDictToJsonKafkaThread
+    dohelper_gzipped_json(args, write_thread)
+
+
+def do_gzipped_json_to_rabbitmq(args):
+    ''' Read file of JSON, print to RabbitMQ. '''
+    write_thread = FilterQueueDictToJsonRabbitmqThread
+    dohelper_gzipped_json(args, write_thread)
+
+
+def do_gzipped_json_to_sqs(args):
+    ''' Read file of JSON, print to AWS SQS. '''
+    write_thread = FilterQueueDictToJsonSqsThread
+    dohelper_gzipped_json(args, write_thread)
+
+
+def do_gzipped_json_to_sqs_batch(args):
+    ''' Read file of JSON, print to AWS SQS. '''
+    write_thread = FilterQueueDictToJsonSqsBatchThread
+    dohelper_gzipped_json(args, write_thread)
+
+
+def do_gzipped_json_to_stdout(args):
+    ''' Read file of JSON, print to STDOUT. '''
+    write_thread = FilterQueueDictToJsonStdoutThread
+    dohelper_gzipped_json(args, write_thread)
 
 
 def do_json_to_kafka(args):
