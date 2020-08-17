@@ -102,11 +102,6 @@ configuration_locator = {
         "env": "SENZING_PASSWORD",
         "cli": "password"
     },
-    "rabbitmq_create_exchange_and_queue": {
-        "default": False,
-        "env": "SENZING_RABBITMQ_CREATE_EXCHANGE_AND_QUEUE",
-        "cli": "rabbitmq-create-exchange-and-queue",
-    },
     "rabbitmq_exchange": {
         "default": "",
         "env": "SENZING_RABBITMQ_EXCHANGE",
@@ -131,6 +126,11 @@ configuration_locator = {
         "default": "senzing-rabbitmq-queue",
         "env": "SENZING_RABBITMQ_QUEUE",
         "cli": "rabbitmq-queue",
+    },
+    "rabbitmq_use_preexisting_exchange_and_queue": {
+        "default": False,
+        "env": "SENZING_RABBITMQ_USE_PREEXISTING_EXCHANGE_AND_QUEUE",
+        "cli": "rabbitmq-use-preexisting-exchange-and-queue",
     },
     "rabbitmq_username": {
         "default": "user",
@@ -394,10 +394,10 @@ def get_parser():
                 "metavar": "SENZING_RABBITMQ_EXCHANGE",
                 "help": "RabbitMQ exchange name. Default: empty string"
             },
-            "--rabbitmq-create-exchange-and-queue": {
-                "dest": "rabbitmq_create_exchange_and_queue",
-                "metavar": "SENZING_RABBITMQ_CREATE_EXCHANGE_AND_QUEUE",
-                "help": "If true, create it the exhange/queue if they don't exist or attempt to connect to an existing exchange/queue. Connecting to an existing exchange will fail if any parameters differ. If false, connect to an existing exchange and queue. Default: False"
+            "--rabbitmq-use-preexisting-exchange-and-queue": {
+                "dest": "rabbitmq_use_preexisting_exchange_and_queue",
+                "metavar": "SENZING_RABBITMQ_USE_PREEXISTNG_EXCHANGE_AND_QUEUE",
+                "help": "Connect to an existing exchange and queue using their setting. An error is thrown if the exchange or queue does not exist. If False, it will create the exchange and queue if they do not exist. If they exist, then it will attempt to connect, checking the settings match. Default: False"
             },
         },
         "sqs": {
@@ -476,8 +476,8 @@ message_dictionary = {
     "410": "Unknown RabbitMQ error when connecting: {0}.",
     "411": "Unknown RabbitMQ error when adding record to queue: {0} for line {1}.",
     "412": "Could not connect to RabbitMQ host at {1}. The host name maybe wrong, it may not be ready, or your credentials are incorrect. See the RabbitMQ log for more details.",
-    "413": "The exchange {0} and/or the queue {1} do not exist. Create them, or set SENZING_RABBITMQ_CREATE_EXCHANGE_AND_QUEUE to True to have stream-producer create them.",
-    "414": "The exchange {0} and/or the queue {1} exist but are configured with different parameters. Set SENZING_RABBITMQ_CREATE_EXCHANGE_AND_QUEUE to False to connect the preconfigured exchange and queue, or delete the existing exchange and queue and try again.",
+    "413": "The exchange {0} and/or the queue {1} do not exist. Create them, or set rabbitmq-use-preexisting-exchange-and-queue to False to have stream-producer create them or ensure they are created with the expected names.",
+    "414": "The exchange {0} and/or the queue {1} exist but are configured with different parameters. Set rabbitmq-use-preexisting-exchange-and-queue to True to connect to the preconfigured exchange and queue, or delete the existing exchange and queue and try again.",
     "499": "{0}",
     "500": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}E",
     "695": "Unknown database scheme '{0}' in database url '{1}'",
@@ -606,7 +606,7 @@ def get_configuration(args):
 
     booleans = [
         'debug',
-        'rabbitmq_create_exchange_and_queue',
+        'rabbitmq_use_preexisting_exchange_and_queue',
     ]
     for boolean in booleans:
         boolean_value = result.get(boolean)
@@ -1270,7 +1270,7 @@ class PrintRabbitmqMixin():
         rabbitmq_password = config.get("rabbitmq_password")
         rabbitmq_port = config.get("rabbitmq_port")
         rabbitmq_username = config.get("rabbitmq_username")
-        rabbitmq_passive_declare = not config.get("rabbitmq_create_exchange_and_queue")
+        rabbitmq_passive_declare = config.get("rabbitmq_use_preexisting_exchange_and_queue")
         self.rabbitmq_exchange = config.get("rabbitmq_exchange")
         self.rabbitmq_queue = config.get("rabbitmq_queue")
         self.record_monitor = config.get("record_monitor")
