@@ -1297,7 +1297,10 @@ class PrintRabbitmqMixin():
             self.channel = self.connection.channel()
             self.channel.exchange_declare(exchange=self.rabbitmq_exchange, passive=rabbitmq_passive_declare)
             message_queue = self.channel.queue_declare(queue=self.rabbitmq_queue, passive=rabbitmq_passive_declare)
-            self.channel.queue_bind(exchange=self.rabbitmq_exchange, routing_key='', queue=message_queue.method.queue)
+
+            # if we are actively declaring, then we need to bind. If passive declare, we assume it is already set up
+            if not rabbitmq_passive_declare:
+                self.channel.queue_bind(exchange=self.rabbitmq_exchange, routing_key='', queue=message_queue.method.queue)
         except (pika.exceptions.AMQPConnectionError) as err:
             exit_error(412, err, rabbitmq_host)
         except (pika.exceptions.ChannelClosedByBroker) as err:
