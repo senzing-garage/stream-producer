@@ -103,7 +103,7 @@ configuration_locator = {
         "cli": "password"
     },
     "rabbitmq_exchange": {
-        "default": "",
+        "default": "senzing-rabbitmq-exchange",
         "env": "SENZING_RABBITMQ_EXCHANGE",
         "cli": "rabbitmq-exchange",
     },
@@ -126,6 +126,11 @@ configuration_locator = {
         "default": "senzing-rabbitmq-queue",
         "env": "SENZING_RABBITMQ_QUEUE",
         "cli": "rabbitmq-queue",
+    },
+    "rabbitmq_use_existing_entities": {
+        "default": False,
+        "env": "SENZING_RABBITMQ_USE_EXISTING_ENTITIES",
+        "cli": "rabbitmq-use-existing-entities",
     },
     "rabbitmq_username": {
         "default": "user",
@@ -389,6 +394,11 @@ def get_parser():
                 "metavar": "SENZING_RABBITMQ_EXCHANGE",
                 "help": "RabbitMQ exchange name. Default: empty string"
             },
+            "--rabbitmq-use-existing-entities": {
+                "dest": "rabbitmq_use_existing_entities",
+                "metavar": "SENZING_RABBITMQ_USE_EXISTING_ENTITIES",
+                "help": "Connect to an existing exchange and queue using their settings. An error is thrown if the exchange or queue does not exist. If False, it will create the exchange and queue if they do not exist. If they exist, then it will attempt to connect, checking the settings match. Default: False"
+            },
         },
         "sqs": {
             "--sqs-queue-url": {
@@ -466,6 +476,8 @@ message_dictionary = {
     "410": "Unknown RabbitMQ error when connecting: {0}.",
     "411": "Unknown RabbitMQ error when adding record to queue: {0} for line {1}.",
     "412": "Could not connect to RabbitMQ host at {1}. The host name maybe wrong, it may not be ready, or your credentials are incorrect. See the RabbitMQ log for more details.",
+    "413": "The exchange {0} and/or the queue {1} do not exist. Create them, or set rabbitmq-use-existing-entities to False to have stream-producer create them.",
+    "414": "The exchange {0} and/or the queue {1} exist but are configured with unexpected parameters. Set rabbitmq-use-existing-entities to True to connect to the preconfigured exchange and queue, or delete the existing exchange and queue and try again.",
     "499": "{0}",
     "500": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}E",
     "695": "Unknown database scheme '{0}' in database url '{1}'",
@@ -592,7 +604,10 @@ def get_configuration(args):
 
     # Special case: Change boolean strings to booleans.
 
-    booleans = ['debug']
+    booleans = [
+        'debug',
+        'rabbitmq_use_existing_entities',
+    ]
     for boolean in booleans:
         boolean_value = result.get(boolean)
         if isinstance(boolean_value, str):
@@ -1255,6 +1270,7 @@ class PrintRabbitmqMixin():
         rabbitmq_password = config.get("rabbitmq_password")
         rabbitmq_port = config.get("rabbitmq_port")
         rabbitmq_username = config.get("rabbitmq_username")
+        rabbitmq_passive_declare = config.get("rabbitmq_use_existing_entities")
         self.rabbitmq_exchange = config.get("rabbitmq_exchange")
         self.rabbitmq_queue = config.get("rabbitmq_queue")
         self.record_monitor = config.get("record_monitor")
@@ -1279,9 +1295,21 @@ class PrintRabbitmqMixin():
         try:
             self.connection = pika.BlockingConnection(rabbitmq_connection_parameters)
             self.channel = self.connection.channel()
-            self.channel.queue_declare(queue=self.rabbitmq_queue)
+            self.channel.exchange_declare(exchange=self.rabbitmq_exchange, passive=rabbitmq_passive_declare)
+            message_queue = self.channel.queue_declare(queue=self.rabbitmq_queue, passive=rabbitmq_passive_declare)
+
+            # if we are actively declaring, then we need to bind. If passive declare, we assume it is already set up
+            if not rabbitmq_passive_declare:
+                self.channel.queue_bind(exchange=self.rabbitmq_exchange, routing_key='', queue=message_queue.method.queue)
         except (pika.exceptions.AMQPConnectionError) as err:
             exit_error(412, err, rabbitmq_host)
+        except (pika.exceptions.ChannelClosedByBroker) as err:
+            if err.reply_code == 404:
+                exit_error(413, self.rabbitmq_exchange, self.rabbitmq_queue)
+            elif err.reply_code == 406:
+                exit_error(414, self.rabbitmq_exchange, self.rabbitmq_queue)
+            else:
+                exit_error(410, err)
         except BaseException as err:
             exit_error(410, err)
 
@@ -1293,7 +1321,7 @@ class PrintRabbitmqMixin():
         try:
             self.channel.basic_publish(
                 exchange=self.rabbitmq_exchange,
-                routing_key=self.rabbitmq_queue,
+                routing_key='',
                 body=message,
                 properties=self.rabbitmq_properties
             )
