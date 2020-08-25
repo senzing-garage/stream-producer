@@ -127,6 +127,11 @@ configuration_locator = {
         "env": "SENZING_RABBITMQ_QUEUE",
         "cli": "rabbitmq-queue",
     },
+    "rabbitmq_routing_key": {
+        "default": "senzing.records",
+        "env": "SENZING_RABBITMQ_ROUTING_KEY",
+        "cli": "rabbitmq-routing-key",
+    },
     "rabbitmq_use_existing_entities": {
         "default": False,
         "env": "SENZING_RABBITMQ_USE_EXISTING_ENTITIES",
@@ -378,6 +383,11 @@ def get_parser():
                 "dest": "rabbitmq_queue",
                 "metavar": "SENZING_RABBITMQ_QUEUE",
                 "help": "RabbitMQ queue. Default: senzing-rabbitmq-queue"
+            },
+            "--rabbitmq-routing-key": {
+                "dest": "rabbitmq_routing_key",
+                "metavar": "SENZING_RABBITMQ_ROUTING_KEY",
+                "help": "RabbitMQ routing key. Default: senzing.records"
             },
             "--rabbitmq-username": {
                 "dest": "rabbitmq_username",
@@ -1273,6 +1283,7 @@ class PrintRabbitmqMixin():
         rabbitmq_passive_declare = config.get("rabbitmq_use_existing_entities")
         self.rabbitmq_exchange = config.get("rabbitmq_exchange")
         self.rabbitmq_queue = config.get("rabbitmq_queue")
+        self.rabbitmq_routing_key = config.get("rabbitmq_routing_key")
         self.record_monitor = config.get("record_monitor")
 
         # Construct Pika objects.
@@ -1300,7 +1311,7 @@ class PrintRabbitmqMixin():
 
             # if we are actively declaring, then we need to bind. If passive declare, we assume it is already set up
             if not rabbitmq_passive_declare:
-                self.channel.queue_bind(exchange=self.rabbitmq_exchange, routing_key='', queue=message_queue.method.queue)
+                self.channel.queue_bind(exchange=self.rabbitmq_exchange, routing_key=self.rabbitmq_routing_key, queue=message_queue.method.queue)
         except (pika.exceptions.AMQPConnectionError) as err:
             exit_error(412, err, rabbitmq_host)
         except (pika.exceptions.ChannelClosedByBroker) as err:
@@ -1321,7 +1332,7 @@ class PrintRabbitmqMixin():
         try:
             self.channel.basic_publish(
                 exchange=self.rabbitmq_exchange,
-                routing_key='',
+                routing_key=self.rabbitmq_routing_key,
                 body=message,
                 properties=self.rabbitmq_properties
             )
