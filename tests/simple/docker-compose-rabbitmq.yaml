@@ -28,7 +28,7 @@ services:
       SENZING_RABBITMQ_QUEUE: senzing-rabbitmq-queue
       SENZING_RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-user}
       SENZING_SUBCOMMAND: ${SENZING_INPUT_FORMAT:-json}-to-rabbitmq
-    image: senzing/stream-producer:${SENZING_STREAM_PRODUCER_VERSION:-latest}
+    image: senzing/stream-producer:${SENZING_DOCKER_IMAGE_VERSION_STREAM_PRODUCER:-latest}
     networks:
       - backend
     restart: on-failure
