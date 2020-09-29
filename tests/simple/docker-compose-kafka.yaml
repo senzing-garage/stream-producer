@@ -56,7 +56,7 @@ services:
       SENZING_KAFKA_TOPIC: senzing-kafka-topic
       SENZING_INPUT_URL: ${SENZING_INPUT_URL}
       SENZING_SUBCOMMAND: ${SENZING_INPUT_FORMAT:-json}-to-kafka
-    image: senzing/stream-producer:${SENZING_STREAM_PRODUCER_VERSION:-latest}
+    image: senzing/stream-producer:${SENZING_DOCKER_IMAGE_VERSION_STREAM_PRODUCER:-latest}
     networks:
       - backend
     restart: on-failure
