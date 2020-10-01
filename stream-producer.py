@@ -2232,6 +2232,15 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, bootstrap_signal_handler)
     signal.signal(signal.SIGINT, bootstrap_signal_handler)
 
+    # Import plugins
+    
+        try:
+        import senzing_governor
+        from senzing_governor import Governor
+        logging.info(message_info(180, senzing_governor.__file__))
+    except ImportError:
+        pass
+    
     # Parse the command line arguments.
 
     subcommand = os.getenv("SENZING_SUBCOMMAND", None)
