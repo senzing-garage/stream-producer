@@ -706,6 +706,29 @@ def redact_configuration(config):
     return result
 
 # -----------------------------------------------------------------------------
+# Class: Governor
+# -----------------------------------------------------------------------------
+
+
+class Governor:
+
+    def __init__(self, g2_engine=None, hint=None, *args, **kwargs):
+        self.g2_engine = g2_engine
+        self.hint = hint
+
+    def govern(self, *args, **kwargs):
+        return
+
+    def close(self):
+        return
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+        
+# -----------------------------------------------------------------------------
 # Utility functions
 # -----------------------------------------------------------------------------
 
