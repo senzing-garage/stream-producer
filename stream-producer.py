@@ -2234,7 +2234,7 @@ if __name__ == "__main__":
 
     # Import plugins
     
-        try:
+    try:
         import senzing_governor
         from senzing_governor import Governor
         logging.info(message_info(180, senzing_governor.__file__))
