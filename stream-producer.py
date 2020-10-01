@@ -1507,6 +1507,7 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
         # Read-Evaluate-Print Loop  (REPL)
 
         for message in self.read():
+            self.govern()
             logging.debug(message_debug(902, threading.current_thread().name, self.counter_name, message))
             self.print(self.evaluate(message))
             self.config[self.counter_name] += 1
