@@ -1756,6 +1756,7 @@ def pipeline_read_write(
     read_thread=None,
     write_thread=None,
     monitor_thread=None,
+    governor = Governor(g2_engine=g2_engine, hint="stream-producer")
 ):
 
     # Get context from CLI, environment variables, and ini files.
@@ -1814,6 +1815,7 @@ def pipeline_read_write(
                 config=config,
                 counter_name="output_counter",
                 read_queue=read_queue,
+                governor=governor
             )
             thread.name = "Process-0-{0}-{1}".format(thread.__class__.__name__, i)
             threads.append(thread)
