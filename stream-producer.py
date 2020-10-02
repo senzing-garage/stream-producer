@@ -1514,11 +1514,15 @@ class PrintStdoutMixin():
 
 class ReadEvaluatePrintLoopThread(threading.Thread):
 
-    def __init__(self, config=None, counter_name=None, *args, **kwargs):
+    def __init__(self, config=None, counter_name=None, governor=None, *args, **kwargs):
         threading.Thread.__init__(self)
         logging.debug(message_debug(997, threading.current_thread().name, "ReadEvaluatePrintLoopThread"))
         self.config = config
         self.counter_name = counter_name
+        self.governor=governor
+
+    def govern(self):
+        return self.governor.govern()
 
     def run(self):
         '''Read-Evaluate-Print Loop (REPL).'''
