@@ -1760,7 +1760,7 @@ def pipeline_read_write(
     read_thread=None,
     write_thread=None,
     monitor_thread=None,
-    governor = Governor(g2_engine=g2_engine, hint="stream-producer")
+    governor = Governor(hint="stream-producer")
 ):
 
     # Get context from CLI, environment variables, and ini files.
