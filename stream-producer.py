@@ -1945,7 +1945,7 @@ def dohelper_gzipped_json(args, write_thread):
         options_to_defaults_map=options_to_defaults_map,
         read_thread=read_thread,
         write_thread=write_thread,
-        monitor_thread=MonitorThread
+        monitor_thread=MonitorThread,
         governor=governor
     )
 
@@ -1976,7 +1976,7 @@ def dohelper_json(args, write_thread):
         options_to_defaults_map=options_to_defaults_map,
         read_thread=read_thread,
         write_thread=write_thread,
-        monitor_thread=MonitorThread
+        monitor_thread=MonitorThread,
         governor=governor
     )
 
@@ -2005,7 +2005,7 @@ def dohelper_parquet(args, write_thread):
         options_to_defaults_map=options_to_defaults_map,
         read_thread=read_thread,
         write_thread=write_thread,
-        monitor_thread=MonitorThread
+        monitor_thread=MonitorThread,
         governor=governor
     )
 
