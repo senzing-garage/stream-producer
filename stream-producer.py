@@ -1938,6 +1938,8 @@ def dohelper_gzipped_json(args, write_thread):
 
     options_to_defaults_map = {}
 
+    governor = Governor(hint="stream-producer")
+    
     # Run pipeline.
 
     pipeline_read_write(
@@ -1969,6 +1971,8 @@ def dohelper_json(args, write_thread):
 
     options_to_defaults_map = {}
 
+    governor = Governor(hint="stream-producer")
+    
     # Run pipeline.
 
     pipeline_read_write(
@@ -1998,6 +2002,8 @@ def dohelper_parquet(args, write_thread):
 
     options_to_defaults_map = {}
 
+    governor = Governor(hint="stream-producer")
+    
     # Run pipeline.
 
     pipeline_read_write(
