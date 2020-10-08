@@ -1763,6 +1763,8 @@ def pipeline_read_write(
     governor=None
 ):
 
+    logging.info(message_info(999, ">>>> Governor #2: {0}".format(governor))
+                 
     # Get context from CLI, environment variables, and ini files.
 
     config = get_configuration(args)
@@ -1875,7 +1877,8 @@ def dohelper_avro(args, write_thread):
     options_to_defaults_map = {}
 
     governor = Governor(hint="stream-producer")
-    
+    logging.info(message_info(999, ">>>> Governor #1: {0}".format(governor))
+                 
     # Run pipeline.
 
     pipeline_read_write(
