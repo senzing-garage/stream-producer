@@ -33,7 +33,7 @@ import urllib.request
 __all__ = []
 __version__ = "1.2.2"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
-__updated__ = '2020-07-30'
+__updated__ = '2020-10-09'
 
 SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -468,6 +468,7 @@ message_dictionary = {
     "127": "Monitor: {0}",
     "129": "{0} is running.",
     "130": "{0} has exited.",
+    "180": "User-supplied Governor loaded from {0}.",
     "181": "Monitoring halted. No active workers.",
     "292": "Configuration change detected.  Old: {0} New: {1}",
     "293": "For information on warnings and errors, see https://github.com/Senzing/stream-loader#errors",
@@ -704,6 +705,29 @@ def redact_configuration(config):
         except:
             pass
     return result
+
+# -----------------------------------------------------------------------------
+# Class: Governor
+# -----------------------------------------------------------------------------
+
+
+class Governor:
+
+    def __init__(self, g2_engine=None, hint=None, *args, **kwargs):
+        self.g2_engine = g2_engine
+        self.hint = hint
+
+    def govern(self, *args, **kwargs):
+        return
+
+    def close(self):
+        return
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
 
 # -----------------------------------------------------------------------------
 # Utility functions
@@ -1491,11 +1515,15 @@ class PrintStdoutMixin():
 
 class ReadEvaluatePrintLoopThread(threading.Thread):
 
-    def __init__(self, config=None, counter_name=None, *args, **kwargs):
+    def __init__(self, config=None, counter_name=None, governor=None, *args, **kwargs):
         threading.Thread.__init__(self)
         logging.debug(message_debug(997, threading.current_thread().name, "ReadEvaluatePrintLoopThread"))
         self.config = config
         self.counter_name = counter_name
+        self.governor = governor
+
+    def govern(self):
+        return self.governor.govern()
 
     def run(self):
         '''Read-Evaluate-Print Loop (REPL).'''
@@ -1507,6 +1535,7 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
         # Read-Evaluate-Print Loop  (REPL)
 
         for message in self.read():
+            self.govern()
             logging.debug(message_debug(902, threading.current_thread().name, self.counter_name, message))
             self.print(self.evaluate(message))
             self.config[self.counter_name] += 1
@@ -1732,6 +1761,7 @@ def pipeline_read_write(
     read_thread=None,
     write_thread=None,
     monitor_thread=None,
+    governor=None
 ):
 
     # Get context from CLI, environment variables, and ini files.
@@ -1772,7 +1802,9 @@ def pipeline_read_write(
         thread = read_thread(
             config=config,
             counter_name="input_counter",
-            print_queue=read_queue
+            print_queue=read_queue,
+            governor=governor,
+# FIXME:
         )
         thread.name = "Process-0-{0}-0".format(thread.__class__.__name__)
         threads.append(thread)
@@ -1790,6 +1822,7 @@ def pipeline_read_write(
                 config=config,
                 counter_name="output_counter",
                 read_queue=read_queue,
+                governor=governor
             )
             thread.name = "Process-0-{0}-{1}".format(thread.__class__.__name__, i)
             threads.append(thread)
@@ -1844,6 +1877,10 @@ def dohelper_avro(args, write_thread):
 
     options_to_defaults_map = {}
 
+    # Create governor.
+
+    governor = Governor(hint="stream-producer")
+
     # Run pipeline.
 
     pipeline_read_write(
@@ -1851,7 +1888,8 @@ def dohelper_avro(args, write_thread):
         options_to_defaults_map=options_to_defaults_map,
         read_thread=read_thread,
         write_thread=write_thread,
-        monitor_thread=MonitorThread
+        monitor_thread=MonitorThread,
+        governor=governor
     )
 
 
@@ -1872,6 +1910,10 @@ def dohelper_csv(args, write_thread):
 
     options_to_defaults_map = {}
 
+    # Create governor.
+
+    governor = Governor(hint="stream-producer")
+
     # Run pipeline.
 
     pipeline_read_write(
@@ -1879,7 +1921,8 @@ def dohelper_csv(args, write_thread):
         options_to_defaults_map=options_to_defaults_map,
         read_thread=read_thread,
         write_thread=write_thread,
-        monitor_thread=MonitorThread
+        monitor_thread=MonitorThread,
+        governor=governor
     )
 
 
@@ -1902,6 +1945,10 @@ def dohelper_gzipped_json(args, write_thread):
 
     options_to_defaults_map = {}
 
+    # Create governor.
+
+    governor = Governor(hint="stream-producer")
+
     # Run pipeline.
 
     pipeline_read_write(
@@ -1909,7 +1956,8 @@ def dohelper_gzipped_json(args, write_thread):
         options_to_defaults_map=options_to_defaults_map,
         read_thread=read_thread,
         write_thread=write_thread,
-        monitor_thread=MonitorThread
+        monitor_thread=MonitorThread,
+        governor=governor
     )
 
 
@@ -1932,6 +1980,10 @@ def dohelper_json(args, write_thread):
 
     options_to_defaults_map = {}
 
+    # Create governor.
+
+    governor = Governor(hint="stream-producer")
+
     # Run pipeline.
 
     pipeline_read_write(
@@ -1939,7 +1991,8 @@ def dohelper_json(args, write_thread):
         options_to_defaults_map=options_to_defaults_map,
         read_thread=read_thread,
         write_thread=write_thread,
-        monitor_thread=MonitorThread
+        monitor_thread=MonitorThread,
+        governor=governor
     )
 
 
@@ -1960,6 +2013,10 @@ def dohelper_parquet(args, write_thread):
 
     options_to_defaults_map = {}
 
+    # Create governor.
+
+    governor = Governor(hint="stream-producer")
+
     # Run pipeline.
 
     pipeline_read_write(
@@ -1967,7 +2024,8 @@ def dohelper_parquet(args, write_thread):
         options_to_defaults_map=options_to_defaults_map,
         read_thread=read_thread,
         write_thread=write_thread,
-        monitor_thread=MonitorThread
+        monitor_thread=MonitorThread,
+        governor=governor
     )
 
 # -----------------------------------------------------------------------------
@@ -2207,6 +2265,15 @@ if __name__ == "__main__":
 
     signal.signal(signal.SIGTERM, bootstrap_signal_handler)
     signal.signal(signal.SIGINT, bootstrap_signal_handler)
+
+    # Import plugins
+
+    try:
+        import senzing_governor
+        from senzing_governor import Governor
+        logging.info(message_info(180, senzing_governor.__file__))
+    except ImportError:
+        pass
 
     # Parse the command line arguments.
 
