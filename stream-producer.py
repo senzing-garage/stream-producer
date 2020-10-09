@@ -31,7 +31,7 @@ import urllib.parse
 import urllib.request
 
 __all__ = []
-__version__ = "1.2.2"  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = "1.2.3"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
 __updated__ = '2020-10-09'
 
@@ -147,6 +147,11 @@ configuration_locator = {
         "env": "SENZING_READ_QUEUE_MAXSIZE",
         "cli": "read-queue-maxsize"
     },
+    "record_identifier": {
+        "default": "RECORD_ID",
+        "env": "SENZING_RECORD_IDENTIFIER",
+        "cli": "record-identifier",
+    },
     "record_max": {
         "default": None,
         "env": "SENZING_RECORD_MAX",
@@ -161,6 +166,11 @@ configuration_locator = {
         "default": "10000",
         "env": "SENZING_RECORD_MONITOR",
         "cli": "record-monitor",
+    },
+    "record_size_max": {
+        "default": 0,
+        "env": "SENZING_RECORD_SIZE_MAX",
+        "cli": "record-size-max"
     },
     "sleep_time_in_seconds": {
         "default": 0,
@@ -340,6 +350,11 @@ def get_parser():
                 "metavar": "SENZING_INPUT_URL",
                 "help": "File/URL of input file. Default: None"
             },
+            "--record-identifier": {
+                "dest": "record_identifier",
+                "metavar": "SENZING_RECORD_IDENTIFIER",
+                "help": "Field that identifies record. Default: RECORD_ID"
+            },
             "--record-max": {
                 "dest": "record_max",
                 "metavar": "SENZING_RECORD_MAX",
@@ -349,6 +364,11 @@ def get_parser():
                 "dest": "record_min",
                 "metavar": "SENZING_RECORD_MIN",
                 "help": "Lowest record id. Default: None"
+            },
+            "--record-size-max": {
+                "dest": "record_size_max",
+                "metavar": "SENZING_RECORD_SIZE_MAX",
+                "help": "Maximum record size (in bytes) to accept. Default: None"
             },
             "--threads-per-print": {
                 "dest": "threads_per_print",
@@ -479,6 +499,7 @@ message_dictionary = {
     "298": "Exit {0}",
     "299": "{0}",
     "300": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}W",
+    "310": "Did not send record identified by {0}: {1}. Exceeds SENZING_RECORD_SIZE_MAX by {2} bytes.",
     "404": "Buffer error: {0} for line #{1} '{2}'.",
     "405": "Kafka error: {0} for line #{1} '{2}'.",
     "406": "Not implemented error: {0} for line #{1} '{2}'.",
@@ -637,6 +658,7 @@ def get_configuration(args):
         'read_queue_maxsize',
         'record_max',
         'record_min',
+        'record_size_max',
         'record_monitor',
         'sleep_time_in_seconds',
         'sqs_delay_seconds',
@@ -1521,9 +1543,17 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
         self.config = config
         self.counter_name = counter_name
         self.governor = governor
+        self.record_identifier = config.get("record_identifier")
+        self.record_size_max = config.get("record_size_max")
 
     def govern(self):
         return self.governor.govern()
+
+    def log_excessive_record(self, record, record_json):
+        assert type(record_json) == str
+        record_overage = len(record_json) - self.record_size_max
+        record_id = record.get(self.record_identifier)
+        logging.warning(message_warning(310, self.record_identifier, record_id, record_overage))
 
     def run(self):
         '''Read-Evaluate-Print Loop (REPL).'''
@@ -1535,6 +1565,15 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
         # Read-Evaluate-Print Loop  (REPL)
 
         for message in self.read():
+
+            # Handle message that is too big.
+
+            if self.record_size_max > 0:
+                message_json = json.dumps(message)
+                if len(message_json) > self.record_size_max:
+                    self.log_excessive_record(message, message_json)
+                    continue
+
             self.govern()
             logging.debug(message_debug(902, threading.current_thread().name, self.counter_name, message))
             self.print(self.evaluate(message))
@@ -1803,8 +1842,7 @@ def pipeline_read_write(
             config=config,
             counter_name="input_counter",
             print_queue=read_queue,
-            governor=governor,
-# FIXME:
+            governor=governor
         )
         thread.name = "Process-0-{0}-0".format(thread.__class__.__name__)
         threads.append(thread)
