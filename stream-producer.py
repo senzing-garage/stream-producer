@@ -29,7 +29,6 @@ import threading
 import time
 import urllib.parse
 import urllib.request
-from numpy import rec
 
 __all__ = []
 __version__ = "1.2.3"  # See https://www.python.org/dev/peps/pep-0396/
