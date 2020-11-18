@@ -7,19 +7,14 @@
 
 from glob import glob
 import argparse
-import boto3
 import collections
-import confluent_kafka
 import csv
-import fastavro
 import gzip
 import json
 import linecache
 import logging
 import multiprocessing
 import os
-import pandas
-import pika
 import queue
 import random
 import signal
@@ -29,6 +24,11 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+import boto3
+import confluent_kafka
+import fastavro
+import pandas
+import pika
 
 __all__ = []
 __version__ = "1.2.3"  # See https://www.python.org/dev/peps/pep-0396/
@@ -1331,6 +1331,8 @@ class PrintRabbitmqMixin():
         self.rabbitmq_queue = config.get("rabbitmq_queue")
         self.rabbitmq_routing_key = config.get("rabbitmq_routing_key")
         self.record_monitor = config.get("record_monitor")
+        self.message_list = []
+        self.number_of_records_per_print = 10
 
         # Construct Pika objects.
 
@@ -1373,20 +1375,28 @@ class PrintRabbitmqMixin():
     def print(self, message):
         assert isinstance(message, str)
 
-        # Send message to RabbitMQ.
+        # batch the message
+#        logging.info("!!!!!!adding message to buffer")
+        self.message_list.append(message)
+#        logging.info("!!!!!!Size of buffer is " + str(len(self.message_list))
+
+        # Send message to RabbitMQ. if there is enough
 
         try:
-            self.channel.basic_publish(
-                exchange=self.rabbitmq_exchange,
-                routing_key=self.rabbitmq_routing_key,
-                body=message,
-                properties=self.rabbitmq_properties
-            )
+            if len(self.message_list) == self.number_of_records_per_print:
+                self.channel.basic_publish(
+                    exchange=self.rabbitmq_exchange,
+                    routing_key=self.rabbitmq_routing_key,
+                    body="\n".join(self.message_list),
+                    properties=self.rabbitmq_properties
+                )
+                self.message_list = []
+
         except BaseException as err:
             logging.warn(message_warning(411, err, message))
 
         # Log progress. Using a "cheap" serialization technique.
-
+        # TODO only update this after sending?
         output_counter = self.config.get('output_counter')
         if output_counter % self.record_monitor == 0:
             if output_counter != self.config.get('output_counter_reported'):
@@ -1394,6 +1404,14 @@ class PrintRabbitmqMixin():
                 logging.info(message_debug(104, threading.current_thread().name, output_counter))
 
     def close(self):
+        if len(self.message_list) > 0:
+            self.channel.basic_publish(
+                exchange=self.rabbitmq_exchange,
+                routing_key=self.rabbitmq_routing_key,
+                body="\n".join(self.message_list),
+                properties=self.rabbitmq_properties
+           )
+
         self.connection.close()
 
 # -----------------------------------------------------------------------------
