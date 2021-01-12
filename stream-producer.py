@@ -167,6 +167,11 @@ configuration_locator = {
         "env": "SENZING_RECORD_MONITOR",
         "cli": "record-monitor",
     },
+    "records_per_message": {
+        "default": 1,
+        "env": "SENZING_RECORDS_PER_MESSAGE",
+        "cli": "records-per-message"
+    },
     "record_size_max": {
         "default": 0,
         "env": "SENZING_RECORD_SIZE_MAX",
@@ -369,6 +374,11 @@ def get_parser():
                 "dest": "record_size_max",
                 "metavar": "SENZING_RECORD_SIZE_MAX",
                 "help": "Maximum record size (in bytes) to accept. Default: None"
+            },
+            "--records-per-message": {
+                "dest": "records_per_message",
+                "metavar": "SENZING_RECORDS_PER_MESSAGE",
+                "help": "The number of records to include per message to the queue. Default: 1"
             },
             "--threads-per-print": {
                 "dest": "threads_per_print",
@@ -663,6 +673,7 @@ def get_configuration(args):
         'sleep_time_in_seconds',
         'sqs_delay_seconds',
         'threads_per_print',
+        'records_per_message'
     ]
     for integer in integers:
         integer_string = result.get(integer)
@@ -1331,8 +1342,10 @@ class PrintRabbitmqMixin():
         self.rabbitmq_queue = config.get("rabbitmq_queue")
         self.rabbitmq_routing_key = config.get("rabbitmq_routing_key")
         self.record_monitor = config.get("record_monitor")
-        self.message_list = []
-        self.number_of_records_per_print = 10
+        self.number_of_records_per_print = config.get("records_per_message")
+        self.message_buffer = '['
+        self.num_messages = 0
+        
 
         # Construct Pika objects.
 
@@ -1375,28 +1388,30 @@ class PrintRabbitmqMixin():
     def print(self, message):
         assert isinstance(message, str)
 
-        # batch the message
-#        logging.info("!!!!!!adding message to buffer")
-        self.message_list.append(message)
-#        logging.info("!!!!!!Size of buffer is " + str(len(self.message_list))
+        # batch the message - if are already messages then add a delimiter first
+        if self.num_messages > 0:
+            self.message_buffer += ','
+        self.message_buffer += message
+        self.num_messages += 1
 
         # Send message to RabbitMQ. if there is enough
 
         try:
-            if len(self.message_list) == self.number_of_records_per_print:
+            if self.num_messages == self.number_of_records_per_print:
+                self.message_buffer += ']'
                 self.channel.basic_publish(
                     exchange=self.rabbitmq_exchange,
                     routing_key=self.rabbitmq_routing_key,
-                    body="\n".join(self.message_list),
+                    body=self.message_buffer,
                     properties=self.rabbitmq_properties
                 )
-                self.message_list = []
+                self.message_buffer = '['
+                self.num_messages = 0
 
         except BaseException as err:
             logging.warn(message_warning(411, err, message))
 
         # Log progress. Using a "cheap" serialization technique.
-        # TODO only update this after sending?
         output_counter = self.config.get('output_counter')
         if output_counter % self.record_monitor == 0:
             if output_counter != self.config.get('output_counter_reported'):
@@ -1404,13 +1419,16 @@ class PrintRabbitmqMixin():
                 logging.info(message_debug(104, threading.current_thread().name, output_counter))
 
     def close(self):
-        if len(self.message_list) > 0:
+        if self.num_messages > 0:
+            self.message_buffer += ']'
             self.channel.basic_publish(
                 exchange=self.rabbitmq_exchange,
                 routing_key=self.rabbitmq_routing_key,
-                body="\n".join(self.message_list),
+                body=self.message_buffer,
                 properties=self.rabbitmq_properties
-           )
+            )
+            self.message_buffer = ''
+            self.num_messages = 0
 
         self.connection.close()
 
