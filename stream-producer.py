@@ -1272,6 +1272,9 @@ class PrintKafkaMixin():
         self.kafka_poll_interval = config.get("kafka_poll_interval")
         self.kafka_topic = config.get('kafka_topic')
         self.record_monitor = config.get("record_monitor")
+        self.number_of_records_per_print = config.get("records_per_message")
+        self.message_buffer = '['
+        self.num_messages = 0
 
         kafka_configuration = {
             'bootstrap.servers':  config.get('kafka_bootstrap_server')
@@ -1289,14 +1292,24 @@ class PrintKafkaMixin():
     def print(self, message):
         assert isinstance(message, str)
 
-        # Send message to Kafka.
+        # batch the message - if are already messages then add a delimiter first
+        
+        if self.num_messages > 0:
+            self.message_buffer += ','
+        self.message_buffer += message
+        self.num_messages += 1
 
         try:
-            self.kafka_producer.produce(
-                self.kafka_topic,
-                message,
-                on_delivery=self.on_kafka_delivery
-            )
+            if self.num_messages == self.number_of_records_per_print:
+                self.message_buffer += ']'
+                self.kafka_producer.produce(
+                    self.kafka_topic,
+                    self.message_buffer,
+                    on_delivery=self.on_kafka_delivery
+                )
+                self.message_buffer = '['
+                self.num_messages = 0
+
         except BufferError as err:
             logging.warning(message_warning(404, err, message))
         except confluent_kafka.KafkaException as err:
@@ -1320,6 +1333,15 @@ class PrintKafkaMixin():
             self.kafka_producer.poll(0)
 
     def close(self):
+        if self.num_messages > 0:
+            self.message_buffer += ']'
+            self.kafka_producer.produce(
+                    self.kafka_topic,
+                    self.message_buffer,
+                    on_delivery=self.on_kafka_delivery
+                )
+            self.message_buffer = ''
+            self.num_messages = 0
         self.kafka_producer.flush()
 
 # -----------------------------------------------------------------------------
