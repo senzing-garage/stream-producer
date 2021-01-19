@@ -1188,7 +1188,6 @@ class ReadUrlMixin():
             assert isinstance(result, dict)
             yield result
 
-
 # -----------------------------------------------------------------------------
 # Class: ReadWebsocketMixin
 # -----------------------------------------------------------------------------
@@ -1202,6 +1201,8 @@ class ReadWebsocketMixin():
         self.websocket_port = config.get("websocket_port")
         self.local_queue = multiprocessing.Queue()
 
+        # Start websocket server.
+
         self.start_server = websockets.serve(self.websocket_server_handler, self.websocket_host, self.websocket_port)
         asyncio.get_event_loop().run_until_complete(self.start_server)
         asyncio.get_event_loop().run_forever()
@@ -1212,8 +1213,14 @@ class ReadWebsocketMixin():
             self.local_queue.put(record)
 
     def read(self):
+
+        logging.info(message_info(999, ">>>>>>>>>>>>>>>>>>> HERE"))
+
         while True:
             record = self.local_queue.get(block=True)
+            logging.info(message_info(999, record))
+
+#             record_dict = json.loads(record)
             yield record
 
         # Cleanup, if "while True" ever changes.
@@ -1317,7 +1324,7 @@ class PrintKafkaMixin():
         self.record_monitor = config.get("record_monitor")
 
         kafka_configuration = {
-            'bootstrap.servers':  config.get('kafka_bootstrap_server')
+            'bootstrap.servers': config.get('kafka_bootstrap_server')
         }
         if config.get('kafka_group_id'):
             kafka_configuration['group.id'] = config.get('kafka_group_id')
@@ -1620,6 +1627,9 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
 
         for message in self.read():
 
+            logging.info(message_info(999, message))
+
+
             # Handle message that is too big.
 
             if self.record_size_max > 0:
@@ -1748,13 +1758,12 @@ class FilterUrlJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlMixin, 
             base.__init__(self, *args, **kwargs)
 
 
-class FilterWebsocketToDictQueueThread(ReadEvaluatePrintLoopThread, ReadWebsocketMixin, EvaluateNullObjectMixin, PrintQueueMixin):
+class FilterWebsocketToDictQueueThread(ReadEvaluatePrintLoopThread, ReadWebsocketMixin, EvaluateJsonToDictMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "FilterUrlJsonToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
-
 
 # -----------------------------------------------------------------------------
 # *_processor
