@@ -5,7 +5,6 @@
 # - Uses a "pipes and filters" design pattern
 # -----------------------------------------------------------------------------
 
-from glob import glob
 import argparse
 import collections
 import csv
@@ -24,16 +23,16 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+import asyncio
 import boto3
 import confluent_kafka
 import fastavro
 import pandas
 import pika
-import asyncio
 import websockets
 
 __all__ = []
-__version__ = "1.2.3"  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = "1.3.0"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
 __updated__ = '2021-01-19'
 
@@ -204,7 +203,7 @@ configuration_locator = {
         "cli": "threads-per-print"
     },
     "websocket_host": {
-        "default": "localhost",
+        "default": "0.0.0.0",
         "env": "SENZING_WEBSOCKET_HOST",
         "cli": "websocket-host"
     },
