@@ -231,7 +231,7 @@ def get_parser():
             "argument_aspects": ["input-url", "avro", "sqs"]
         },
         'avro-to-sqs-batch': {
-            "help": 'Read Avro file and print to AWS SQS using batch.',
+            "help": 'Read Avro file and print to AWS SQS using batch. DEPRECATED: Use avro-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
             "argument_aspects": ["input-url", "avro", "sqs"]
         },
         'avro-to-stdout': {
@@ -251,7 +251,7 @@ def get_parser():
             "argument_aspects": ["input-url", "csv", "sqs"]
         },
         'csv-to-sqs-batch': {
-            "help": 'Read CSV file and print to SQS using batch.',
+            "help": 'Read CSV file and print to SQS using batch. DEPRECATED: Use csv-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
             "argument_aspects": ["input-url", "csv", "sqs"]
         },
         'csv-to-stdout': {
@@ -271,7 +271,7 @@ def get_parser():
             "argument_aspects": ["input-url", "json", "sqs"]
         },
         'gzipped-json-to-sqs-batch': {
-            "help": 'Read gzipped JSON file and send to AWS SQS using batch.',
+            "help": 'Read gzipped JSON file and send to AWS SQS using batch. DEPRECATED: Use gzipped-json-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
             "argument_aspects": ["input-url", "json", "sqs"]
         },
         'gzipped-json-to-stdout': {
@@ -291,7 +291,7 @@ def get_parser():
             "argument_aspects": ["input-url", "json", "sqs"]
         },
         'json-to-sqs-batch': {
-            "help": 'Read JSON file and send to AWS SQS using batch.',
+            "help": 'Read JSON file and send to AWS SQS using batch. DEPRECATED: Use json-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
             "argument_aspects": ["input-url", "json", "sqs"]
         },
         'json-to-stdout': {
@@ -311,7 +311,7 @@ def get_parser():
             "argument_aspects": ["input-url", "parquet", "sqs"]
         },
         'parquet-to-sqs-batch': {
-            "help": 'Read Parquet file and print to AWS SQS using batch.',
+            "help": 'Read Parquet file and print to AWS SQS using batch. DEPRECATED: Use parquet-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
             "argument_aspects": ["input-url", "parquet", "sqs"]
         },
         'parquet-to-stdout': {
