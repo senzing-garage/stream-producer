@@ -206,6 +206,7 @@ configuration_locator = {
     "websocket_host": {
         "default": "localhost",
         "env": "SENZING_WEBSOCKET_HOST",
+        "cli": "websocket-host"
     },
     "websocket_port": {
         "default": 8255,
@@ -329,9 +330,25 @@ def get_parser():
             "help": 'Read Parquet file and print to STDOUT.',
             "argument_aspects": ["input-url", "parquet", "stdout"]
         },
+        'websocket-to-kafka': {
+            "help": 'Read JSON from Websocket and send to Kafka.',
+            "argument_aspects": ["websocket", "kafka"]
+        },
+        'websocket-to-rabbitmq': {
+            "help": 'Read JSON from Websocket and send to RabbitMQ.',
+            "argument_aspects": ["websocket", "rabbitmq"]
+        },
+        'websocket-to-sqs': {
+            "help": 'Read JSON from Websocket and print to AWS SQS.',
+            "argument_aspects": ["websocket", "sqs"]
+        },
+        'websocket-to-sqs-batch': {
+            "help": 'Read JSON from Websocket and print to AWS SQS using batch.  DEPRECATED: Use websocket-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
+            "argument_aspects": ["websocket", "sqs"]
+        },
         'websocket-to-stdout': {
             "help": 'Read JSON from Websocket and print to STDOUT.',
-            "argument_aspects": ["stdout", "websocket"]
+            "argument_aspects": ["websocket", "stdout"]
         },
         'sleep': {
             "help": 'Do nothing but sleep. For Docker testing.',
@@ -2025,6 +2042,8 @@ def pipeline_read_write(
         adminThreads.append(thread)
         thread.start()
 
+    # WebSocket requires an asyncio loop.
+
     if run_async:
         asyncio.get_event_loop().run_forever()
 
@@ -2266,13 +2285,13 @@ def do_avro_to_rabbitmq(args):
 
 
 def do_avro_to_sqs(args):
-    ''' Read file of AVRO, print to STDOUT. '''
+    ''' Read file of AVRO, print to AWS SQS. '''
     write_thread = FilterQueueDictToJsonSqsThread
     dohelper_avro(args, write_thread)
 
 
 def do_avro_to_sqs_batch(args):
-    ''' Read file of AVRO, print to STDOUT. '''
+    ''' Read file of AVRO, print to AWS SQS batch. '''
     write_thread = FilterQueueDictToJsonSqsBatchThread
     dohelper_avro(args, write_thread)
 
@@ -2296,13 +2315,13 @@ def do_csv_to_rabbitmq(args):
 
 
 def do_csv_to_sqs(args):
-    ''' Read file of CSV, print to STDOUT. '''
+    ''' Read file of CSV, print to AWS SQS. '''
     write_thread = FilterQueueDictToJsonSqsThread
     dohelper_csv(args, write_thread)
 
 
 def do_csv_to_sqs_batch(args):
-    ''' Read file of CSV, print to STDOUT. '''
+    ''' Read file of CSV, print to AWS SQS batch. '''
     write_thread = FilterQueueDictToJsonSqsBatchThread
     dohelper_csv(args, write_thread)
 
@@ -2348,7 +2367,7 @@ def do_gzipped_json_to_sqs(args):
 
 
 def do_gzipped_json_to_sqs_batch(args):
-    ''' Read file of JSON, print to AWS SQS. '''
+    ''' Read file of JSON, print to AWS SQS batch. '''
     write_thread = FilterQueueDictToJsonSqsBatchThread
     dohelper_gzipped_json(args, write_thread)
 
@@ -2378,7 +2397,7 @@ def do_json_to_sqs(args):
 
 
 def do_json_to_sqs_batch(args):
-    ''' Read file of JSON, print to AWS SQS. '''
+    ''' Read file of JSON, print to AWS SQS batch. '''
     write_thread = FilterQueueDictToJsonSqsBatchThread
     dohelper_json(args, write_thread)
 
@@ -2402,13 +2421,13 @@ def do_parquet_to_rabbitmq(args):
 
 
 def do_parquet_to_sqs(args):
-    ''' Read file of Parquet, print to STDOUT. '''
+    ''' Read file of Parquet, print to AWS SQS. '''
     write_thread = FilterQueueDictToJsonSqsThread
     dohelper_parquet(args, write_thread)
 
 
 def do_parquet_to_sqs_batch(args):
-    ''' Read file of Parquet, print to STDOUT. '''
+    ''' Read file of Parquet, print to AWS SQS batch. '''
     write_thread = FilterQueueDictToJsonSqsBatchThread
     dohelper_parquet(args, write_thread)
 
@@ -2457,11 +2476,34 @@ def do_version(args):
     logging.info(message_info(294, __version__, __updated__))
 
 
+def do_websocket_to_kafka(args):
+    ''' Read JSON from Websocket, print to Kafka. '''
+    write_thread = FilterQueueDictToJsonKafkaThread
+    dohelper_websocket(args, write_thread)
+
+
+def do_websocket_to_rabbitmq(args):
+    ''' Read JSON from Websocket, print to RabbitMQ. '''
+    write_thread = FilterQueueDictToJsonRabbitmqThread
+    dohelper_websocket(args, write_thread)
+
+
+def do_websocket_to_sqs(args):
+    ''' Read JSON from Websocket, print to AWS SQS. '''
+    write_thread = FilterQueueDictToJsonSqsThread
+    dohelper_websocket(args, write_thread)
+
+
+def do_websocket_to_sqs_batch(args):
+    ''' Read JSON from Websocket, print to AWS SQS. '''
+    write_thread = FilterQueueDictToJsonSqsBatchThread
+    dohelper_websocket(args, write_thread)
+
+
 def do_websocket_to_stdout(args):
     ''' Read JSON from Websocket, print to STDOUT. '''
     write_thread = FilterQueueDictToJsonStdoutThread
     dohelper_websocket(args, write_thread)
-    logging.info(message_info(999, "MJD >>>> {0}: {1}()".format(sys._getframe().f_lineno, sys._getframe().f_code.co_name)))
 
 # -----------------------------------------------------------------------------
 # Main
