@@ -5,7 +5,6 @@
 # - Uses a "pipes and filters" design pattern
 # -----------------------------------------------------------------------------
 
-
 from glob import glob
 import argparse
 import collections
@@ -200,7 +199,7 @@ configuration_locator = {
         "env": "SENZING_SUBCOMMAND",
     },
     "threads_per_print": {
-        "default": 4,
+        "default": 1,
         "env": "SENZING_THREADS_PER_PRINT",
         "cli": "threads-per-print"
     },
@@ -1218,22 +1217,15 @@ class ReadWebsocketMixin():
 
         self.start_server = websockets.serve(self.websocket_server_handler, self.websocket_host, self.websocket_port)
         asyncio.get_event_loop().run_until_complete(self.start_server)
-        asyncio.get_event_loop().run_forever()
+#         asyncio.get_event_loop().run_forever()
 
     async def websocket_server_handler(self, websocket, path):
         async for record in websocket:
-            logging.info(message_info(999, record))
             self.local_queue.put(record)
 
     def read(self):
-
-        logging.info(message_info(999, ">>>>>>>>>>>>>>>>>>> HERE"))
-
         while True:
             record = self.local_queue.get(block=True)
-            logging.info(message_info(999, record))
-
-#             record_dict = json.loads(record)
             yield record
 
         # Cleanup, if "while True" ever changes.
@@ -1430,7 +1422,6 @@ class PrintRabbitmqMixin():
         self.number_of_records_per_print = config.get("records_per_message")
         self.message_buffer = '['
         self.num_messages = 0
-
 
         # Construct Pika objects.
 
@@ -1711,9 +1702,6 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
 
         for message in self.read():
 
-            logging.info(message_info(999, message))
-
-
             # Handle message that is too big.
 
             if self.record_size_max > 0:
@@ -1957,7 +1945,8 @@ def pipeline_read_write(
     read_thread=None,
     write_thread=None,
     monitor_thread=None,
-    governor=None
+    governor=None,
+    run_async=False,
 ):
 
     # Get context from CLI, environment variables, and ini files.
@@ -2035,6 +2024,9 @@ def pipeline_read_write(
         thread.name = "Process-0-{0}-0".format(thread.__class__.__name__)
         adminThreads.append(thread)
         thread.start()
+
+    if run_async:
+        asyncio.get_event_loop().run_forever()
 
     # Collect inactive threads.
 
@@ -2251,7 +2243,8 @@ def dohelper_websocket(args, write_thread):
         read_thread=read_thread,
         write_thread=write_thread,
         monitor_thread=MonitorThread,
-        governor=governor
+        governor=governor,
+        run_async=True
     )
 
 # -----------------------------------------------------------------------------
@@ -2468,6 +2461,7 @@ def do_websocket_to_stdout(args):
     ''' Read JSON from Websocket, print to STDOUT. '''
     write_thread = FilterQueueDictToJsonStdoutThread
     dohelper_websocket(args, write_thread)
+    logging.info(message_info(999, "MJD >>>> {0}: {1}()".format(sys._getframe().f_lineno, sys._getframe().f_code.co_name)))
 
 # -----------------------------------------------------------------------------
 # Main
