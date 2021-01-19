@@ -1416,7 +1416,7 @@ class PrintRabbitmqMixin():
         self.message_buffer += message
         self.num_messages += 1
 
-        # Send message to RabbitMQ. if there is enough
+        # Send message to RabbitMQ. if there are enough
 
         try:
             if self.num_messages == self.number_of_records_per_print:
@@ -1487,21 +1487,45 @@ class PrintSqsMixin():
         self.record_monitor = config.get("record_monitor")
         self.sqs = boto3.client("sqs")
         self.sqs_delay_seconds = config.get("sqs_delay_seconds")
+        self.number_of_records_per_print = config.get("records_per_message")
+        self.message_buffer = '['
+        self.num_messages = 0
 
     def print(self, message):
         self.counter += 1
         assert type(message) == str
-        response = self.sqs.send_message(
-            QueueUrl=self.queue_url,
-            DelaySeconds=self.sqs_delay_seconds,
-            MessageAttributes={},
-            MessageBody=(message),
-        )
+
+        # batch the message - if are already messages then add a delimiter first
+        if self.num_messages > 0:
+            self.message_buffer += ','
+        self.message_buffer += message
+        self.num_messages += 1
+
+        if self.num_messages == self.number_of_records_per_print:
+            self.message_buffer += ']'
+            response = self.sqs.send_message(
+                QueueUrl=self.queue_url,
+                DelaySeconds=self.sqs_delay_seconds,
+                MessageAttributes={},
+                MessageBody=(self.message_buffer),
+            )
+            self.message_buffer = '['
+            self.num_messages = 0
+
         if self.counter % self.record_monitor == 0:
             logging.info(message_debug(104, threading.current_thread().name, self.counter))
 
     def close(self):
-        pass
+        if self.num_messages > 0:
+            self.message_buffer += ']'
+            response = self.sqs.send_message(
+                QueueUrl=self.queue_url,
+                DelaySeconds=self.sqs_delay_seconds,
+                MessageAttributes={},
+                MessageBody=(self.message_buffer),
+            )
+            self.message_buffer = ''
+            self.num_messages = 0
 
 # -----------------------------------------------------------------------------
 # Class: PrintSqsBatchMixin
