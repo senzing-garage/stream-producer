@@ -5,8 +5,8 @@
 # - Uses a "pipes and filters" design pattern
 # -----------------------------------------------------------------------------
 
-from glob import glob
 import argparse
+import asyncio
 import boto3
 import collections
 import confluent_kafka
@@ -29,11 +29,12 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+import websockets
 
 __all__ = []
 __version__ = "1.2.3"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
-__updated__ = '2020-10-09'
+__updated__ = '2021-01-19'
 
 SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -195,6 +196,15 @@ configuration_locator = {
         "default": 4,
         "env": "SENZING_THREADS_PER_PRINT",
         "cli": "threads-per-print"
+    },
+    "websocket_host": {
+        "default": "localhost",
+        "env": "SENZING_WEBSOCKET_HOST",
+    },
+    "websocket_port": {
+        "default": 8255,
+        "env": "SENZING_WEBSOCKET_PORT",
+        "cli": "websocket-port"
     }
 }
 
@@ -312,6 +322,10 @@ def get_parser():
         'parquet-to-stdout': {
             "help": 'Read Parquet file and print to STDOUT.',
             "argument_aspects": ["input-url", "parquet", "stdout"]
+        },
+        'websocket-to-stdout': {
+            "help": 'Read JSON from Websocket and print to STDOUT.',
+            "argument_aspects": ["stdout", "websocket"]
         },
         'sleep': {
             "help": 'Do nothing but sleep. For Docker testing.',
@@ -435,6 +449,13 @@ def get_parser():
                 "dest": "sqs_queue_url",
                 "metavar": "SENZING_SQS_QUEUE_URL",
                 "help": "AWS SQS URL. Default: none"
+            },
+        },
+        "websocket": {
+            "--websocket-port": {
+                "dest": "websocket_port",
+                "metavar": "SENZING_WEBSOCKET_PORT",
+                "help": "Port to listen on. Default: 8255"
             },
         },
     }
@@ -1167,6 +1188,39 @@ class ReadUrlMixin():
             assert isinstance(result, dict)
             yield result
 
+
+# -----------------------------------------------------------------------------
+# Class: ReadWebsocketMixin
+# -----------------------------------------------------------------------------
+
+
+class ReadWebsocketMixin():
+
+    def __init__(self, config={}, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadWebsocketMixin"))
+        self.websocket_host = config.get("websocket_host")
+        self.websocket_port = config.get("websocket_port")
+        self.local_queue = multiprocessing.Queue()
+
+        self.start_server = websockets.serve(self.websocket_server_handler, self.websocket_host, self.websocket_port)
+        asyncio.get_event_loop().run_until_complete(self.start_server)
+        asyncio.get_event_loop().run_forever()
+
+    async def websocket_server_handler(self, websocket, path):
+        async for record in websocket:
+            logging.info(message_info(999, record))
+            self.local_queue.put(record)
+
+    def read(self):
+        while True:
+            record = self.local_queue.get(block=True)
+            yield record
+
+        # Cleanup, if "while True" ever changes.
+
+        self.local_queue.close()
+        self.local_queue.join_thread()
+
 # =============================================================================
 # Mixins: Evaluate*
 #   Methods:
@@ -1692,6 +1746,16 @@ class FilterUrlJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlMixin, 
         logging.debug(message_debug(997, threading.current_thread().name, "FilterUrlJsonToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
+
+
+class FilterWebsocketToDictQueueThread(ReadEvaluatePrintLoopThread, ReadWebsocketMixin, EvaluateNullObjectMixin, PrintQueueMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterUrlJsonToDictQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+
+
 # -----------------------------------------------------------------------------
 # *_processor
 # -----------------------------------------------------------------------------
@@ -2066,6 +2130,37 @@ def dohelper_parquet(args, write_thread):
         governor=governor
     )
 
+
+def dohelper_websocket(args, write_thread):
+    ''' Read file of JSON, print to write_thread. '''
+
+    # Get context variables.
+
+    config = get_configuration(args)
+
+    # Determine Read thread.
+
+    read_thread = FilterWebsocketToDictQueueThread  # Default.
+
+    # Cascading defaults.
+
+    options_to_defaults_map = {}
+
+    # Create governor.
+
+    governor = Governor(hint="stream-producer")
+
+    # Run pipeline.
+
+    pipeline_read_write(
+        args=args,
+        options_to_defaults_map=options_to_defaults_map,
+        read_thread=read_thread,
+        write_thread=write_thread,
+        monitor_thread=MonitorThread,
+        governor=governor
+    )
+
 # -----------------------------------------------------------------------------
 # do_* functions
 #   Common function signature: do_XXX(args)
@@ -2274,6 +2369,12 @@ def do_version(args):
     ''' Log version information. '''
 
     logging.info(message_info(294, __version__, __updated__))
+
+
+def do_websocket_to_stdout(args):
+    ''' Read JSON from Websocket, print to STDOUT. '''
+    write_thread = FilterQueueDictToJsonStdoutThread
+    dohelper_websocket(args, write_thread)
 
 # -----------------------------------------------------------------------------
 # Main
