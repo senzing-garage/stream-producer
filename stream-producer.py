@@ -7,19 +7,14 @@
 
 from glob import glob
 import argparse
-import boto3
 import collections
-import confluent_kafka
 import csv
-import fastavro
 import gzip
 import json
 import linecache
 import logging
 import multiprocessing
 import os
-import pandas
-import pika
 import queue
 import random
 import signal
@@ -29,6 +24,11 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+import boto3
+import confluent_kafka
+import fastavro
+import pandas
+import pika
 
 __all__ = []
 __version__ = "1.2.3"  # See https://www.python.org/dev/peps/pep-0396/
@@ -167,6 +167,11 @@ configuration_locator = {
         "env": "SENZING_RECORD_MONITOR",
         "cli": "record-monitor",
     },
+    "records_per_message": {
+        "default": 1,
+        "env": "SENZING_RECORDS_PER_MESSAGE",
+        "cli": "records-per-message"
+    },
     "record_size_max": {
         "default": 0,
         "env": "SENZING_RECORD_SIZE_MAX",
@@ -226,7 +231,7 @@ def get_parser():
             "argument_aspects": ["input-url", "avro", "sqs"]
         },
         'avro-to-sqs-batch': {
-            "help": 'Read Avro file and print to AWS SQS using batch.',
+            "help": 'Read Avro file and print to AWS SQS using batch. DEPRECATED: Use avro-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
             "argument_aspects": ["input-url", "avro", "sqs"]
         },
         'avro-to-stdout': {
@@ -246,7 +251,7 @@ def get_parser():
             "argument_aspects": ["input-url", "csv", "sqs"]
         },
         'csv-to-sqs-batch': {
-            "help": 'Read CSV file and print to SQS using batch.',
+            "help": 'Read CSV file and print to SQS using batch. DEPRECATED: Use csv-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
             "argument_aspects": ["input-url", "csv", "sqs"]
         },
         'csv-to-stdout': {
@@ -266,7 +271,7 @@ def get_parser():
             "argument_aspects": ["input-url", "json", "sqs"]
         },
         'gzipped-json-to-sqs-batch': {
-            "help": 'Read gzipped JSON file and send to AWS SQS using batch.',
+            "help": 'Read gzipped JSON file and send to AWS SQS using batch. DEPRECATED: Use gzipped-json-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
             "argument_aspects": ["input-url", "json", "sqs"]
         },
         'gzipped-json-to-stdout': {
@@ -286,7 +291,7 @@ def get_parser():
             "argument_aspects": ["input-url", "json", "sqs"]
         },
         'json-to-sqs-batch': {
-            "help": 'Read JSON file and send to AWS SQS using batch.',
+            "help": 'Read JSON file and send to AWS SQS using batch. DEPRECATED: Use json-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
             "argument_aspects": ["input-url", "json", "sqs"]
         },
         'json-to-stdout': {
@@ -306,7 +311,7 @@ def get_parser():
             "argument_aspects": ["input-url", "parquet", "sqs"]
         },
         'parquet-to-sqs-batch': {
-            "help": 'Read Parquet file and print to AWS SQS using batch.',
+            "help": 'Read Parquet file and print to AWS SQS using batch. DEPRECATED: Use parquet-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
             "argument_aspects": ["input-url", "parquet", "sqs"]
         },
         'parquet-to-stdout': {
@@ -369,6 +374,11 @@ def get_parser():
                 "dest": "record_size_max",
                 "metavar": "SENZING_RECORD_SIZE_MAX",
                 "help": "Maximum record size (in bytes) to accept. Default: None"
+            },
+            "--records-per-message": {
+                "dest": "records_per_message",
+                "metavar": "SENZING_RECORDS_PER_MESSAGE",
+                "help": "The number of records to include per message to the queue. Default: 1"
             },
             "--threads-per-print": {
                 "dest": "threads_per_print",
@@ -663,6 +673,7 @@ def get_configuration(args):
         'sleep_time_in_seconds',
         'sqs_delay_seconds',
         'threads_per_print',
+        'records_per_message'
     ]
     for integer in integers:
         integer_string = result.get(integer)
@@ -1261,6 +1272,9 @@ class PrintKafkaMixin():
         self.kafka_poll_interval = config.get("kafka_poll_interval")
         self.kafka_topic = config.get('kafka_topic')
         self.record_monitor = config.get("record_monitor")
+        self.number_of_records_per_print = config.get("records_per_message")
+        self.message_buffer = '['
+        self.num_messages = 0
 
         kafka_configuration = {
             'bootstrap.servers':  config.get('kafka_bootstrap_server')
@@ -1278,14 +1292,24 @@ class PrintKafkaMixin():
     def print(self, message):
         assert isinstance(message, str)
 
-        # Send message to Kafka.
+        # batch the message - if are already messages then add a delimiter first
+        
+        if self.num_messages > 0:
+            self.message_buffer += ','
+        self.message_buffer += message
+        self.num_messages += 1
 
         try:
-            self.kafka_producer.produce(
-                self.kafka_topic,
-                message,
-                on_delivery=self.on_kafka_delivery
-            )
+            if self.num_messages == self.number_of_records_per_print:
+                self.message_buffer += ']'
+                self.kafka_producer.produce(
+                    self.kafka_topic,
+                    self.message_buffer,
+                    on_delivery=self.on_kafka_delivery
+                )
+                self.message_buffer = '['
+                self.num_messages = 0
+
         except BufferError as err:
             logging.warning(message_warning(404, err, message))
         except confluent_kafka.KafkaException as err:
@@ -1309,6 +1333,15 @@ class PrintKafkaMixin():
             self.kafka_producer.poll(0)
 
     def close(self):
+        if self.num_messages > 0:
+            self.message_buffer += ']'
+            self.kafka_producer.produce(
+                    self.kafka_topic,
+                    self.message_buffer,
+                    on_delivery=self.on_kafka_delivery
+                )
+            self.message_buffer = ''
+            self.num_messages = 0
         self.kafka_producer.flush()
 
 # -----------------------------------------------------------------------------
@@ -1331,6 +1364,10 @@ class PrintRabbitmqMixin():
         self.rabbitmq_queue = config.get("rabbitmq_queue")
         self.rabbitmq_routing_key = config.get("rabbitmq_routing_key")
         self.record_monitor = config.get("record_monitor")
+        self.number_of_records_per_print = config.get("records_per_message")
+        self.message_buffer = '['
+        self.num_messages = 0
+        
 
         # Construct Pika objects.
 
@@ -1373,20 +1410,30 @@ class PrintRabbitmqMixin():
     def print(self, message):
         assert isinstance(message, str)
 
-        # Send message to RabbitMQ.
+        # batch the message - if are already messages then add a delimiter first
+        if self.num_messages > 0:
+            self.message_buffer += ','
+        self.message_buffer += message
+        self.num_messages += 1
+
+        # Send message to RabbitMQ. if there are enough
 
         try:
-            self.channel.basic_publish(
-                exchange=self.rabbitmq_exchange,
-                routing_key=self.rabbitmq_routing_key,
-                body=message,
-                properties=self.rabbitmq_properties
-            )
+            if self.num_messages == self.number_of_records_per_print:
+                self.message_buffer += ']'
+                self.channel.basic_publish(
+                    exchange=self.rabbitmq_exchange,
+                    routing_key=self.rabbitmq_routing_key,
+                    body=self.message_buffer,
+                    properties=self.rabbitmq_properties
+                )
+                self.message_buffer = '['
+                self.num_messages = 0
+
         except BaseException as err:
             logging.warn(message_warning(411, err, message))
 
         # Log progress. Using a "cheap" serialization technique.
-
         output_counter = self.config.get('output_counter')
         if output_counter % self.record_monitor == 0:
             if output_counter != self.config.get('output_counter_reported'):
@@ -1394,6 +1441,17 @@ class PrintRabbitmqMixin():
                 logging.info(message_debug(104, threading.current_thread().name, output_counter))
 
     def close(self):
+        if self.num_messages > 0:
+            self.message_buffer += ']'
+            self.channel.basic_publish(
+                exchange=self.rabbitmq_exchange,
+                routing_key=self.rabbitmq_routing_key,
+                body=self.message_buffer,
+                properties=self.rabbitmq_properties
+            )
+            self.message_buffer = ''
+            self.num_messages = 0
+
         self.connection.close()
 
 # -----------------------------------------------------------------------------
@@ -1429,21 +1487,45 @@ class PrintSqsMixin():
         self.record_monitor = config.get("record_monitor")
         self.sqs = boto3.client("sqs")
         self.sqs_delay_seconds = config.get("sqs_delay_seconds")
+        self.number_of_records_per_print = config.get("records_per_message")
+        self.message_buffer = '['
+        self.num_messages = 0
 
     def print(self, message):
         self.counter += 1
         assert type(message) == str
-        response = self.sqs.send_message(
-            QueueUrl=self.queue_url,
-            DelaySeconds=self.sqs_delay_seconds,
-            MessageAttributes={},
-            MessageBody=(message),
-        )
+
+        # batch the message - if are already messages then add a delimiter first
+        if self.num_messages > 0:
+            self.message_buffer += ','
+        self.message_buffer += message
+        self.num_messages += 1
+
+        if self.num_messages == self.number_of_records_per_print:
+            self.message_buffer += ']'
+            response = self.sqs.send_message(
+                QueueUrl=self.queue_url,
+                DelaySeconds=self.sqs_delay_seconds,
+                MessageAttributes={},
+                MessageBody=(self.message_buffer),
+            )
+            self.message_buffer = '['
+            self.num_messages = 0
+
         if self.counter % self.record_monitor == 0:
             logging.info(message_debug(104, threading.current_thread().name, self.counter))
 
     def close(self):
-        pass
+        if self.num_messages > 0:
+            self.message_buffer += ']'
+            response = self.sqs.send_message(
+                QueueUrl=self.queue_url,
+                DelaySeconds=self.sqs_delay_seconds,
+                MessageAttributes={},
+                MessageBody=(self.message_buffer),
+            )
+            self.message_buffer = ''
+            self.num_messages = 0
 
 # -----------------------------------------------------------------------------
 # Class: PrintSqsBatchMixin
