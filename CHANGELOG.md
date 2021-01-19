@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.3.0] - 2021-01-19
+
+### Added in 1.3.0
+
+- Microbatching for RabbitMQ, Kafka, and SQS. The batch of records is formatted as a json array
+  - SENZING_RECORDS_PER_MESSAGE is the number of records to include in a single message.
+
 ## [1.2.3] - 2020-10-09
 
 ### Added in 1.2.3
