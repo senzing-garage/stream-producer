@@ -32,7 +32,7 @@ import pika
 import websockets
 
 __all__ = []
-__version__ = "1.3.0"  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = "1.3.1"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
 __updated__ = '2021-01-19'
 
