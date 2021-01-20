@@ -479,6 +479,11 @@ def get_parser():
             },
         },
         "websocket": {
+            "--websocket-host": {
+                "dest": "websocket_host",
+                "metavar": "SENZING_WEBSOCKET_HOST",
+                "help": "Host to listen on. Default: 0.0.0.0"
+            },
             "--websocket-port": {
                 "dest": "websocket_port",
                 "metavar": "SENZING_WEBSOCKET_PORT",
