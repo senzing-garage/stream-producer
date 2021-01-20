@@ -198,7 +198,7 @@ configuration_locator = {
         "env": "SENZING_SUBCOMMAND",
     },
     "threads_per_print": {
-        "default": 1,
+        "default": 4,
         "env": "SENZING_THREADS_PER_PRINT",
         "cli": "threads-per-print"
     },
