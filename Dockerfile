@@ -1,11 +1,11 @@
 ARG BASE_IMAGE=debian:10.2
 FROM ${BASE_IMAGE}
 
-ENV REFRESHED_AT=2020-07-24
+ENV REFRESHED_AT=2021-01-18
 
 LABEL Name="senzing/stream-producer" \
       Maintainer="support@senzing.com" \
-      Version="1.2.0"
+      Version="1.3.1"
 
 HEALTHCHECK CMD ["/app/healthcheck.sh"]
 
@@ -26,6 +26,7 @@ RUN apt-get update \
 
 RUN pip3 install --upgrade pip
 RUN pip3 install \
+      asyncio \
       boto3 \
       confluent_kafka \
       fastavro \
@@ -33,7 +34,8 @@ RUN pip3 install \
       pandas \
       pika \
       psutil \
-      pyarrow
+      pyarrow \
+      websockets
 
 # Copy files from repository.
 
