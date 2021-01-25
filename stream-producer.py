@@ -83,6 +83,11 @@ configuration_locator = {
         "env": "SENZING_KAFKA_BOOTSTRAP_SERVER",
         "cli": "kafka-bootstrap-server",
     },
+    "kafka_group": {
+        "default": "senzing-kafka-group",
+        "env": "SENZING_KAFKA_GROUP",
+        "cli": "kafka-group"
+    },
     "kafka_poll_interval": {
         "default": 100,
         "env": "SENZING_KAFKA_POLL_INTERVAL",
@@ -422,6 +427,11 @@ def get_parser():
                 "dest": "kafka_bootstrap_server",
                 "metavar": "SENZING_KAFKA_BOOTSTRAP_SERVER",
                 "help": "Kafka bootstrap server. Default: localhost:9092"
+            },
+            "--kafka-group": {
+                "dest": "kafka_group",
+                "metavar": "SENZING_KAFKA_GROUP",
+                "help": "Kafka group. Default: senzing-kafka-group"
             },
             "--kafka-topic": {
                 "dest": "kafka_topic",
@@ -1355,8 +1365,8 @@ class PrintKafkaMixin():
         kafka_configuration = {
             'bootstrap.servers': config.get('kafka_bootstrap_server')
         }
-        if config.get('kafka_group_id'):
-            kafka_configuration['group.id'] = config.get('kafka_group_id')
+        if config.get('kafka_group'):
+            kafka_configuration['group.id'] = config.get('kafka_group')
 
         self.kafka_producer = confluent_kafka.Producer(kafka_configuration)
 
