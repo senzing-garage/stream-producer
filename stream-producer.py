@@ -1028,8 +1028,13 @@ class ReadFileCsvMixin():
         self.counter = 0
 
     def read(self):
-        data_frame = pandas.read_csv(self.input_url, skipinitialspace=True)
+        data_frame = pandas.read_csv(self.input_url, skipinitialspace=True, dtype=str)
+        data_frame.fillna('', inplace=True)
         for row in data_frame.to_dict(orient="records"):
+
+            # Remove items that have '' value
+            row = {i:j for i,j in row.items() if j != ''}
+
             self.counter += 1
             if self.record_min and self.counter < self.record_min:
                 continue
