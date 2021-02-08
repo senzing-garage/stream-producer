@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 [markdownlint](https://dlaa.me/markdownlint/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2021-02-08
+
+### Added in 1.3.2
+
+- Fixed [issue #49](https://github.com/Senzing/stream-producer/issues/49) to handle CSV input files with empty values.
+
 ## [1.3.1] - 2021-01-20
 
 ### Added in 1.3.1
