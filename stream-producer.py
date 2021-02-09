@@ -53,6 +53,11 @@ QUEUE_SENTINEL = ".{0}.".format(''.join([random.choice(string.ascii_letters + st
 # 1) Command line options, 2) Environment variables, 3) Configuration files, 4) Default values
 
 configuration_locator = {
+    "csv_rows_in_chunk": {
+        "default": 10000,
+        "env": "SENZING_CSV_ROWS_IN_CHUNK",
+        "cli": "csv-rows-in-chunk"
+    },
     "debug": {
         "default": False,
         "env": "SENZING_DEBUG",
@@ -500,6 +505,13 @@ def get_parser():
                 "help": "Port to listen on. Default: 8255"
             },
         },
+        "csv": {
+            "--csv-rows-in-chunk": {
+                "dest": "csv_rows_in_chunk",
+                "metavar": "SENZING_CSV_ROWS_IN_CHUNK",
+                "help": "The number of csv lines to read into memory and process at one time. Default: 10000"
+            }
+        }
     }
 
     # Augment "subcommands" variable with arguments specified by aspects.
@@ -715,6 +727,7 @@ def get_configuration(args):
     # Special case: Change integer strings to integers.
 
     integers = [
+        'csv_rows_in_chunk',
         'delay_in_seconds',
         'kafka_poll_interval',
         'monitoring_period_in_seconds',
@@ -1025,23 +1038,24 @@ class ReadFileCsvMixin():
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
+        self.rows_in_chunk = config.get('csv_rows_in_chunk')
         self.counter = 0
 
     def read(self):
-        data_frame = pandas.read_csv(self.input_url, skipinitialspace=True, dtype=str)
-        data_frame.fillna('', inplace=True)
-        for row in data_frame.to_dict(orient="records"):
+        with pandas.read_csv(self.input_url, skipinitialspace=True, dtype=str, chunksize=self.rows_in_chunk) as reader:
+            for data_frame in reader:
+                data_frame.fillna('', inplace=True)
+                for row in data_frame.to_dict(orient="records"):
+                    # Remove items that have '' value
+                    row = {i:j for i,j in row.items() if j != ''}
 
-            # Remove items that have '' value
-            row = {i:j for i,j in row.items() if j != ''}
-
-            self.counter += 1
-            if self.record_min and self.counter < self.record_min:
-                continue
-            if self.record_max and self.counter > self.record_max:
-                break
-            assert type(row) == dict
-            yield row
+                    self.counter += 1
+                    if self.record_min and self.counter < self.record_min:
+                        continue
+                    if self.record_max and self.counter > self.record_max:
+                        break
+                    assert type(row) == dict
+                    yield row
 
 # -----------------------------------------------------------------------------
 # Class: ReadFileMixin
