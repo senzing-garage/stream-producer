@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added in 1.3.2
 
 - Implemented reading csv files in chunks to reduce memory usage when loading large files. Use SENZING_CSV_ROWS_IN_CHUNK (default 10000) to set the number of rows per chunk.
+- Programmable csv delimieter.  Use SENZING_CSV_DELIMITER (default is ',')
 - Fixed [issue #49](https://github.com/Senzing/stream-producer/issues/49) to handle CSV input files with empty values.
 
 ## [1.3.1] - 2021-01-20
