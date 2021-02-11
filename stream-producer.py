@@ -58,6 +58,11 @@ configuration_locator = {
         "env": "SENZING_CSV_ROWS_IN_CHUNK",
         "cli": "csv-rows-in-chunk"
     },
+    "csv_delimiter": {
+        "default": ",",
+        "env": "SENZING_CSV_DELIMITER",
+        "cli": "csv-delimiter"
+    },
     "debug": {
         "default": False,
         "env": "SENZING_DEBUG",
@@ -510,6 +515,11 @@ def get_parser():
                 "dest": "csv_rows_in_chunk",
                 "metavar": "SENZING_CSV_ROWS_IN_CHUNK",
                 "help": "The number of csv lines to read into memory and process at one time. Default: 10000"
+            },
+            "--csv-delimiter": {
+                "dest": "csv_delimiter",
+                "metavar": "SENZING_CSV_DELIMITER",
+                "help": "The character used to separate column values in a csv row. Default: ,"
             }
         }
     }
@@ -1039,10 +1049,11 @@ class ReadFileCsvMixin():
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
         self.rows_in_chunk = config.get('csv_rows_in_chunk')
+        self.delimiter = config.get('csv_delimiter')
         self.counter = 0
 
     def read(self):
-        with pandas.read_csv(self.input_url, skipinitialspace=True, dtype=str, chunksize=self.rows_in_chunk) as reader:
+        with pandas.read_csv(self.input_url, skipinitialspace=True, dtype=str, chunksize=self.rows_in_chunk, delimiter=self.delimiter) as reader:
             for data_frame in reader:
                 data_frame.fillna('', inplace=True)
                 for row in data_frame.to_dict(orient="records"):
