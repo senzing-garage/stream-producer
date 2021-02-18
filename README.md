@@ -65,8 +65,14 @@ describing where we can improve.   Now on with the show...
 :thinking: The following tasks need to be complete before proceeding.
 These are "one-time tasks" which may already have been completed.
 
-1. Install Python dependencies:
-    1. See [requirements.txt](requirements.txt) for list
+1. Install Python prerequisites.
+   Example:
+
+    ```console
+    pip3 install -r https://raw.githubusercontent.com/Senzing/stream-producer/master/requirements.txt
+    ```
+
+    1. See [requirements.txt](requirements.txt) for list.
         1. [Installation hints](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/install-python-dependencies.md)
 
 ### Download
@@ -233,7 +239,56 @@ see [Environment Variables](https://github.com/Senzing/knowledge-base/blob/maste
 The following examples require initialization described in
 [Demonstrate using Command Line Interface](#demonstrate-using-command-line-interface).
 
-1. Example CLI invocations can be seen in
+#### Upload file to AWS SQS
+
+1. :pencil2: For AWS access, set environment variables.
+   For more information, see
+   [How to set AWS environment variables](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/set-aws-environment-variables.md)
+   Example:
+
+    ```console
+    export AWS_ACCESS_KEY_ID=$(aws configure get default.aws_access_key_id)
+    export AWS_SECRET_ACCESS_KEY=$(aws configure get default.aws_secret_access_key)
+    export AWS_DEFAULT_REGION=$(aws configure get default.region)
+    ```
+
+1. :pencil2: Identify the file on the local system to push to the AWS SQS queue.
+   Example:
+
+    ```console
+    export SENZING_INPUT_URL=/path/to/my/records.json
+    ```
+
+1. :pencil2: Identify the AWS SQS queue.
+   Example:
+
+    ```console
+    export SENZING_SQS_QUEUE_URL=https://sqs.us-east-1.amazonaws.com/000000000000/queue-name
+    ```
+
+1. :thinking: **Optional:** If limiting the number of records is desired, identify the maximum number of records to send.
+   To load all records in the file, set the value to "0".
+   For more information, see
+   [SENZING_RECORD_MAX](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md#senzing_record_max)
+   Example:
+
+    ```console
+    export SENZING_RECORD_MAX=100
+    ```
+
+1. Run `stream-producer.py`.
+   Example:
+
+    ```console
+    ~/stream-producer.py json-to-sqs \
+        --input-url ${SENZING_INPUT_URL} \
+        --record-max ${SENZING_RECORD_MAX} \
+        --sqs-queue-url ${SENZING_SQS_QUEUE_URL}
+    ```
+
+#### More
+
+1. More example CLI invocations can be seen in
    [Tests](tests/README.md#test-cli)
 
 ### Examples of Docker

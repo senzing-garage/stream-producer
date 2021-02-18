@@ -6,16 +6,23 @@
 # -----------------------------------------------------------------------------
 
 import argparse
+import asyncio
+import boto3
 import collections
+import confluent_kafka
 import csv
+import fastavro
 import gzip
 import json
 import linecache
 import logging
 import multiprocessing
 import os
+import pandas
+import pika
 import queue
 import random
+import re
 import signal
 import string
 import sys
@@ -23,18 +30,12 @@ import threading
 import time
 import urllib.parse
 import urllib.request
-import asyncio
-import boto3
-import confluent_kafka
-import fastavro
-import pandas
-import pika
 import websockets
 
 __all__ = []
-__version__ = "1.3.1"  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = "1.3.3"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-04-07'
-__updated__ = '2021-01-19'
+__updated__ = '2021-02-18'
 
 SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -604,6 +605,7 @@ message_dictionary = {
     "699": "{0}",
     "700": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}E",
     "721": "Running low on workers.  May need to restart",
+    "750": "Invalid SQS URL config for {0}",
     "885": "License has expired.",
     "886": "G2Engine.addRecord() bad return code: {0}; JSON: {1}",
     "888": "G2Engine.addRecord() G2ModuleNotInitialized: {0}; JSON: {1}",
@@ -1058,7 +1060,7 @@ class ReadFileCsvMixin():
                 data_frame.fillna('', inplace=True)
                 for row in data_frame.to_dict(orient="records"):
                     # Remove items that have '' value
-                    row = {i:j for i,j in row.items() if j != ''}
+                    row = {i: j for i, j in row.items() if j != ''}
 
                     self.counter += 1
                     if self.record_min and self.counter < self.record_min:
@@ -1600,11 +1602,22 @@ class PrintSqsMixin():
         self.counter = 0
         self.queue_url = config.get("sqs_queue_url")
         self.record_monitor = config.get("record_monitor")
-        self.sqs = boto3.client("sqs")
         self.sqs_delay_seconds = config.get("sqs_delay_seconds")
         self.number_of_records_per_print = config.get("records_per_message")
         self.message_buffer = '['
         self.num_messages = 0
+
+        # Create sqs object.
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs.html
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/core/session.html
+
+        regular_expression = "^([^/]+://[^/]+)/"
+        regex = re.compile(regular_expression)
+        match = regex.match(self.queue_url)
+        if not match:
+            exit_error(750, self.queue_url)
+        endpoint_url = match.group(1)
+        self.sqs = boto3.client("sqs", endpoint_url=endpoint_url)
 
     def print(self, message):
         self.counter += 1
@@ -1655,9 +1668,20 @@ class PrintSqsBatchMixin():
         self.counter = 0
         self.queue_url = config.get("sqs_queue_url")
         self.record_monitor = config.get("record_monitor")
-        self.sqs = boto3.client("sqs")
         self.sqs_delay_seconds = config.get("sqs_delay_seconds")
         self.messages = []
+
+        # Create sqs object.
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs.html
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/core/session.html
+
+        regular_expression = "^([^/]+://[^/]+)/"
+        regex = re.compile(regular_expression)
+        match = regex.match(self.queue_url)
+        if not match:
+            exit_error(750, self.queue_url)
+        endpoint_url = match.group(1)
+        self.sqs = boto3.client("sqs", endpoint_url=endpoint_url)
 
     def print(self, message):
         self.counter += 1
