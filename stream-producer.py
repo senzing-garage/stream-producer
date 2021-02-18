@@ -6,16 +6,23 @@
 # -----------------------------------------------------------------------------
 
 import argparse
+import asyncio
+import boto3
 import collections
+import confluent_kafka
 import csv
+import fastavro
 import gzip
 import json
 import linecache
 import logging
 import multiprocessing
 import os
+import pandas
+import pika
 import queue
 import random
+import re
 import signal
 import string
 import sys
@@ -23,12 +30,6 @@ import threading
 import time
 import urllib.parse
 import urllib.request
-import asyncio
-import boto3
-import confluent_kafka
-import fastavro
-import pandas
-import pika
 import websockets
 
 __all__ = []
@@ -1059,7 +1060,7 @@ class ReadFileCsvMixin():
                 data_frame.fillna('', inplace=True)
                 for row in data_frame.to_dict(orient="records"):
                     # Remove items that have '' value
-                    row = {i:j for i, j in row.items() if j != ''}
+                    row = {i: j for i, j in row.items() if j != ''}
 
                     self.counter += 1
                     if self.record_min and self.counter < self.record_min:

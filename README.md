@@ -263,7 +263,7 @@ The following examples require initialization described in
    Example:
 
     ```console
-    export SENZING_SQS_QUEUE_URL=https://sqs.us-east-1.amazonaws.com/000000000003/senzing-queue
+    export SENZING_SQS_QUEUE_URL=https://sqs.us-east-1.amazonaws.com/000000000000/queue-name
     ```
 
 1. :thinking: **Optional:** If limiting the number of records is desired, identify the maximum number of records to send.
