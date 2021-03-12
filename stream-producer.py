@@ -768,6 +768,11 @@ def get_configuration(args):
     for counter in counters:
         result[counter] = 0
 
+    # Normalize SENZING_INPUT_URL
+
+    if result.get('input_url', "").startswith("file://"):
+        result['input_url'] = result.get('input_url')[7:]
+
     return result
 
 
