@@ -1060,20 +1060,20 @@ class ReadFileCsvMixin():
         self.counter = 0
 
     def read(self):
-        with pandas.read_csv(self.input_url, skipinitialspace=True, dtype=str, chunksize=self.rows_in_chunk, delimiter=self.delimiter) as reader:
-            for data_frame in reader:
-                data_frame.fillna('', inplace=True)
-                for row in data_frame.to_dict(orient="records"):
-                    # Remove items that have '' value
-                    row = {i: j for i, j in row.items() if j != ''}
+        reader = pandas.read_csv(self.input_url, skipinitialspace=True, dtype=str, chunksize=self.rows_in_chunk, delimiter=self.delimiter)
+        for data_frame in reader:
+            data_frame.fillna('', inplace=True)
+            for row in data_frame.to_dict(orient="records"):
+                # Remove items that have '' value
+                row = {i: j for i, j in row.items() if j != ''}
 
-                    self.counter += 1
-                    if self.record_min and self.counter < self.record_min:
-                        continue
-                    if self.record_max and self.counter > self.record_max:
-                        break
-                    assert type(row) == dict
-                    yield row
+                self.counter += 1
+                if self.record_min and self.counter < self.record_min:
+                    continue
+                if self.record_max and self.counter > self.record_max:
+                    break
+                assert type(row) == dict
+                yield row
 
 # -----------------------------------------------------------------------------
 # Class: ReadFileMixin
