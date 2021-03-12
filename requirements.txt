@@ -1,8 +1,10 @@
-boto3
+asyncio
+boto3 \
 confluent_kafka
 fastavro
 fastparquet
 pandas
-parquet
 pika
+psutil
 pyarrow
+websockets
