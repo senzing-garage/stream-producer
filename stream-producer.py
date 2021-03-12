@@ -1322,10 +1322,10 @@ class EvaluateDictToJsonMixin():
     def evaluate(self, message):
 
         if self.default_data_source:
-            if not 'DATA_SOURCE' in message.keys():
+            if 'DATA_SOURCE' not in message.keys():
                 message['DATA_SOURCE'] = self.default_data_source
         if self.default_entity_type:
-            if not 'ENTITY_TYPE' in message.keys():
+            if 'ENTITY_TYPE' not in message.keys():
                 message['ENTITY_TYPE'] = self.default_entity_type
         return json.dumps(message)
 
