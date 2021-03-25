@@ -1,18 +1,62 @@
 # stream-producer
 
-## Preamble
+## Synopsis
 
-At [Senzing](http://senzing.com),
-we strive to create GitHub documentation in a
-"[don't make me think](https://github.com/Senzing/knowledge-base/blob/master/WHATIS/dont-make-me-think.md)" style.
-For the most part, instructions are copy and paste.
-Whenever thinking is needed, it's marked with a "thinking" icon :thinking:.
-Whenever customization is needed, it's marked with a "pencil" icon :pencil2:.
-If the instructions are not clear, please let us know by opening a new
-[Documentation issue](https://github.com/Senzing/stream-producer/issues/new?template=documentation_request.md)
-describing where we can improve.   Now on with the show...
+Populate a queue with records to be consumed by
+[stream-loader](https://github.com/Senzing/stream-loader).
 
 ## Overview
+
+The [stream-produder.py](stream-producer.py) python script reads files of different formats
+(JSON, CSV, Parquet, Avro) and publishes it to a queue (RabbitMQ, Kafka, AWS SQS).
+The `senzing/stream-producer` docker image is a wrapper for use in docker formations (e.g. docker-compose, kubernetes).
+
+To see all of the subcommands, run:
+
+```console
+$ ./stream-producer.py --help
+usage: stream-producer.py [-h]
+                          {avro-to-kafka,avro-to-rabbitmq,avro-to-sqs,avro-to-sqs-batch,avro-to-stdout,csv-to-kafka,csv-to-rabbitmq,csv-to-sqs,csv-to-sqs-batch,csv-to-stdout,gzipped-json-to-kafka,gzipped-json-to-rabbitmq,gzipped-json-to-sqs,gzipped-json-to-sqs-batch,gzipped-json-to-stdout,json-to-kafka,json-to-rabbitmq,json-to-sqs,json-to-sqs-batch,json-to-stdout,parquet-to-kafka,parquet-to-rabbitmq,parquet-to-sqs,parquet-to-sqs-batch,parquet-to-stdout,websocket-to-kafka,websocket-to-rabbitmq,websocket-to-sqs,websocket-to-sqs-batch,websocket-to-stdout,sleep,version,docker-acceptance-test}
+                          ...
+
+Queue messages. For more information, see https://github.com/Senzing/stream-
+producer
+
+positional arguments:
+  {avro-to-kafka,avro-to-rabbitmq,avro-to-sqs,avro-to-sqs-batch,avro-to-stdout,csv-to-kafka,csv-to-rabbitmq,csv-to-sqs,csv-to-sqs-batch,csv-to-stdout,gzipped-json-to-kafka,gzipped-json-to-rabbitmq,gzipped-json-to-sqs,gzipped-json-to-sqs-batch,gzipped-json-to-stdout,json-to-kafka,json-to-rabbitmq,json-to-sqs,json-to-sqs-batch,json-to-stdout,parquet-to-kafka,parquet-to-rabbitmq,parquet-to-sqs,parquet-to-sqs-batch,parquet-to-stdout,websocket-to-kafka,websocket-to-rabbitmq,websocket-to-sqs,websocket-to-sqs-batch,websocket-to-stdout,sleep,version,docker-acceptance-test}
+                              Subcommands (SENZING_SUBCOMMAND):
+    avro-to-kafka             Read Avro file and send to Kafka.
+    avro-to-rabbitmq          Read Avro file and send to RabbitMQ.
+    avro-to-sqs               Read Avro file and print to AWS SQS.
+    avro-to-stdout            Read Avro file and print to STDOUT.
+
+    csv-to-kafka              Read CSV file and send to Kafka.
+    csv-to-rabbitmq           Read CSV file and send to RabbitMQ.
+    csv-to-sqs                Read CSV file and print to SQS.
+    csv-to-stdout             Read CSV file and print to STDOUT.
+
+    gzipped-json-to-kafka     Read gzipped JSON file and send to Kafka.
+    gzipped-json-to-rabbitmq  Read gzipped JSON file and send to RabbitMQ.
+    gzipped-json-to-sqs       Read gzipped JSON file and send to AWS SQS.
+    gzipped-json-to-stdout    Read gzipped JSON file and print to STDOUT.
+
+    json-to-kafka             Read JSON file and send to Kafka.
+    json-to-rabbitmq          Read JSON file and send to RabbitMQ.
+    json-to-sqs               Read JSON file and send to AWS SQS.
+    json-to-stdout            Read JSON file and print to STDOUT.
+
+    parquet-to-kafka          Read Parquet file and send to Kafka.
+    parquet-to-rabbitmq       Read Parquet file and send to RabbitMQ.
+    parquet-to-sqs            Read Parquet file and print to AWS SQS.
+    parquet-to-stdout         Read Parquet file and print to STDOUT.
+
+    sleep                     Do nothing but sleep. For Docker testing.
+    version                   Print version of program.
+    docker-acceptance-test    For Docker acceptance testing.
+
+optional arguments:
+  -h, --help                  show this help message and exit
+```
 
 ### Contents
 
@@ -39,7 +83,19 @@ describing where we can improve.   Now on with the show...
 1. [Errors](#errors)
 1. [References](#references)
 
-#### Legend
+## Preamble
+
+At [Senzing](http://senzing.com),
+we strive to create GitHub documentation in a
+"[don't make me think](https://github.com/Senzing/knowledge-base/blob/master/WHATIS/dont-make-me-think.md)" style.
+For the most part, instructions are copy and paste.
+Whenever thinking is needed, it's marked with a "thinking" icon :thinking:.
+Whenever customization is needed, it's marked with a "pencil" icon :pencil2:.
+If the instructions are not clear, please let us know by opening a new
+[Documentation issue](https://github.com/Senzing/template-python/issues/new?template=documentation_request.md)
+describing where we can improve.   Now on with the show...
+
+### Legend
 
 1. :thinking: - A "thinker" icon means that a little extra thinking may be required.
    Perhaps there are some choices to be made.
@@ -158,7 +214,7 @@ These are "one-time tasks" which may already have been completed.
 
 Although the `Docker run` command looks complex,
 it accounts for all of the optional variations described above.
-Unset environment variables have no effect on the
+Unset `*_PARAMETER` environment variables have no effect on the
 `docker run` command and may be removed or remain.
 
 1. Run Docker container.
