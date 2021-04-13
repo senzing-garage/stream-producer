@@ -313,7 +313,7 @@ This example shows how to load a file of JSONlines onto a RabbitMQ queue using t
     export SENZING_INPUT_URL=/path/to/my/records.json
     ```
 
-   or identify a URL.
+   :pencil2: or identify a URL.
    Example:
 
     ```console
@@ -382,7 +382,7 @@ This example shows how to load a file of JSONlines onto an AWS SQS queue using t
     export SENZING_INPUT_URL=/path/to/my/records.json
     ```
 
-   or identify a URL.
+   :pencil2: or identify a URL.
    Example:
 
     ```console
