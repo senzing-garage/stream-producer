@@ -159,6 +159,11 @@ configuration_locator = {
         "env": "SENZING_RABBITMQ_USERNAME",
         "cli": "rabbitmq-username",
     },
+    "rabbitmq_virtual_host": {
+        "default": pika.ConnectionParameters.DEFAULT_VIRTUAL_HOST,
+        "env": "SENZING_RABBITMQ_VIRTUAL_HOST",
+        "cli": "rabbitmq-virtual-host",
+    },
     "read_queue_maxsize": {
         "default": 50,
         "env": "SENZING_READ_QUEUE_MAXSIZE",
@@ -490,6 +495,11 @@ def get_parser():
                 "dest": "rabbitmq_use_existing_entities",
                 "metavar": "SENZING_RABBITMQ_USE_EXISTING_ENTITIES",
                 "help": "Connect to an existing exchange and queue using their settings. An error is thrown if the exchange or queue does not exist. If False, it will create the exchange and queue if they do not exist. If they exist, then it will attempt to connect, checking the settings match. Default: False"
+            },
+            "--rabbitmq-virtual-host": {
+                "dest": "rabbitmq_virtual_host",
+                "metavar": "SENZING_RABBITMQ_VIRTUAL_HOST",
+                "help": "RabbitMQ virtual host. Default: None, which will use the RabbitMQ defined default virtual host"
             },
         },
         "sqs": {
@@ -1492,6 +1502,7 @@ class PrintRabbitmqMixin():
         rabbitmq_port = config.get("rabbitmq_port")
         rabbitmq_username = config.get("rabbitmq_username")
         rabbitmq_passive_declare = config.get("rabbitmq_use_existing_entities")
+        rabbitmq_virtual_host = config.get("rabbitmq_virtual_host")
         self.rabbitmq_exchange = config.get("rabbitmq_exchange")
         self.rabbitmq_queue = config.get("rabbitmq_queue")
         self.rabbitmq_routing_key = config.get("rabbitmq_routing_key")
@@ -1512,7 +1523,8 @@ class PrintRabbitmqMixin():
         rabbitmq_connection_parameters = pika.ConnectionParameters(
             host=rabbitmq_host,
             port=rabbitmq_port,
-            credentials=credentials
+            credentials=credentials,
+            virtual_host=rabbitmq_virtual_host
         )
 
         # Open connection to RabbitMQ.
