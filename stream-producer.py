@@ -1302,7 +1302,7 @@ class ReadWebsocketMixin():
         self.local_queue.join_thread()
 
 # -----------------------------------------------------------------------------
-# Class: ReadWebsocketMixin
+# Class: ReadS3CsvMixin
 # -----------------------------------------------------------------------------
 
 class ReadS3CsvMixin():
