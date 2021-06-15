@@ -6,21 +6,12 @@
 # -----------------------------------------------------------------------------
 
 import argparse
-import asyncio
-import boto3
-import collections
-import confluent_kafka
-import csv
-import fastavro
 import gzip
 import json
 import linecache
 import logging
 import multiprocessing
 import os
-import pandas
-import pika
-import queue
 import random
 import re
 import signal
@@ -30,6 +21,11 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+import boto3
+import pika
+import confluent_kafka
+import fastavro
+import pandas
 
 __all__ = []
 __version__ = "1.4.0"  # See https://www.python.org/dev/peps/pep-0396/
@@ -604,7 +600,6 @@ def message(index, *args):
 
 
 def message_generic(generic_index, index, *args):
-    index_string = str(index)
     return "{0} {1}".format(message(generic_index, index), message(index, *args))
 
 
@@ -928,7 +923,7 @@ class MonitorThread(threading.Thread):
 
             interval_in_seconds = 5
             active_workers = len(self.workers)
-            for step in range(1, sleep_time_in_seconds, interval_in_seconds):
+            for _ in range(1, sleep_time_in_seconds, interval_in_seconds):
                 time.sleep(interval_in_seconds)
                 active_workers = len(self.workers)
                 for worker in self.workers:
@@ -1582,7 +1577,7 @@ class PrintSqsMixin():
 
         if self.num_messages == self.number_of_records_per_print:
             self.message_buffer += ']'
-            response = self.sqs.send_message(
+            self.sqs.send_message(
                 QueueUrl=self.queue_url,
                 DelaySeconds=self.sqs_delay_seconds,
                 MessageAttributes={},
@@ -1597,7 +1592,7 @@ class PrintSqsMixin():
     def close(self):
         if self.num_messages > 0:
             self.message_buffer += ']'
-            response = self.sqs.send_message(
+            self.sqs.send_message(
                 QueueUrl=self.queue_url,
                 DelaySeconds=self.sqs_delay_seconds,
                 MessageAttributes={},
@@ -1647,7 +1642,7 @@ class PrintSqsBatchMixin():
                     "DelaySeconds": self.sqs_delay_seconds
                 }
                 entries.append(entry)
-            response = self.sqs.send_message_batch(
+            self.sqs.send_message_batch(
                 QueueUrl=self.queue_url,
                 Entries=entries,
             )
@@ -1665,7 +1660,7 @@ class PrintSqsBatchMixin():
             }
             entries.append(entry)
         if len(entries) > 0:
-            response = self.sqs.send_message_batch(
+            self.sqs.send_message_batch(
                 QueueUrl=self.queue_url,
                 Entries=entries,
             )
@@ -2108,12 +2103,6 @@ def dohelper_avro(args, write_thread):
 def dohelper_csv(args, write_thread):
     ''' Read file of CSV, print to write_thread. '''
 
-    # Get context variables.
-
-    config = get_configuration(args)
-    input_url = config.get("input_url")
-    parsed_file_name = urllib.parse.urlparse(input_url)
-
     # Determine Read thread.
 
     read_thread = FilterFileCsvToDictQueueThread
@@ -2210,12 +2199,6 @@ def dohelper_json(args, write_thread):
 
 def dohelper_parquet(args, write_thread):
     ''' Read file of Parquet, print to write_thread. '''
-
-    # Get context variables.
-
-    config = get_configuration(args)
-    input_url = config.get("input_url")
-    parsed_file_name = urllib.parse.urlparse(input_url)
 
     # Determine Read thread.
 
