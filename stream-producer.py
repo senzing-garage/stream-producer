@@ -1381,7 +1381,7 @@ class PrintKafkaMixin():
             logging.warning(message_warning(404, err, message))
         except confluent_kafka.KafkaException as err:
             logging.warning(message_warning(405, err, message))
-        except NotImplemented as err:
+        except NotImplementedError as err:
             logging.warning(message_warning(406, err, message))
         except:
             logging.warning(message_warning(407, err, message))
