@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added in 1.4.1
 
 - RabbitMQ virtual host is now a settable parameter.
+- Removed suppor for adding records to a queue from a websocket. Loading records via websocket has been moved to the Senzing API server.
 
 ## [1.4.0] - 2021-03-12
 
