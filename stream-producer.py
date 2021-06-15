@@ -30,7 +30,6 @@ import threading
 import time
 import urllib.parse
 import urllib.request
-import websockets
 
 __all__ = []
 __version__ = "1.4.0"  # See https://www.python.org/dev/peps/pep-0396/
@@ -223,16 +222,6 @@ configuration_locator = {
         "env": "SENZING_THREADS_PER_PRINT",
         "cli": "threads-per-print"
     },
-    "websocket_host": {
-        "default": "0.0.0.0",
-        "env": "SENZING_WEBSOCKET_HOST",
-        "cli": "websocket-host"
-    },
-    "websocket_port": {
-        "default": 8255,
-        "env": "SENZING_WEBSOCKET_PORT",
-        "cli": "websocket-port"
-    }
 }
 
 # Enumerate keys in 'configuration_locator' that should not be printed to the log.
@@ -349,26 +338,6 @@ def get_parser():
         'parquet-to-stdout': {
             "help": 'Read Parquet file and print to STDOUT.',
             "argument_aspects": ["input-url", "parquet", "stdout"]
-        },
-        'websocket-to-kafka': {
-            "help": 'Read JSON from Websocket and send to Kafka.',
-            "argument_aspects": ["websocket", "kafka"]
-        },
-        'websocket-to-rabbitmq': {
-            "help": 'Read JSON from Websocket and send to RabbitMQ.',
-            "argument_aspects": ["websocket", "rabbitmq"]
-        },
-        'websocket-to-sqs': {
-            "help": 'Read JSON from Websocket and print to AWS SQS.',
-            "argument_aspects": ["websocket", "sqs"]
-        },
-        'websocket-to-sqs-batch': {
-            "help": 'Read JSON from Websocket and print to AWS SQS using batch.  DEPRECATED: Use websocket-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
-            "argument_aspects": ["websocket", "sqs"]
-        },
-        'websocket-to-stdout': {
-            "help": 'Read JSON from Websocket and print to STDOUT.',
-            "argument_aspects": ["websocket", "stdout"]
         },
         'sleep': {
             "help": 'Do nothing but sleep. For Docker testing.',
@@ -507,18 +476,6 @@ def get_parser():
                 "dest": "sqs_queue_url",
                 "metavar": "SENZING_SQS_QUEUE_URL",
                 "help": "AWS SQS URL. Default: none"
-            },
-        },
-        "websocket": {
-            "--websocket-host": {
-                "dest": "websocket_host",
-                "metavar": "SENZING_WEBSOCKET_HOST",
-                "help": "Host to listen on. Default: 0.0.0.0"
-            },
-            "--websocket-port": {
-                "dest": "websocket_port",
-                "metavar": "SENZING_WEBSOCKET_PORT",
-                "help": "Port to listen on. Default: 8255"
             },
         },
         "csv": {
@@ -1278,38 +1235,6 @@ class ReadUrlMixin():
             assert isinstance(result, dict)
             yield result
 
-# -----------------------------------------------------------------------------
-# Class: ReadWebsocketMixin
-# -----------------------------------------------------------------------------
-
-
-class ReadWebsocketMixin():
-
-    def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadWebsocketMixin"))
-        self.websocket_host = config.get("websocket_host")
-        self.websocket_port = config.get("websocket_port")
-        self.local_queue = multiprocessing.Queue()
-
-        # Start websocket server.
-
-        self.start_server = websockets.serve(self.websocket_server_handler, self.websocket_host, self.websocket_port)
-        asyncio.get_event_loop().run_until_complete(self.start_server)
-#         asyncio.get_event_loop().run_forever()
-
-    async def websocket_server_handler(self, websocket, path):
-        async for record in websocket:
-            self.local_queue.put(record)
-
-    def read(self):
-        while True:
-            record = self.local_queue.get(block=True)
-            yield record
-
-        # Cleanup, if "while True" ever changes.
-
-        self.local_queue.close()
-        self.local_queue.join_thread()
 
 # =============================================================================
 # Mixins: Evaluate*
@@ -1941,13 +1866,6 @@ class FilterUrlJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlMixin, 
             base.__init__(self, *args, **kwargs)
 
 
-class FilterWebsocketToDictQueueThread(ReadEvaluatePrintLoopThread, ReadWebsocketMixin, EvaluateJsonToDictMixin, PrintQueueMixin):
-
-    def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterUrlJsonToDictQueueThread"))
-        for base in type(self).__bases__:
-            base.__init__(self, *args, **kwargs)
-
 # -----------------------------------------------------------------------------
 # *_processor
 # -----------------------------------------------------------------------------
@@ -2057,7 +1975,6 @@ def pipeline_read_write(
     write_thread=None,
     monitor_thread=None,
     governor=None,
-    run_async=False,
 ):
 
     # Get context from CLI, environment variables, and ini files.
@@ -2135,11 +2052,6 @@ def pipeline_read_write(
         thread.name = "Process-0-{0}-0".format(thread.__class__.__name__)
         adminThreads.append(thread)
         thread.start()
-
-    # WebSocket requires an asyncio loop.
-
-    if run_async:
-        asyncio.get_event_loop().run_forever()
 
     # Collect inactive threads.
 
@@ -2328,37 +2240,6 @@ def dohelper_parquet(args, write_thread):
         governor=governor
     )
 
-
-def dohelper_websocket(args, write_thread):
-    ''' Read file of JSON, print to write_thread. '''
-
-    # Get context variables.
-
-    config = get_configuration(args)
-
-    # Determine Read thread.
-
-    read_thread = FilterWebsocketToDictQueueThread  # Default.
-
-    # Cascading defaults.
-
-    options_to_defaults_map = {}
-
-    # Create governor.
-
-    governor = Governor(hint="stream-producer")
-
-    # Run pipeline.
-
-    pipeline_read_write(
-        args=args,
-        options_to_defaults_map=options_to_defaults_map,
-        read_thread=read_thread,
-        write_thread=write_thread,
-        monitor_thread=MonitorThread,
-        governor=governor,
-        run_async=True
-    )
 
 # -----------------------------------------------------------------------------
 # do_* functions
@@ -2569,35 +2450,6 @@ def do_version(args):
 
     logging.info(message_info(294, __version__, __updated__))
 
-
-def do_websocket_to_kafka(args):
-    ''' Read JSON from Websocket, print to Kafka. '''
-    write_thread = FilterQueueDictToJsonKafkaThread
-    dohelper_websocket(args, write_thread)
-
-
-def do_websocket_to_rabbitmq(args):
-    ''' Read JSON from Websocket, print to RabbitMQ. '''
-    write_thread = FilterQueueDictToJsonRabbitmqThread
-    dohelper_websocket(args, write_thread)
-
-
-def do_websocket_to_sqs(args):
-    ''' Read JSON from Websocket, print to AWS SQS. '''
-    write_thread = FilterQueueDictToJsonSqsThread
-    dohelper_websocket(args, write_thread)
-
-
-def do_websocket_to_sqs_batch(args):
-    ''' Read JSON from Websocket, print to AWS SQS. '''
-    write_thread = FilterQueueDictToJsonSqsBatchThread
-    dohelper_websocket(args, write_thread)
-
-
-def do_websocket_to_stdout(args):
-    ''' Read JSON from Websocket, print to STDOUT. '''
-    write_thread = FilterQueueDictToJsonStdoutThread
-    dohelper_websocket(args, write_thread)
 
 # -----------------------------------------------------------------------------
 # Main
