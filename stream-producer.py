@@ -804,7 +804,7 @@ class Governor:
     def __enter__(self):
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exception_type, exception_value, exception_traceback):
         self.close()
 
 # -----------------------------------------------------------------------------
@@ -1903,15 +1903,15 @@ def pipeline_runner(
 
     # Create pipeline segments.
 
-    for filter in pipeline:
+    for filter_metadata in pipeline:
 
         # Get metadata about the filter.
 
-        filter_class = filter.get("class")
-        filter_threads = filter.get("threads", 1)
-        filter_queue_max_size = filter.get("queue_max_size", default_queue_maxsize)
-        filter_counter_name = filter.get("counter_name")
-        filter_delay = filter.get("delay", 1)
+        filter_class = filter_metadata.get("class")
+        filter_threads = filter_metadata.get("threads", 1)
+        filter_queue_max_size = filter_metadata.get("queue_max_size", default_queue_maxsize)
+        filter_counter_name = filter_metadata.get("counter_name")
+        filter_delay = filter_metadata.get("delay", 1)
 
         # Give prior filter a head start
 
