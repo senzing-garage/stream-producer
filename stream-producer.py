@@ -780,7 +780,7 @@ def redact_configuration(config):
     for key in keys_to_redact:
         try:
             result.pop(key)
-        except:
+        except Exception:
             pass
     return result
 
@@ -1307,7 +1307,7 @@ class EvaluateMakeSerializeableDictMixin():
             try:
                 if value.isnumeric():
                     new_message[key] = value
-            except:
+            except Exception:
                 pass
         return new_message
 
@@ -1378,7 +1378,7 @@ class PrintKafkaMixin():
             logging.warning(message_warning(405, err, message))
         except NotImplementedError as err:
             logging.warning(message_warning(406, err, message))
-        except:
+        except Exception:
             logging.warning(message_warning(407, err, message))
 
         # Log progress. Using a "cheap" serialization technique.
