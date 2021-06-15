@@ -1355,8 +1355,6 @@ class ReadS3JsonMixin():
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
-        self.rows_in_chunk = config.get('csv_rows_in_chunk')
-        self.delimiter = config.get('csv_delimiter')
         self.counter = 0
         
         #Instantiate boto3
@@ -1385,6 +1383,41 @@ class ReadS3JsonMixin():
                     continue
                 assert isinstance(line, str)
                 yield line
+
+# -----------------------------------------------------------------------------
+# Class: ReadS3AvroMixin
+# -----------------------------------------------------------------------------
+
+class ReadS3AvroMixin():
+
+    def __init__(self, config={}, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3CsvMixin"))
+        self.input_url = config.get('input_url')
+        self.record_min = config.get('record_min')
+        self.record_max = config.get('record_max')
+        self.counter = 0
+        
+        #Instantiate boto3
+        
+        S3_client = boto3.client("S3")
+        
+        #Get S3 bucket and key
+        
+        self.urlParts = urlparse(self.input_url)
+        self.S3Bucket = self.urlParts.netloc
+        self.S3Key = self.urlParts.path.lstrip('/')
+        
+    def read(self):
+      self.response = S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
+        with open(self.input_url, 'rb') as input_file:
+            avro_reader = fastavro.reader(input_file)
+            for record in avro_reader:
+                self.counter += 1
+                if self.record_min and self.counter < self.record_min:
+                    continue
+                if self.record_max and self.counter > self.record_max:
+                    break
+                yield record
 
 # =============================================================================
 # Mixins: Evaluate*
