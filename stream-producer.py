@@ -987,7 +987,7 @@ class MonitorThread(threading.Thread):
 
 class ReadFileAvroMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileAvroMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
@@ -1012,7 +1012,7 @@ class ReadFileAvroMixin():
 
 class ReadFileCsvMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileCsvMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
@@ -1044,7 +1044,7 @@ class ReadFileCsvMixin():
 
 class ReadFileMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
@@ -1072,7 +1072,7 @@ class ReadFileMixin():
 
 class ReadFileGzippedMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileGzippedMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
@@ -1100,7 +1100,7 @@ class ReadFileGzippedMixin():
 
 class ReadUrlGzippedMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadUrlGzippedMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
@@ -1131,7 +1131,7 @@ class ReadUrlGzippedMixin():
 
 class ReadFileParquetMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileParquetMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
@@ -1182,7 +1182,7 @@ class ReadQueueMixin():
 
 class ReadUrlAvroMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileAvroMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
@@ -1207,7 +1207,7 @@ class ReadUrlAvroMixin():
 
 class ReadUrlMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadUrlMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
@@ -1328,7 +1328,7 @@ class EvaluateMakeSerializeableDictMixin():
 
 class PrintKafkaMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "PrintKafkaMixin"))
         self.config = config
         self.kafka_poll_interval = config.get("kafka_poll_interval")
@@ -1413,7 +1413,7 @@ class PrintKafkaMixin():
 
 class PrintRabbitmqMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "PrintRabbitmqMixin"))
 
         rabbitmq_delivery_mode = 2
@@ -1965,7 +1965,7 @@ def pipeline_runner(
 
 def pipeline_read_write(
     args=None,
-    options_to_defaults_map={},
+    options_to_defaults_map=None,
     read_thread=None,
     write_thread=None,
     monitor_thread=None,
@@ -1979,9 +1979,10 @@ def pipeline_read_write(
 
     # If configuration values not specified, use defaults.
 
-    for key, value in options_to_defaults_map.items():
-        if not config.get(key):
-            config[key] = config.get(value)
+    if options_to_defaults_map is not None:
+        for key, value in options_to_defaults_map.items():
+            if not config.get(key):
+                config[key] = config.get(value)
 
     # Prolog.
 
