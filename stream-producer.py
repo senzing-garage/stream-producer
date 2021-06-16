@@ -6,21 +6,12 @@
 # -----------------------------------------------------------------------------
 
 import argparse
-import asyncio
-import boto3
-import collections
-import confluent_kafka
-import csv
-import fastavro
 import gzip
 import json
 import linecache
 import logging
 import multiprocessing
 import os
-import pandas
-import pika
-import queue
 import random
 import re
 import signal
@@ -30,7 +21,11 @@ import threading
 import time
 import urllib.parse
 import urllib.request
-import websockets
+import boto3
+import pika
+import confluent_kafka
+import fastavro
+import pandas
 
 __all__ = []
 __version__ = "1.4.0"  # See https://www.python.org/dev/peps/pep-0396/
@@ -223,16 +218,6 @@ configuration_locator = {
         "env": "SENZING_THREADS_PER_PRINT",
         "cli": "threads-per-print"
     },
-    "websocket_host": {
-        "default": "0.0.0.0",
-        "env": "SENZING_WEBSOCKET_HOST",
-        "cli": "websocket-host"
-    },
-    "websocket_port": {
-        "default": 8255,
-        "env": "SENZING_WEBSOCKET_PORT",
-        "cli": "websocket-port"
-    }
 }
 
 # Enumerate keys in 'configuration_locator' that should not be printed to the log.
@@ -349,26 +334,6 @@ def get_parser():
         'parquet-to-stdout': {
             "help": 'Read Parquet file and print to STDOUT.',
             "argument_aspects": ["input-url", "parquet", "stdout"]
-        },
-        'websocket-to-kafka': {
-            "help": 'Read JSON from Websocket and send to Kafka.',
-            "argument_aspects": ["websocket", "kafka"]
-        },
-        'websocket-to-rabbitmq': {
-            "help": 'Read JSON from Websocket and send to RabbitMQ.',
-            "argument_aspects": ["websocket", "rabbitmq"]
-        },
-        'websocket-to-sqs': {
-            "help": 'Read JSON from Websocket and print to AWS SQS.',
-            "argument_aspects": ["websocket", "sqs"]
-        },
-        'websocket-to-sqs-batch': {
-            "help": 'Read JSON from Websocket and print to AWS SQS using batch.  DEPRECATED: Use websocket-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
-            "argument_aspects": ["websocket", "sqs"]
-        },
-        'websocket-to-stdout': {
-            "help": 'Read JSON from Websocket and print to STDOUT.',
-            "argument_aspects": ["websocket", "stdout"]
         },
         'sleep': {
             "help": 'Do nothing but sleep. For Docker testing.',
@@ -509,18 +474,6 @@ def get_parser():
                 "help": "AWS SQS URL. Default: none"
             },
         },
-        "websocket": {
-            "--websocket-host": {
-                "dest": "websocket_host",
-                "metavar": "SENZING_WEBSOCKET_HOST",
-                "help": "Host to listen on. Default: 0.0.0.0"
-            },
-            "--websocket-port": {
-                "dest": "websocket_port",
-                "metavar": "SENZING_WEBSOCKET_PORT",
-                "help": "Port to listen on. Default: 8255"
-            },
-        },
         "csv": {
             "--csv-rows-in-chunk": {
                 "dest": "csv_rows_in_chunk",
@@ -647,7 +600,6 @@ def message(index, *args):
 
 
 def message_generic(generic_index, index, *args):
-    index_string = str(index)
     return "{0} {1}".format(message(generic_index, index), message(index, *args))
 
 
@@ -828,7 +780,7 @@ def redact_configuration(config):
     for key in keys_to_redact:
         try:
             result.pop(key)
-        except:
+        except Exception:
             pass
     return result
 
@@ -852,7 +804,7 @@ class Governor:
     def __enter__(self):
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exception_type, exception_value, exception_traceback):
         self.close()
 
 # -----------------------------------------------------------------------------
@@ -971,7 +923,7 @@ class MonitorThread(threading.Thread):
 
             interval_in_seconds = 5
             active_workers = len(self.workers)
-            for step in range(1, sleep_time_in_seconds, interval_in_seconds):
+            for _ in range(1, sleep_time_in_seconds, interval_in_seconds):
                 time.sleep(interval_in_seconds)
                 active_workers = len(self.workers)
                 for worker in self.workers:
@@ -1035,7 +987,7 @@ class MonitorThread(threading.Thread):
 
 class ReadFileAvroMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileAvroMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
@@ -1060,7 +1012,7 @@ class ReadFileAvroMixin():
 
 class ReadFileCsvMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileCsvMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
@@ -1092,7 +1044,7 @@ class ReadFileCsvMixin():
 
 class ReadFileMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
@@ -1120,7 +1072,7 @@ class ReadFileMixin():
 
 class ReadFileGzippedMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileGzippedMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
@@ -1148,7 +1100,7 @@ class ReadFileGzippedMixin():
 
 class ReadUrlGzippedMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadUrlGzippedMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
@@ -1179,7 +1131,7 @@ class ReadUrlGzippedMixin():
 
 class ReadFileParquetMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileParquetMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
@@ -1230,7 +1182,7 @@ class ReadQueueMixin():
 
 class ReadUrlAvroMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileAvroMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
@@ -1255,7 +1207,7 @@ class ReadUrlAvroMixin():
 
 class ReadUrlMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadUrlMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
@@ -1278,38 +1230,6 @@ class ReadUrlMixin():
             assert isinstance(result, dict)
             yield result
 
-# -----------------------------------------------------------------------------
-# Class: ReadWebsocketMixin
-# -----------------------------------------------------------------------------
-
-
-class ReadWebsocketMixin():
-
-    def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadWebsocketMixin"))
-        self.websocket_host = config.get("websocket_host")
-        self.websocket_port = config.get("websocket_port")
-        self.local_queue = multiprocessing.Queue()
-
-        # Start websocket server.
-
-        self.start_server = websockets.serve(self.websocket_server_handler, self.websocket_host, self.websocket_port)
-        asyncio.get_event_loop().run_until_complete(self.start_server)
-#         asyncio.get_event_loop().run_forever()
-
-    async def websocket_server_handler(self, websocket, path):
-        async for record in websocket:
-            self.local_queue.put(record)
-
-    def read(self):
-        while True:
-            record = self.local_queue.get(block=True)
-            yield record
-
-        # Cleanup, if "while True" ever changes.
-
-        self.local_queue.close()
-        self.local_queue.join_thread()
 
 # =============================================================================
 # Mixins: Evaluate*
@@ -1387,7 +1307,7 @@ class EvaluateMakeSerializeableDictMixin():
             try:
                 if value.isnumeric():
                     new_message[key] = value
-            except:
+            except Exception:
                 pass
         return new_message
 
@@ -1408,7 +1328,7 @@ class EvaluateMakeSerializeableDictMixin():
 
 class PrintKafkaMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "PrintKafkaMixin"))
         self.config = config
         self.kafka_poll_interval = config.get("kafka_poll_interval")
@@ -1456,9 +1376,9 @@ class PrintKafkaMixin():
             logging.warning(message_warning(404, err, message))
         except confluent_kafka.KafkaException as err:
             logging.warning(message_warning(405, err, message))
-        except NotImplemented as err:
+        except NotImplementedError as err:
             logging.warning(message_warning(406, err, message))
-        except:
+        except Exception:
             logging.warning(message_warning(407, err, message))
 
         # Log progress. Using a "cheap" serialization technique.
@@ -1493,7 +1413,7 @@ class PrintKafkaMixin():
 
 class PrintRabbitmqMixin():
 
-    def __init__(self, config={}, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "PrintRabbitmqMixin"))
 
         rabbitmq_delivery_mode = 2
@@ -1657,7 +1577,7 @@ class PrintSqsMixin():
 
         if self.num_messages == self.number_of_records_per_print:
             self.message_buffer += ']'
-            response = self.sqs.send_message(
+            self.sqs.send_message(
                 QueueUrl=self.queue_url,
                 DelaySeconds=self.sqs_delay_seconds,
                 MessageAttributes={},
@@ -1672,7 +1592,7 @@ class PrintSqsMixin():
     def close(self):
         if self.num_messages > 0:
             self.message_buffer += ']'
-            response = self.sqs.send_message(
+            self.sqs.send_message(
                 QueueUrl=self.queue_url,
                 DelaySeconds=self.sqs_delay_seconds,
                 MessageAttributes={},
@@ -1722,7 +1642,7 @@ class PrintSqsBatchMixin():
                     "DelaySeconds": self.sqs_delay_seconds
                 }
                 entries.append(entry)
-            response = self.sqs.send_message_batch(
+            self.sqs.send_message_batch(
                 QueueUrl=self.queue_url,
                 Entries=entries,
             )
@@ -1740,7 +1660,7 @@ class PrintSqsBatchMixin():
             }
             entries.append(entry)
         if len(entries) > 0:
-            response = self.sqs.send_message_batch(
+            self.sqs.send_message_batch(
                 QueueUrl=self.queue_url,
                 Entries=entries,
             )
@@ -1941,123 +1861,18 @@ class FilterUrlJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlMixin, 
             base.__init__(self, *args, **kwargs)
 
 
-class FilterWebsocketToDictQueueThread(ReadEvaluatePrintLoopThread, ReadWebsocketMixin, EvaluateJsonToDictMixin, PrintQueueMixin):
-
-    def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterUrlJsonToDictQueueThread"))
-        for base in type(self).__bases__:
-            base.__init__(self, *args, **kwargs)
-
 # -----------------------------------------------------------------------------
 # *_processor
 # -----------------------------------------------------------------------------
 
 
-def pipeline_runner(
-    args=None,
-    options_to_defaults_map={},
-    pipeline=[],
-    monitor_thread=None,
-):
-
-    # Get context from CLI, environment variables, and ini files.
-
-    config = get_configuration(args)
-    validate_configuration(config)
-
-    # If configuration values not specified, use defaults.
-
-    for key, value in options_to_defaults_map.items():
-        if not config.get(key):
-            config[key] = config.get(value)
-
-    # Prolog.
-
-    logging.info(entry_template(config))
-
-    # If requested, delay start.
-
-    delay(config)
-
-    # Pull values from configuration.
-
-    default_queue_maxsize = config.get('read_queue_maxsize')
-
-    # Create threads for master process.
-
-    threads = []
-    input_queue = None
-
-    # Create pipeline segments.
-
-    for filter in pipeline:
-
-        # Get metadata about the filter.
-
-        filter_class = filter.get("class")
-        filter_threads = filter.get("threads", 1)
-        filter_queue_max_size = filter.get("queue_max_size", default_queue_maxsize)
-        filter_counter_name = filter.get("counter_name")
-        filter_delay = filter.get("delay", 1)
-
-        # Give prior filter a head start
-
-        time.sleep(filter_delay)
-
-        # Create internal Queue.
-
-        output_queue = multiprocessing.Queue(filter_queue_max_size)
-
-        # Start threads.
-
-        for i in range(0, filter_threads):
-            thread = filter_class(
-                config=config,
-                counter_name=filter_counter_name,
-                input_queue=input_queue,
-                output_queue=output_queue,
-            )
-            thread.name = "Process-0-{0}-{1}".format(thread.__class__.__name__, i)
-            threads.append(thread)
-            thread.start()
-
-        # Prepare for next filter.
-
-        input_queue = output_queue
-
-    # Add a monitoring thread.
-
-    adminThreads = []
-
-    if monitor_thread:
-        thread = monitor_thread(
-            config=config,
-            workers=threads,
-        )
-        thread.name = "Process-0-{0}-0".format(thread.__class__.__name__)
-        adminThreads.append(thread)
-        thread.start()
-
-    # Collect inactive threads.
-
-    for thread in threads:
-        thread.join()
-    for thread in adminThreads:
-        thread.join()
-
-    # Epilog.
-
-    logging.info(exit_template(config))
-
-
 def pipeline_read_write(
     args=None,
-    options_to_defaults_map={},
+    options_to_defaults_map=None,
     read_thread=None,
     write_thread=None,
     monitor_thread=None,
     governor=None,
-    run_async=False,
 ):
 
     # Get context from CLI, environment variables, and ini files.
@@ -2067,9 +1882,10 @@ def pipeline_read_write(
 
     # If configuration values not specified, use defaults.
 
-    for key, value in options_to_defaults_map.items():
-        if not config.get(key):
-            config[key] = config.get(value)
+    if options_to_defaults_map is not None:
+        for key, value in options_to_defaults_map.items():
+            if not config.get(key):
+                config[key] = config.get(value)
 
     # Prolog.
 
@@ -2136,11 +1952,6 @@ def pipeline_read_write(
         adminThreads.append(thread)
         thread.start()
 
-    # WebSocket requires an asyncio loop.
-
-    if run_async:
-        asyncio.get_event_loop().run_forever()
-
     # Collect inactive threads.
 
     for thread in threads:
@@ -2195,12 +2006,6 @@ def dohelper_avro(args, write_thread):
 
 def dohelper_csv(args, write_thread):
     ''' Read file of CSV, print to write_thread. '''
-
-    # Get context variables.
-
-    config = get_configuration(args)
-    input_url = config.get("input_url")
-    parsed_file_name = urllib.parse.urlparse(input_url)
 
     # Determine Read thread.
 
@@ -2299,12 +2104,6 @@ def dohelper_json(args, write_thread):
 def dohelper_parquet(args, write_thread):
     ''' Read file of Parquet, print to write_thread. '''
 
-    # Get context variables.
-
-    config = get_configuration(args)
-    input_url = config.get("input_url")
-    parsed_file_name = urllib.parse.urlparse(input_url)
-
     # Determine Read thread.
 
     read_thread = FilterFileParquetToDictQueueThread
@@ -2328,37 +2127,6 @@ def dohelper_parquet(args, write_thread):
         governor=governor
     )
 
-
-def dohelper_websocket(args, write_thread):
-    ''' Read file of JSON, print to write_thread. '''
-
-    # Get context variables.
-
-    config = get_configuration(args)
-
-    # Determine Read thread.
-
-    read_thread = FilterWebsocketToDictQueueThread  # Default.
-
-    # Cascading defaults.
-
-    options_to_defaults_map = {}
-
-    # Create governor.
-
-    governor = Governor(hint="stream-producer")
-
-    # Run pipeline.
-
-    pipeline_read_write(
-        args=args,
-        options_to_defaults_map=options_to_defaults_map,
-        read_thread=read_thread,
-        write_thread=write_thread,
-        monitor_thread=MonitorThread,
-        governor=governor,
-        run_async=True
-    )
 
 # -----------------------------------------------------------------------------
 # do_* functions
@@ -2569,35 +2337,6 @@ def do_version(args):
 
     logging.info(message_info(294, __version__, __updated__))
 
-
-def do_websocket_to_kafka(args):
-    ''' Read JSON from Websocket, print to Kafka. '''
-    write_thread = FilterQueueDictToJsonKafkaThread
-    dohelper_websocket(args, write_thread)
-
-
-def do_websocket_to_rabbitmq(args):
-    ''' Read JSON from Websocket, print to RabbitMQ. '''
-    write_thread = FilterQueueDictToJsonRabbitmqThread
-    dohelper_websocket(args, write_thread)
-
-
-def do_websocket_to_sqs(args):
-    ''' Read JSON from Websocket, print to AWS SQS. '''
-    write_thread = FilterQueueDictToJsonSqsThread
-    dohelper_websocket(args, write_thread)
-
-
-def do_websocket_to_sqs_batch(args):
-    ''' Read JSON from Websocket, print to AWS SQS. '''
-    write_thread = FilterQueueDictToJsonSqsBatchThread
-    dohelper_websocket(args, write_thread)
-
-
-def do_websocket_to_stdout(args):
-    ''' Read JSON from Websocket, print to STDOUT. '''
-    write_thread = FilterQueueDictToJsonStdoutThread
-    dohelper_websocket(args, write_thread)
 
 # -----------------------------------------------------------------------------
 # Main
