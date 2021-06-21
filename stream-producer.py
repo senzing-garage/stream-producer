@@ -1214,6 +1214,159 @@ class ReadQueueMixin():
             yield message
 
 # -----------------------------------------------------------------------------
+# Class: ReadS3AvroMixin
+# -----------------------------------------------------------------------------
+
+class ReadS3AvroMixin():
+
+    def __init__(self, config={}, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3CsvMixin"))
+        self.input_url = config.get('input_url')
+        self.record_min = config.get('record_min')
+        self.record_max = config.get('record_max')
+        self.counter = 0
+        
+        #Instantiate boto3
+        
+        S3_client = boto3.client("S3")
+        
+        #Get S3 bucket and key
+        
+        self.urlParts = urlparse(self.input_url)
+        self.S3Bucket = self.urlParts.netloc
+        self.S3Key = self.urlParts.path.lstrip('/')
+        
+    def read(self):
+      self.response = S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
+        with open(self.input_url, 'rb') as input_file:
+            avro_reader = fastavro.reader(input_file)
+            for record in avro_reader:
+                self.counter += 1
+                if self.record_min and self.counter < self.record_min:
+                    continue
+                if self.record_max and self.counter > self.record_max:
+                    break
+                yield record
+      
+# -----------------------------------------------------------------------------
+# Class: ReadS3CsvMixin
+# -----------------------------------------------------------------------------
+
+class ReadS3CsvMixin():
+
+    def __init__(self, config={}, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3CsvMixin"))
+        self.input_url = config.get('input_url')
+        self.record_min = config.get('record_min')
+        self.record_max = config.get('record_max')
+        self.rows_in_chunk = config.get('csv_rows_in_chunk')
+        self.delimiter = config.get('csv_delimiter')
+        self.counter = 0
+        
+        #Instantiate boto3
+        
+        S3_client = boto3.client("S3")
+        
+        #Get S3 bucket and key
+        
+        self.urlParts = urlparse(self.input_url)
+        self.S3Bucket = self.urlParts.netloc
+        self.S3Key = self.urlParts.path.lstrip('/')
+        
+    def read(self):
+      self.response = S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
+      
+      reader = pandas.read_csv(self.response, skipinitialspace=True, dtype=str, chunksize=self.rows_in_chunk, delimiter=self.delimiter)
+        for data_frame in reader:
+            data_frame.fillna('', inplace=True)
+            for row in data_frame.to_dict(orient="records"):
+                # Remove items that have '' value
+                row = {i: j for i, j in row.items() if j != ''}
+
+                self.counter += 1
+                if self.record_min and self.counter < self.record_min:
+                    continue
+                if self.record_max and self.counter > self.record_max:
+                    break
+                assert type(row) == dict
+                yield row
+      
+# -----------------------------------------------------------------------------
+# Class: ReadS3JsosMixin
+# -----------------------------------------------------------------------------
+
+class ReadS3JsonMixin():
+
+    def __init__(self, config={}, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3CsvMixin"))
+        self.input_url = config.get('input_url')
+        self.record_min = config.get('record_min')
+        self.record_max = config.get('record_max')
+        self.counter = 0
+        
+        #Instantiate boto3
+        
+        S3_client = boto3.client("S3")
+        
+        #Get S3 bucket and key
+        
+        self.urlParts = urlparse(self.input_url)
+        self.S3Bucket = self.urlParts.netloc
+        self.S3Key = self.urlParts.path.lstrip('/')
+        
+    def read(self):
+      self.response = S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
+      self.data = self.response.read().decode('utf-8')
+    
+      with open(self.data, 'r') as input_file:
+            for line in input_file:
+                self.counter += 1
+                if self.record_min and self.counter < self.record_min:
+                    continue
+                if self.record_max and self.counter > self.record_max:
+                    break
+                line = line.strip()
+                if not line:
+                    continue
+                assert isinstance(line, str)
+                yield line
+                
+# -----------------------------------------------------------------------------
+# Class: ReadS3ParquetMixin
+# -----------------------------------------------------------------------------
+
+class ReadS3ParquetMixin():
+
+    def __init__(self, config={}, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3CsvMixin"))
+        self.input_url = config.get('input_url')
+        self.record_min = config.get('record_min')
+        self.record_max = config.get('record_max')
+        self.counter = 0
+        
+        #Instantiate boto3
+        
+        S3_client = boto3.client("S3")
+        
+        #Get S3 bucket and key
+        
+        self.urlParts = urlparse(self.input_url)
+        self.S3Bucket = self.urlParts.netloc
+        self.S3Key = self.urlParts.path.lstrip('/')
+        
+    def read(self):
+      self.response = S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
+      data_frame = pandas.read_parquet(self.response)
+      for row in data_frame.to_dict(orient="records"):
+            self.counter += 1
+            if self.record_min and self.counter < self.record_min:
+                continue
+            if self.record_max and self.counter > self.record_max:
+                break
+            assert type(row) == dict
+            yield row
+      
+# -----------------------------------------------------------------------------
 # Class: ReadUrlAvroMixin
 # -----------------------------------------------------------------------------
 
@@ -1301,159 +1454,6 @@ class ReadWebsocketMixin():
         self.local_queue.close()
         self.local_queue.join_thread()
 
-# -----------------------------------------------------------------------------
-# Class: ReadS3CsvMixin
-# -----------------------------------------------------------------------------
-
-class ReadS3CsvMixin():
-
-    def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3CsvMixin"))
-        self.input_url = config.get('input_url')
-        self.record_min = config.get('record_min')
-        self.record_max = config.get('record_max')
-        self.rows_in_chunk = config.get('csv_rows_in_chunk')
-        self.delimiter = config.get('csv_delimiter')
-        self.counter = 0
-        
-        #Instantiate boto3
-        
-        S3_client = boto3.client("S3")
-        
-        #Get S3 bucket and key
-        
-        self.urlParts = urlparse(self.input_url)
-        self.S3Bucket = self.urlParts.netloc
-        self.S3Key = self.urlParts.path.lstrip('/')
-        
-    def read(self):
-      self.response = S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
-      
-      reader = pandas.read_csv(self.response, skipinitialspace=True, dtype=str, chunksize=self.rows_in_chunk, delimiter=self.delimiter)
-        for data_frame in reader:
-            data_frame.fillna('', inplace=True)
-            for row in data_frame.to_dict(orient="records"):
-                # Remove items that have '' value
-                row = {i: j for i, j in row.items() if j != ''}
-
-                self.counter += 1
-                if self.record_min and self.counter < self.record_min:
-                    continue
-                if self.record_max and self.counter > self.record_max:
-                    break
-                assert type(row) == dict
-                yield row
-      
-# -----------------------------------------------------------------------------
-# Class: ReadS3JsosMixin
-# -----------------------------------------------------------------------------
-
-class ReadS3JsonMixin():
-
-    def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3CsvMixin"))
-        self.input_url = config.get('input_url')
-        self.record_min = config.get('record_min')
-        self.record_max = config.get('record_max')
-        self.counter = 0
-        
-        #Instantiate boto3
-        
-        S3_client = boto3.client("S3")
-        
-        #Get S3 bucket and key
-        
-        self.urlParts = urlparse(self.input_url)
-        self.S3Bucket = self.urlParts.netloc
-        self.S3Key = self.urlParts.path.lstrip('/')
-        
-    def read(self):
-      self.response = S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
-      self.data = self.response.read().decode('utf-8')
-    
-      with open(self.data, 'r') as input_file:
-            for line in input_file:
-                self.counter += 1
-                if self.record_min and self.counter < self.record_min:
-                    continue
-                if self.record_max and self.counter > self.record_max:
-                    break
-                line = line.strip()
-                if not line:
-                    continue
-                assert isinstance(line, str)
-                yield line
-
-# -----------------------------------------------------------------------------
-# Class: ReadS3AvroMixin
-# -----------------------------------------------------------------------------
-
-class ReadS3AvroMixin():
-
-    def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3CsvMixin"))
-        self.input_url = config.get('input_url')
-        self.record_min = config.get('record_min')
-        self.record_max = config.get('record_max')
-        self.counter = 0
-        
-        #Instantiate boto3
-        
-        S3_client = boto3.client("S3")
-        
-        #Get S3 bucket and key
-        
-        self.urlParts = urlparse(self.input_url)
-        self.S3Bucket = self.urlParts.netloc
-        self.S3Key = self.urlParts.path.lstrip('/')
-        
-    def read(self):
-      self.response = S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
-        with open(self.input_url, 'rb') as input_file:
-            avro_reader = fastavro.reader(input_file)
-            for record in avro_reader:
-                self.counter += 1
-                if self.record_min and self.counter < self.record_min:
-                    continue
-                if self.record_max and self.counter > self.record_max:
-                    break
-                yield record
-
-# -----------------------------------------------------------------------------
-# Class: ReadS3ParquetMixin
-# -----------------------------------------------------------------------------
-
-class ReadS3ParquetMixin():
-
-    def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3CsvMixin"))
-        self.input_url = config.get('input_url')
-        self.record_min = config.get('record_min')
-        self.record_max = config.get('record_max')
-        self.counter = 0
-        
-        #Instantiate boto3
-        
-        S3_client = boto3.client("S3")
-        
-        #Get S3 bucket and key
-        
-        self.urlParts = urlparse(self.input_url)
-        self.S3Bucket = self.urlParts.netloc
-        self.S3Key = self.urlParts.path.lstrip('/')
-        
-    def read(self):
-      self.response = S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
-      data_frame = pandas.read_parquet(self.response)
-      for row in data_frame.to_dict(orient="records"):
-            self.counter += 1
-            if self.record_min and self.counter < self.record_min:
-                continue
-            if self.record_max and self.counter > self.record_max:
-                break
-            assert type(row) == dict
-            yield row
-      
 # =============================================================================
 # Mixins: Evaluate*
 #   Methods:
