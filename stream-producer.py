@@ -1220,7 +1220,7 @@ class ReadQueueMixin():
 class ReadS3AvroMixin():
 
     def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3CsvMixin"))
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3AvroMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
@@ -1298,7 +1298,7 @@ class ReadS3CsvMixin():
 class ReadS3JsonMixin():
 
     def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3CsvMixin"))
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3JsonMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
@@ -1338,7 +1338,7 @@ class ReadS3JsonMixin():
 class ReadS3ParquetMixin():
 
     def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3CsvMixin"))
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3ParquetMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
