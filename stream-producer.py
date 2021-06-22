@@ -1209,7 +1209,7 @@ class ReadS3AvroMixin():
         
     def read(self):
       self.response = S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
-        with open(self.input_url, 'rb') as input_file:
+        with open(self.response, 'rb') as input_file:
             avro_reader = fastavro.reader(input_file)
             for record in avro_reader:
                 self.counter += 1
@@ -2074,7 +2074,34 @@ class FilterQueueDictToJsonStdoutThread(ReadEvaluatePrintLoopThread, ReadQueueMi
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
+class FilterS3AvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3AvroMixin, EvaluateDictToJsonMixin, PrintQueueMixin):
 
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterS3AvroToDictQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+            
+class FilterS3CsvtToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3CSVMixin, EvaluateDictToJsonMixin, PrintQueueMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterS3CsvtToDictQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+            
+class FilterS3JsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3JsonMixin, EvaluateDictToJsonMixin, PrintQueueMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterS3JsonToDictQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+            
+class FilterS3ParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3ParquetMixin, EvaluateDictToJsonMixin, PrintQueueMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterS3ParquetToDictQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+            
 class FilterUrlAvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlAvroMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
