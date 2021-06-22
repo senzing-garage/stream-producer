@@ -1076,34 +1076,6 @@ class ReadFileCsvMixin():
                 yield row
 
 # -----------------------------------------------------------------------------
-# Class: ReadFileMixin
-# -----------------------------------------------------------------------------
-
-
-class ReadFileMixin():
-
-    def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileMixin"))
-        self.input_url = config.get('input_url')
-        self.record_min = config.get('record_min')
-        self.record_max = config.get('record_max')
-        self.counter = 0
-
-    def read(self):
-        with open(self.input_url, 'r') as input_file:
-            for line in input_file:
-                self.counter += 1
-                if self.record_min and self.counter < self.record_min:
-                    continue
-                if self.record_max and self.counter > self.record_max:
-                    break
-                line = line.strip()
-                if not line:
-                    continue
-                assert isinstance(line, str)
-                yield line
-
-# -----------------------------------------------------------------------------
 # Class: ReadFileGzippedMixin
 # -----------------------------------------------------------------------------
 
@@ -1131,37 +1103,35 @@ class ReadFileGzippedMixin():
                 assert isinstance(line, str)
                 yield line
 
+
 # -----------------------------------------------------------------------------
-# Class: ReadUrlGzippedMixin
+# Class: ReadFileMixin
 # -----------------------------------------------------------------------------
 
 
-class ReadUrlGzippedMixin():
+class ReadFileMixin():
 
     def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadUrlGzippedMixin"))
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
         self.counter = 0
 
     def read(self):
-
-        gzipped_data = urllib.request.urlopen(self.input_url, timeout=5)
-        data = gzip.GzipFile(fileobj=gzipped_data)
-        for line in data:
-            self.counter += 1
-            if self.record_min and self.counter < self.record_min:
-                continue
-            if self.record_max and self.counter > self.record_max:
-                break
-            line = line.strip()
-            if not line:
-                continue
-            result = json.loads(line)
-            assert isinstance(result, dict)
-            yield result
-
+        with open(self.input_url, 'r') as input_file:
+            for line in input_file:
+                self.counter += 1
+                if self.record_min and self.counter < self.record_min:
+                    continue
+                if self.record_max and self.counter > self.record_max:
+                    break
+                line = line.strip()
+                if not line:
+                    continue
+                assert isinstance(line, str)
+                yield line
+                
 # -----------------------------------------------------------------------------
 # Class: ReadFileParquetMixin
 # -----------------------------------------------------------------------------
@@ -1217,6 +1187,7 @@ class ReadQueueMixin():
 # Class: ReadS3AvroMixin
 # -----------------------------------------------------------------------------
 
+
 class ReadS3AvroMixin():
 
     def __init__(self, config={}, *args, **kwargs):
@@ -1251,6 +1222,7 @@ class ReadS3AvroMixin():
 # -----------------------------------------------------------------------------
 # Class: ReadS3CsvMixin
 # -----------------------------------------------------------------------------
+
 
 class ReadS3CsvMixin():
 
@@ -1295,6 +1267,7 @@ class ReadS3CsvMixin():
 # Class: ReadS3JsosMixin
 # -----------------------------------------------------------------------------
 
+
 class ReadS3JsonMixin():
 
     def __init__(self, config={}, *args, **kwargs):
@@ -1334,6 +1307,7 @@ class ReadS3JsonMixin():
 # -----------------------------------------------------------------------------
 # Class: ReadS3ParquetMixin
 # -----------------------------------------------------------------------------
+
 
 class ReadS3ParquetMixin():
 
@@ -1390,6 +1364,37 @@ class ReadUrlAvroMixin():
                 if self.record_max and self.counter > self.record_max:
                     break
                 yield record
+
+# -----------------------------------------------------------------------------
+# Class: ReadUrlGzippedMixin
+# -----------------------------------------------------------------------------
+
+
+class ReadUrlGzippedMixin():
+
+    def __init__(self, config={}, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadUrlGzippedMixin"))
+        self.input_url = config.get('input_url')
+        self.record_min = config.get('record_min')
+        self.record_max = config.get('record_max')
+        self.counter = 0
+
+    def read(self):
+
+        gzipped_data = urllib.request.urlopen(self.input_url, timeout=5)
+        data = gzip.GzipFile(fileobj=gzipped_data)
+        for line in data:
+            self.counter += 1
+            if self.record_min and self.counter < self.record_min:
+                continue
+            if self.record_max and self.counter > self.record_max:
+                break
+            line = line.strip()
+            if not line:
+                continue
+            result = json.loads(line)
+            assert isinstance(result, dict)
+            yield result
 
 # -----------------------------------------------------------------------------
 # Class: ReadUrlMixin
