@@ -1980,6 +1980,18 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
 
 # =============================================================================
 # Filter* classes created with mixins
+#
+# Filter class formats
+# Filter[File|Queue|Url][Avro|Csv|GzippedJson|Json|Parquet|Dict]To[Dict|Json][Queue|Kafka|Rabbitmq|Stdout|Sqs|SqsBatch|]Thread
+#
+# Descriptions
+# 1. "Filter"
+# 2. input source: [File | Queue | Url]
+# 3. input format: [Avro | Csv | GzippedJson | Json | Parquet | Dict]
+# 4. "To"
+# 5. output format: [Dict | Json]
+# 6. output destination: [Queue | Kafka | Rabbitmq | Stdout | Sqs | SqsBatch]
+# 7. "Thread"
 # =============================================================================
 
 
