@@ -866,7 +866,8 @@ def exit_error(index, *args):
     ''' Log error message and exit program. '''
     logging.error(message_error(index, *args))
     logging.error(message_error(698))
-    sys.exit(1)
+    logging.shutdown()
+    os._exit(1)
 
 
 def exit_silently():
