@@ -2357,6 +2357,8 @@ def dohelper_avro(args, write_thread):
     read_thread = FilterFileAvroToDictQueueThread
     if parsed_file_name.scheme in ['http', 'https']:
         read_thread = FilterUrlAvroToDictQueueThread
+    elif parsed_file_name.scheme in ['s3']:
+        read_thread = FilterS3AvroToDictQueueThread
 
     # Cascading defaults.
 
@@ -2460,6 +2462,8 @@ def dohelper_json(args, write_thread):
     read_thread = FilterFileJsonToDictQueueThread  # Default.
     if parsed_file_name.scheme in ['http', 'https']:
         read_thread = FilterUrlJsonToDictQueueThread
+    elif parsed_file_name.scheme in ['s3']:
+        read_thread = FilterS3JsonToDictQueueThread
 
     # Cascading defaults.
 
