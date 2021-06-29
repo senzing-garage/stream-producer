@@ -1209,15 +1209,16 @@ class ReadS3AvroMixin():
         
     def read(self):
       self.response = S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
-        with open(self.response, 'rb') as input_file:
-            avro_reader = fastavro.reader(input_file)
-            for record in avro_reader:
-                self.counter += 1
-                if self.record_min and self.counter < self.record_min:
-                    continue
-                if self.record_max and self.counter > self.record_max:
-                    break
-                yield record
+      
+      with open(self.response, 'rb') as input_file:
+        avro_reader = fastavro.reader(input_file)
+        for record in avro_reader:
+          self.counter += 1
+          if self.record_min and self.counter < self.record_min:
+            continue
+          if self.record_max and self.counter > self.record_max:
+            break
+          yield record
       
 # -----------------------------------------------------------------------------
 # Class: ReadS3CsvMixin
@@ -1249,19 +1250,19 @@ class ReadS3CsvMixin():
       self.response = S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
       
       reader = pandas.read_csv(self.response, skipinitialspace=True, dtype=str, chunksize=self.rows_in_chunk, delimiter=self.delimiter)
-        for data_frame in reader:
-            data_frame.fillna('', inplace=True)
-            for row in data_frame.to_dict(orient="records"):
-                # Remove items that have '' value
-                row = {i: j for i, j in row.items() if j != ''}
-
-                self.counter += 1
-                if self.record_min and self.counter < self.record_min:
-                    continue
-                if self.record_max and self.counter > self.record_max:
-                    break
-                assert type(row) == dict
-                yield row
+      for data_frame in reader:
+        data_frame.fillna('', inplace=True)
+        for row in data_frame.to_dict(orient="records"):
+          # Remove items that have '' value
+          row = {i: j for i, j in row.items() if j != ''}
+          
+          self.counter += 1
+          if self.record_min and self.counter < self.record_min:
+            continue
+          if self.record_max and self.counter > self.record_max:
+            break
+          assert type(row) == dict
+          yield row
       
 # -----------------------------------------------------------------------------
 # Class: ReadS3JsosMixin
@@ -2081,7 +2082,7 @@ class FilterS3AvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3AvroMixin
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
             
-class FilterS3CsvtToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3CSVMixin, EvaluateDictToJsonMixin, PrintQueueMixin):
+class FilterS3CsvToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3CsvMixin, EvaluateDictToJsonMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "FilterS3CsvtToDictQueueThread"))
