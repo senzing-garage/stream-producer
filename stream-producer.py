@@ -2413,8 +2413,7 @@ if __name__ == "__main__":
     else:
         parser.print_help()
         if len(os.getenv("SENZING_DOCKER_LAUNCHED", "")):
-            subcommand = "sleep"
-            args = argparse.Namespace(subcommand=subcommand)
+            args = argparse.Namespace(subcommand='sleep')
             do_sleep(args)
         exit_silently()
 
