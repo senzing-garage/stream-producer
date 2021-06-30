@@ -1036,7 +1036,7 @@ class ReadFileCsvMixin():
                     continue
                 if self.record_max and self.counter > self.record_max:
                     break
-                assert type(row) == dict
+                assert isinstance(row, dict)
                 yield row
 
 # -----------------------------------------------------------------------------
@@ -1148,7 +1148,7 @@ class ReadFileParquetMixin():
                 continue
             if self.record_max and self.counter > self.record_max:
                 break
-            assert type(row) == dict
+            assert isinstance(row, dict)
             yield row
 
 # -----------------------------------------------------------------------------
@@ -1579,7 +1579,7 @@ class PrintSqsMixin():
 
     def print(self, message):
         self.counter += 1
-        assert type(message) == str
+        assert isinstance(message, str)
 
         new_record_size_in_bytes = len(message.encode('utf-8'))
 
@@ -1656,7 +1656,7 @@ class PrintSqsBatchMixin():
 
     def print(self, message):
         self.counter += 1
-        assert type(message) == str
+        assert isinstance(message, str)
         self.messages.append(message)
         if len(self.messages) >= 10:
             entries = []
@@ -1706,7 +1706,7 @@ class PrintStdoutMixin():
 
     def print(self, message):
         self.counter += 1
-        assert type(message) == str
+        assert isinstance(message, str)
         print(message)
         if self.counter % self.record_monitor == 0:
             logging.info(message_debug(104, threading.current_thread().name, self.counter))
@@ -1742,7 +1742,7 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
         return self.governor.govern()
 
     def log_excessive_record(self, record, record_json):
-        assert type(record_json) == str
+        assert isinstance(record_json, str)
         record_overage = len(record_json) - self.record_size_max
         record_id = record.get(self.record_identifier)
         logging.warning(message_warning(310, self.record_identifier, record_id, record_overage))
