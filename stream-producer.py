@@ -28,9 +28,9 @@ import fastavro
 import pandas
 
 __all__ = []
-__version__ = "1.4.0"  # See https://www.python.org/dev/peps/pep-0396/
-__date__ = '2020-04-07'
-__updated__ = '2021-03-12'
+__version__ = "1.4.2"  # See https://www.python.org/dev/peps/pep-0396/
+__date__ = '2020-07-01'
+__updated__ = '2021-07-01'
 
 SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -1554,7 +1554,6 @@ class PrintSqsMixin():
         self.number_of_records_per_print = config.get("records_per_message")
         self.message_buffer = '['
         self.num_messages = 0
-        #self.MAX_MESSAGE_SIZE_IN_BYTES = 226 * 1024
         self.record_identifier = config.get("record_identifier")
 
         if self.number_of_records_per_print <= 0:
