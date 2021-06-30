@@ -549,6 +549,7 @@ message_dictionary = {
     "299": "{0}",
     "300": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}W",
     "310": "Did not send record identified by {0}: {1}. Exceeds SENZING_RECORD_SIZE_MAX by {2} bytes.",
+    "311": "Did not send record identified by {0}: {1}. Exceeds SQS message size limit by {2} bytes.",
     "404": "Buffer error: {0} for line #{1} '{2}'.",
     "405": "Kafka error: {0} for line #{1} '{2}'.",
     "406": "Not implemented error: {0} for line #{1} '{2}'.",
@@ -1553,6 +1554,11 @@ class PrintSqsMixin():
         self.number_of_records_per_print = config.get("records_per_message")
         self.message_buffer = '['
         self.num_messages = 0
+        #self.MAX_MESSAGE_SIZE_IN_BYTES = 226 * 1024
+        self.record_identifier = config.get("record_identifier")
+
+        if self.number_of_records_per_print <= 0:
+            self.number_of_records_per_print = sys.maxsize
 
         # Create sqs object.
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs.html
@@ -1566,41 +1572,60 @@ class PrintSqsMixin():
         endpoint_url = match.group(1)
         self.sqs = boto3.client("sqs", endpoint_url=endpoint_url)
 
+        # Query queue for max message size, then leave some overhead space in case SQS needs some itself
+
+        response = self.sqs.get_queue_attributes(QueueUrl=self.queue_url, AttributeNames=['MaximumMessageSize'])
+        self.MAX_MESSAGE_SIZE_IN_BYTES = response.get('Attributes', { "MaximumMessageSize" : 256 * 1024}).get('MaximumMessageSize')
+        self.MAX_MESSAGE_SIZE_IN_BYTES = int(self.MAX_MESSAGE_SIZE_IN_BYTES) - (30 * 1024)
+
     def print(self, message):
         self.counter += 1
         assert type(message) == str
 
+        new_record_size_in_bytes = len(message.encode('utf-8'))
+
+        # if the record itself is too long for the queue, then log the ID with a warning and move on (+2 for the enclosing [])
+
+        if new_record_size_in_bytes + 2 > self.MAX_MESSAGE_SIZE_IN_BYTES:
+            record = json.dumps(message)
+            record_id = record.get(self.record_identifier)
+            record_overage = new_record_size_in_bytes + 2 - self.MAX_MESSAGE_SIZE_IN_BYTES
+            logging.warning(message_warning(311, self.record_identifier, record_id, record_overage))
+            return
+
+        # Check if the new record would overflow the message and if so, send the existing messages
+        
+        if (len(self.message_buffer.encode('utf-8')) + new_record_size_in_bytes + 1 > self.MAX_MESSAGE_SIZE_IN_BYTES):
+            self.send_message_buffer()
+
         # batch the message - if are already messages then add a delimiter first
+
         if self.num_messages > 0:
             self.message_buffer += ','
         self.message_buffer += message
         self.num_messages += 1
 
         if self.num_messages == self.number_of_records_per_print:
-            self.message_buffer += ']'
-            self.sqs.send_message(
-                QueueUrl=self.queue_url,
-                DelaySeconds=self.sqs_delay_seconds,
-                MessageAttributes={},
-                MessageBody=(self.message_buffer),
-            )
-            self.message_buffer = '['
-            self.num_messages = 0
+            self.send_message_buffer()
 
         if self.counter % self.record_monitor == 0:
             logging.info(message_debug(104, threading.current_thread().name, self.counter))
 
     def close(self):
         if self.num_messages > 0:
-            self.message_buffer += ']'
-            self.sqs.send_message(
-                QueueUrl=self.queue_url,
-                DelaySeconds=self.sqs_delay_seconds,
-                MessageAttributes={},
-                MessageBody=(self.message_buffer),
-            )
-            self.message_buffer = ''
-            self.num_messages = 0
+            self.send_message_buffer()
+
+    def send_message_buffer(self):
+        self.message_buffer += ']'
+        self.sqs.send_message(
+            QueueUrl=self.queue_url,
+            DelaySeconds=self.sqs_delay_seconds,
+            MessageAttributes={},
+            MessageBody=(self.message_buffer),
+        )
+        self.message_buffer = '['
+        self.num_messages = 0
+
 
 # -----------------------------------------------------------------------------
 # Class: PrintSqsBatchMixin
