@@ -1574,8 +1574,8 @@ class PrintSqsMixin():
         # Query queue for max message size, then leave some overhead space in case SQS needs some itself
 
         response = self.sqs.get_queue_attributes(QueueUrl=self.queue_url, AttributeNames=['MaximumMessageSize'])
-        self.MAX_MESSAGE_SIZE_IN_BYTES = response.get('Attributes', { "MaximumMessageSize" : 256 * 1024}).get('MaximumMessageSize')
-        self.MAX_MESSAGE_SIZE_IN_BYTES = int(self.MAX_MESSAGE_SIZE_IN_BYTES) - (30 * 1024)
+        self.max_message_size_in_bytes = response.get('Attributes', { "MaximumMessageSize" : 256 * 1024}).get('MaximumMessageSize')
+        self.max_message_size_in_bytes = int(self.max_message_size_in_bytes) - (30 * 1024)
 
     def print(self, message):
         self.counter += 1
@@ -1585,16 +1585,16 @@ class PrintSqsMixin():
 
         # if the record itself is too long for the queue, then log the ID with a warning and move on (+2 for the enclosing [])
 
-        if new_record_size_in_bytes + 2 > self.MAX_MESSAGE_SIZE_IN_BYTES:
+        if new_record_size_in_bytes + 2 > self.max_message_size_in_bytes:
             record = json.dumps(message)
             record_id = record.get(self.record_identifier)
-            record_overage = new_record_size_in_bytes + 2 - self.MAX_MESSAGE_SIZE_IN_BYTES
+            record_overage = new_record_size_in_bytes + 2 - self.max_message_size_in_bytes
             logging.warning(message_warning(311, self.record_identifier, record_id, record_overage))
             return
 
         # Check if the new record would overflow the message and if so, send the existing messages
-        
-        if (len(self.message_buffer.encode('utf-8')) + new_record_size_in_bytes + 1 > self.MAX_MESSAGE_SIZE_IN_BYTES):
+
+        if len(self.message_buffer.encode('utf-8')) + new_record_size_in_bytes + 1 > self.max_message_size_in_bytes:
             self.send_message_buffer()
 
         # batch the message - if are already messages then add a delimiter first
