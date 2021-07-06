@@ -8,12 +8,16 @@
 import argparse
 import asyncio
 import boto3
+#For testing
+from botocore import UNSIGNED
+from botocore.config import Config
 import collections
 import confluent_kafka
 import csv
 import fastavro
 import gzip
 import json
+import io
 import linecache
 import logging
 import multiprocessing
@@ -1203,7 +1207,7 @@ class ReadS3AvroMixin():
         
         #Get S3 bucket and key
         
-        self.urlParts = urlparse(self.input_url)
+        self.urlParts = urllib.parse.urlparse(self.input_url)
         self.S3Bucket = self.urlParts.netloc
         self.S3Key = self.urlParts.path.lstrip('/')
         
@@ -1238,18 +1242,21 @@ class ReadS3CsvMixin():
         
         #Instantiate boto3
         
-        S3_client = boto3.client("S3")
+        self.S3_client = boto3.client("s3")
         
         #Get S3 bucket and key
         
-        self.urlParts = urlparse(self.input_url)
+        self.urlParts = urllib.parse.urlparse(self.input_url)
         self.S3Bucket = self.urlParts.netloc
         self.S3Key = self.urlParts.path.lstrip('/')
         
     def read(self):
-      self.response = S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
-      
-      reader = pandas.read_csv(self.response, skipinitialspace=True, dtype=str, chunksize=self.rows_in_chunk, delimiter=self.delimiter)
+      self.response = self.S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
+      self.body = self.response['Body']
+      self.csv_string = self.body.read().decode('utf-8')
+
+      reader = pandas.read_csv(io.StringIO(self.csv_string), skipinitialspace=True, dtype=str, chunksize=self.rows_in_chunk, delimiter=self.delimiter)
+      #reader = pandas.read_csv(self.input_url, skipinitialspace=True, dtype=str, chunksize=self.rows_in_chunk, delimiter=self.delimiter)
       for data_frame in reader:
         data_frame.fillna('', inplace=True)
         for row in data_frame.to_dict(orient="records"):
@@ -1284,7 +1291,7 @@ class ReadS3JsonMixin():
         
         #Get S3 bucket and key
         
-        self.urlParts = urlparse(self.input_url)
+        self.urlParts = urllib.parse.urlparse(self.input_url)
         self.S3Bucket = self.urlParts.netloc
         self.S3Key = self.urlParts.path.lstrip('/')
         
@@ -1325,7 +1332,7 @@ class ReadS3ParquetMixin():
         
         #Get S3 bucket and key
         
-        self.urlParts = urlparse(self.input_url)
+        self.urlParts = urllib.parse.urlparse(self.input_url)
         self.S3Bucket = self.urlParts.netloc
         self.S3Key = self.urlParts.path.lstrip('/')
         
@@ -2085,7 +2092,7 @@ class FilterS3AvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3AvroMixin
 class FilterS3CsvToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3CsvMixin, EvaluateDictToJsonMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterS3CsvtToDictQueueThread"))
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterS3CsvToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
             
@@ -2393,7 +2400,9 @@ def dohelper_csv(args, write_thread):
     # Determine Read thread.
 
     read_thread = FilterFileCsvToDictQueueThread
-
+    if parsed_file_name.scheme in ['s3']:
+        read_thread = FilterS3CsvToDictQueueThread
+        
     # Cascading defaults.
 
     options_to_defaults_map = {}
@@ -2498,7 +2507,9 @@ def dohelper_parquet(args, write_thread):
     # Determine Read thread.
 
     read_thread = FilterFileParquetToDictQueueThread
-
+    if parsed_file_name.scheme in ['s3']:
+        read_thread = FilterS3ParquetToDictQueueThread
+        
     # Cascading defaults.
 
     options_to_defaults_map = {}
