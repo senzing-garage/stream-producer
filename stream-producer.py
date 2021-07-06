@@ -1340,6 +1340,13 @@ class PrintKafkaMixin():
         self.message_buffer = '['
         self.num_messages = 0
 
+        # default max message size if 1MB, save some space for kafka to use, just in case
+
+        self.max_message_size_in_bytes = 1024 * 1024 - (32 * 1024)
+
+        if self.number_of_records_per_print <= 0:
+            self.number_of_records_per_print = sys.maxsize
+
         kafka_configuration = {
             'bootstrap.servers': config.get('kafka_bootstrap_server')
         }
@@ -1356,6 +1363,22 @@ class PrintKafkaMixin():
     def print(self, message):
         assert isinstance(message, str)
 
+        new_record_size_in_bytes = len(message.encode('utf-8'))
+
+        # if the record itself is too long for the queue, then log the ID with a warning and move on (+2 for the enclosing [])
+
+        if new_record_size_in_bytes + 2 > self.max_message_size_in_bytes:
+            record = json.dumps(message)
+            record_id = record.get(self.record_identifier)
+            record_overage = new_record_size_in_bytes + 2 - self.max_message_size_in_bytes
+            logging.warning(message_warning(311, self.record_identifier, record_id, record_overage))
+            return
+
+        # Check if the new record would overflow the message and if so, send the existing messages
+
+        if len(self.message_buffer.encode('utf-8')) + new_record_size_in_bytes + 1 > self.max_message_size_in_bytes:
+            self.send_message_buffer()
+
         # batch the message - if are already messages then add a delimiter first
 
         if self.num_messages > 0:
@@ -1365,14 +1388,7 @@ class PrintKafkaMixin():
 
         try:
             if self.num_messages == self.number_of_records_per_print:
-                self.message_buffer += ']'
-                self.kafka_producer.produce(
-                    self.kafka_topic,
-                    self.message_buffer,
-                    on_delivery=self.on_kafka_delivery
-                )
-                self.message_buffer = '['
-                self.num_messages = 0
+                self.send_message_buffer()
 
         except BufferError as err:
             logging.warning(message_warning(404, err, message))
@@ -1398,15 +1414,18 @@ class PrintKafkaMixin():
 
     def close(self):
         if self.num_messages > 0:
-            self.message_buffer += ']'
-            self.kafka_producer.produce(
+            self.send_message_buffer()
+        self.kafka_producer.flush()
+
+    def send_message_buffer(self):
+        self.message_buffer += ']'
+        self.kafka_producer.produce(
                     self.kafka_topic,
                     self.message_buffer,
                     on_delivery=self.on_kafka_delivery
                 )
-            self.message_buffer = ''
-            self.num_messages = 0
-        self.kafka_producer.flush()
+        self.message_buffer = '['
+        self.num_messages = 0
 
 # -----------------------------------------------------------------------------
 # Class: PrintRabbitmqMixin
@@ -1575,7 +1594,7 @@ class PrintSqsMixin():
 
         response = self.sqs.get_queue_attributes(QueueUrl=self.queue_url, AttributeNames=['MaximumMessageSize'])
         self.max_message_size_in_bytes = response.get('Attributes', { "MaximumMessageSize" : 256 * 1024}).get('MaximumMessageSize')
-        self.max_message_size_in_bytes = int(self.max_message_size_in_bytes) - (30 * 1024)
+        self.max_message_size_in_bytes = int(self.max_message_size_in_bytes) - (32 * 1024)
 
     def print(self, message):
         self.counter += 1
