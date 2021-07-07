@@ -549,7 +549,7 @@ message_dictionary = {
     "299": "{0}",
     "300": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}W",
     "310": "Did not send record identified by {0}: {1}. Exceeds SENZING_RECORD_SIZE_MAX by {2} bytes.",
-    "311": "Did not send record identified by {0}: {1}. Exceeds SQS message size limit by {2} bytes.",
+    "311": "Did not send record identified by {0}: {1}. Exceeds queue message size limit by {2} bytes.",
     "404": "Buffer error: {0} for line #{1} '{2}'.",
     "405": "Kafka error: {0} for line #{1} '{2}'.",
     "406": "Not implemented error: {0} for line #{1} '{2}'.",
