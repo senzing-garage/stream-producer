@@ -1340,9 +1340,10 @@ class PrintKafkaMixin():
         self.message_buffer = '['
         self.num_messages = 0
 
-        # default max message size if 1MB, save some space for kafka to use, just in case
+        # default Kafka max message size, but save some space for kafka to use, just in case
 
-        self.max_message_size_in_bytes = 1024 * 1024 - (32 * 1024)
+        self.max_message_size_in_bytes = 1000012 - (32 * 1024)
+
 
         if self.number_of_records_per_print <= 0:
             self.number_of_records_per_print = sys.maxsize
