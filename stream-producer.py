@@ -28,9 +28,9 @@ import fastavro
 import pandas
 
 __all__ = []
-__version__ = "1.4.0"  # See https://www.python.org/dev/peps/pep-0396/
-__date__ = '2020-04-07'
-__updated__ = '2021-03-12'
+__version__ = "1.4.2"  # See https://www.python.org/dev/peps/pep-0396/
+__date__ = '2020-07-07'
+__updated__ = '2021-07-07'
 
 SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -549,6 +549,7 @@ message_dictionary = {
     "299": "{0}",
     "300": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}W",
     "310": "Did not send record identified by {0}: {1}. Exceeds SENZING_RECORD_SIZE_MAX by {2} bytes.",
+    "311": "Did not send record identified by {0}: {1}. Exceeds queue message size limit by {2} bytes.",
     "404": "Buffer error: {0} for line #{1} '{2}'.",
     "405": "Kafka error: {0} for line #{1} '{2}'.",
     "406": "Not implemented error: {0} for line #{1} '{2}'.",
@@ -1035,7 +1036,7 @@ class ReadFileCsvMixin():
                     continue
                 if self.record_max and self.counter > self.record_max:
                     break
-                assert type(row) == dict
+                assert isinstance(row, dict)
                 yield row
 
 # -----------------------------------------------------------------------------
@@ -1147,7 +1148,7 @@ class ReadFileParquetMixin():
                 continue
             if self.record_max and self.counter > self.record_max:
                 break
-            assert type(row) == dict
+            assert isinstance(row, dict)
             yield row
 
 # -----------------------------------------------------------------------------
@@ -1339,6 +1340,14 @@ class PrintKafkaMixin():
         self.message_buffer = '['
         self.num_messages = 0
 
+        # default Kafka max message size, but save some space for kafka to use, just in case
+
+        self.max_message_size_in_bytes = 1000012 - (32 * 1024)
+
+
+        if self.number_of_records_per_print <= 0:
+            self.number_of_records_per_print = sys.maxsize
+
         kafka_configuration = {
             'bootstrap.servers': config.get('kafka_bootstrap_server')
         }
@@ -1355,6 +1364,21 @@ class PrintKafkaMixin():
     def print(self, message):
         assert isinstance(message, str)
 
+        # if the record itself is too long to fit in a message, then log the ID with a warning and move on (+2 for the enclosing [])
+
+        new_record_size_in_bytes = len(message.encode('utf-8'))
+        if new_record_size_in_bytes + 2 > self.max_message_size_in_bytes:
+            record = json.dumps(message)
+            record_id = record.get(self.record_identifier)
+            record_overage = new_record_size_in_bytes + 2 - self.max_message_size_in_bytes
+            logging.warning(message_warning(311, self.record_identifier, record_id, record_overage))
+            return
+
+        # Check if the new record would overflow the message and if so, send the existing messages
+
+        if len(self.message_buffer.encode('utf-8')) + new_record_size_in_bytes + 1 > self.max_message_size_in_bytes:
+            self.send_message_buffer()
+
         # batch the message - if are already messages then add a delimiter first
 
         if self.num_messages > 0:
@@ -1364,14 +1388,7 @@ class PrintKafkaMixin():
 
         try:
             if self.num_messages == self.number_of_records_per_print:
-                self.message_buffer += ']'
-                self.kafka_producer.produce(
-                    self.kafka_topic,
-                    self.message_buffer,
-                    on_delivery=self.on_kafka_delivery
-                )
-                self.message_buffer = '['
-                self.num_messages = 0
+                self.send_message_buffer()
 
         except BufferError as err:
             logging.warning(message_warning(404, err, message))
@@ -1397,15 +1414,18 @@ class PrintKafkaMixin():
 
     def close(self):
         if self.num_messages > 0:
-            self.message_buffer += ']'
-            self.kafka_producer.produce(
+            self.send_message_buffer()
+        self.kafka_producer.flush()
+
+    def send_message_buffer(self):
+        self.message_buffer += ']'
+        self.kafka_producer.produce(
                     self.kafka_topic,
                     self.message_buffer,
                     on_delivery=self.on_kafka_delivery
                 )
-            self.message_buffer = ''
-            self.num_messages = 0
-        self.kafka_producer.flush()
+        self.message_buffer = '['
+        self.num_messages = 0
 
 # -----------------------------------------------------------------------------
 # Class: PrintRabbitmqMixin
@@ -1432,6 +1452,13 @@ class PrintRabbitmqMixin():
         self.message_buffer = '['
         self.num_messages = 0
 
+        # default RabbitMQ max message size, but save some space for Rabbit to use, just in case
+
+        self.max_message_size_in_bytes = (128 * 1024 * 1024) - (32 * 1024)
+
+        if self.number_of_records_per_print <= 0:
+            self.number_of_records_per_print = sys.maxsize
+
         # Construct Pika objects.
 
         self.rabbitmq_properties = pika.BasicProperties(
@@ -1457,6 +1484,7 @@ class PrintRabbitmqMixin():
             message_queue = self.channel.queue_declare(queue=self.rabbitmq_queue, passive=rabbitmq_passive_declare)
 
             # if we are actively declaring, then we need to bind. If passive declare, we assume it is already set up
+
             if not rabbitmq_passive_declare:
                 self.channel.queue_bind(exchange=self.rabbitmq_exchange, routing_key=self.rabbitmq_routing_key, queue=message_queue.method.queue)
         except (pika.exceptions.AMQPConnectionError) as err:
@@ -1474,7 +1502,23 @@ class PrintRabbitmqMixin():
     def print(self, message):
         assert isinstance(message, str)
 
+        # if the record itself is too long to fit in a message, then log the ID with a warning and move on (+2 for the enclosing [])
+
+        new_record_size_in_bytes = len(message.encode('utf-8'))
+        if new_record_size_in_bytes + 2 > self.max_message_size_in_bytes:
+            record = json.dumps(message)
+            record_id = record.get(self.record_identifier)
+            record_overage = new_record_size_in_bytes + 2 - self.max_message_size_in_bytes
+            logging.warning(message_warning(311, self.record_identifier, record_id, record_overage))
+            return
+
+        # Check if the new record would overflow the message and if so, send the existing messages
+
+        if len(self.message_buffer.encode('utf-8')) + new_record_size_in_bytes + 1 > self.max_message_size_in_bytes:
+            self.send_message_buffer()
+
         # batch the message - if are already messages then add a delimiter first
+
         if self.num_messages > 0:
             self.message_buffer += ','
         self.message_buffer += message
@@ -1484,18 +1528,10 @@ class PrintRabbitmqMixin():
 
         try:
             if self.num_messages == self.number_of_records_per_print:
-                self.message_buffer += ']'
-                self.channel.basic_publish(
-                    exchange=self.rabbitmq_exchange,
-                    routing_key=self.rabbitmq_routing_key,
-                    body=self.message_buffer,
-                    properties=self.rabbitmq_properties
-                )
-                self.message_buffer = '['
-                self.num_messages = 0
+                self.send_message_buffer()
 
         except BaseException as err:
-            logging.warn(message_warning(411, err, message))
+            logging.warning(message_warning(411, err, message))
 
         # Log progress. Using a "cheap" serialization technique.
         output_counter = self.config.get('output_counter')
@@ -1506,17 +1542,20 @@ class PrintRabbitmqMixin():
 
     def close(self):
         if self.num_messages > 0:
-            self.message_buffer += ']'
-            self.channel.basic_publish(
-                exchange=self.rabbitmq_exchange,
-                routing_key=self.rabbitmq_routing_key,
-                body=self.message_buffer,
-                properties=self.rabbitmq_properties
-            )
-            self.message_buffer = ''
-            self.num_messages = 0
+            self.send_message_buffer()
 
         self.connection.close()
+
+    def send_message_buffer(self):
+        self.message_buffer += ']'
+        self.channel.basic_publish(
+            exchange=self.rabbitmq_exchange,
+            routing_key=self.rabbitmq_routing_key,
+            body=self.message_buffer,
+            properties=self.rabbitmq_properties
+        )
+        self.message_buffer = '['
+        self.num_messages = 0
 
 # -----------------------------------------------------------------------------
 # Class: PrintQueueMixin
@@ -1553,6 +1592,10 @@ class PrintSqsMixin():
         self.number_of_records_per_print = config.get("records_per_message")
         self.message_buffer = '['
         self.num_messages = 0
+        self.record_identifier = config.get("record_identifier")
+
+        if self.number_of_records_per_print <= 0:
+            self.number_of_records_per_print = sys.maxsize
 
         # Create sqs object.
         # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs.html
@@ -1566,41 +1609,59 @@ class PrintSqsMixin():
         endpoint_url = match.group(1)
         self.sqs = boto3.client("sqs", endpoint_url=endpoint_url)
 
+        # Query queue for max message size, then leave some overhead space in case SQS needs some itself
+
+        response = self.sqs.get_queue_attributes(QueueUrl=self.queue_url, AttributeNames=['MaximumMessageSize'])
+        self.max_message_size_in_bytes = response.get('Attributes', { "MaximumMessageSize" : 256 * 1024}).get('MaximumMessageSize')
+        self.max_message_size_in_bytes = int(self.max_message_size_in_bytes) - (32 * 1024)
+
     def print(self, message):
         self.counter += 1
-        assert type(message) == str
+        assert isinstance(message, str)
+
+        # if the record itself is too long to fit in a message, then log the ID with a warning and move on (+2 for the enclosing [])
+
+        new_record_size_in_bytes = len(message.encode('utf-8'))
+        if new_record_size_in_bytes + 2 > self.max_message_size_in_bytes:
+            record = json.dumps(message)
+            record_id = record.get(self.record_identifier)
+            record_overage = new_record_size_in_bytes + 2 - self.max_message_size_in_bytes
+            logging.warning(message_warning(311, self.record_identifier, record_id, record_overage))
+            return
+
+        # Check if the new record would overflow the message and if so, send the existing messages
+
+        if len(self.message_buffer.encode('utf-8')) + new_record_size_in_bytes + 1 > self.max_message_size_in_bytes:
+            self.send_message_buffer()
 
         # batch the message - if are already messages then add a delimiter first
+
         if self.num_messages > 0:
             self.message_buffer += ','
         self.message_buffer += message
         self.num_messages += 1
 
         if self.num_messages == self.number_of_records_per_print:
-            self.message_buffer += ']'
-            self.sqs.send_message(
-                QueueUrl=self.queue_url,
-                DelaySeconds=self.sqs_delay_seconds,
-                MessageAttributes={},
-                MessageBody=(self.message_buffer),
-            )
-            self.message_buffer = '['
-            self.num_messages = 0
+            self.send_message_buffer()
 
         if self.counter % self.record_monitor == 0:
             logging.info(message_debug(104, threading.current_thread().name, self.counter))
 
     def close(self):
         if self.num_messages > 0:
-            self.message_buffer += ']'
-            self.sqs.send_message(
-                QueueUrl=self.queue_url,
-                DelaySeconds=self.sqs_delay_seconds,
-                MessageAttributes={},
-                MessageBody=(self.message_buffer),
-            )
-            self.message_buffer = ''
-            self.num_messages = 0
+            self.send_message_buffer()
+
+    def send_message_buffer(self):
+        self.message_buffer += ']'
+        self.sqs.send_message(
+            QueueUrl=self.queue_url,
+            DelaySeconds=self.sqs_delay_seconds,
+            MessageAttributes={},
+            MessageBody=(self.message_buffer),
+        )
+        self.message_buffer = '['
+        self.num_messages = 0
+
 
 # -----------------------------------------------------------------------------
 # Class: PrintSqsBatchMixin
@@ -1632,7 +1693,7 @@ class PrintSqsBatchMixin():
 
     def print(self, message):
         self.counter += 1
-        assert type(message) == str
+        assert isinstance(message, str)
         self.messages.append(message)
         if len(self.messages) >= 10:
             entries = []
@@ -1682,7 +1743,7 @@ class PrintStdoutMixin():
 
     def print(self, message):
         self.counter += 1
-        assert type(message) == str
+        assert isinstance(message, str)
         print(message)
         if self.counter % self.record_monitor == 0:
             logging.info(message_debug(104, threading.current_thread().name, self.counter))
@@ -1718,7 +1779,7 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
         return self.governor.govern()
 
     def log_excessive_record(self, record, record_json):
-        assert type(record_json) == str
+        assert isinstance(record_json, str)
         record_overage = len(record_json) - self.record_size_max
         record_id = record.get(self.record_identifier)
         logging.warning(message_warning(310, self.record_identifier, record_id, record_overage))
@@ -2389,8 +2450,7 @@ if __name__ == "__main__":
     else:
         parser.print_help()
         if len(os.getenv("SENZING_DOCKER_LAUNCHED", "")):
-            subcommand = "sleep"
-            args = argparse.Namespace(subcommand=subcommand)
+            args = argparse.Namespace(subcommand='sleep')
             do_sleep(args)
         exit_silently()
 
