@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 [markdownlint](https://dlaa.me/markdownlint/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] - 2021-07-07
+
+- Added a max message size to batching for SQS, RabbitMQ, and Kafka.
+
 ## [1.4.1] - 2021-06-23
 
 ### Added in 1.4.1
