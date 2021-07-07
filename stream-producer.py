@@ -1531,7 +1531,7 @@ class PrintRabbitmqMixin():
                 self.send_message_buffer()
 
         except BaseException as err:
-            logging.warn(message_warning(411, err, message))
+            logging.warning(message_warning(411, err, message))
 
         # Log progress. Using a "cheap" serialization technique.
         output_counter = self.config.get('output_counter')
