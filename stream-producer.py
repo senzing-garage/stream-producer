@@ -1203,7 +1203,7 @@ class ReadS3AvroMixin():
         
         #Instantiate boto3
         
-        S3_client = boto3.client("S3")
+        self.S3_client = boto3.client("s3")
         
         #Get S3 bucket and key
         
@@ -1212,7 +1212,7 @@ class ReadS3AvroMixin():
         self.S3Key = self.urlParts.path.lstrip('/')
         
     def read(self):
-      self.response = S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
+      self.response = self.S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
       
       with open(self.response, 'rb') as input_file:
         avro_reader = fastavro.reader(input_file)
@@ -1256,7 +1256,7 @@ class ReadS3CsvMixin():
       self.csv_string = self.body.read().decode('utf-8')
 
       reader = pandas.read_csv(io.StringIO(self.csv_string), skipinitialspace=True, dtype=str, chunksize=self.rows_in_chunk, delimiter=self.delimiter)
-      #reader = pandas.read_csv(self.input_url, skipinitialspace=True, dtype=str, chunksize=self.rows_in_chunk, delimiter=self.delimiter)
+
       for data_frame in reader:
         data_frame.fillna('', inplace=True)
         for row in data_frame.to_dict(orient="records"):
@@ -1283,11 +1283,13 @@ class ReadS3JsonMixin():
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
+        self.rows_in_chunk = config.get('csv_rows_in_chunk')
+        self.delimiter = config.get('csv_delimiter')
         self.counter = 0
         
         #Instantiate boto3
         
-        S3_client = boto3.client("S3")
+        self.S3_client = boto3.client("s3")
         
         #Get S3 bucket and key
         
@@ -1296,23 +1298,23 @@ class ReadS3JsonMixin():
         self.S3Key = self.urlParts.path.lstrip('/')
         
     def read(self):
-      self.response = S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
-      self.data = self.response.read().decode('utf-8')
-    
-      with open(self.data, 'r') as input_file:
-            for line in input_file:
-                self.counter += 1
-                if self.record_min and self.counter < self.record_min:
-                    continue
-                if self.record_max and self.counter > self.record_max:
-                    break
-                line = line.strip()
-                if not line:
-                    continue
-                assert isinstance(line, str)
-                yield line
-                
-# -----------------------------------------------------------------------------
+      self.response = self.S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
+      self.data = self.response["Body"].read().decode()
+      self.data = io.StringIO(self.data)
+      
+      for line in self.data:
+        self.counter +=1
+        if self.record_min and self.counter < self.record_min:
+           continue
+        if self.record_max and self.counter > self.record_max:
+            break
+        line = line.strip()
+        if not line:
+            continue
+        assert isinstance(line, str)
+        yield line
+
+#------------------------------------------------------------------------------
 # Class: ReadS3ParquetMixin
 # -----------------------------------------------------------------------------
 
@@ -1328,7 +1330,7 @@ class ReadS3ParquetMixin():
         
         #Instantiate boto3
         
-        S3_client = boto3.client("S3")
+        self.S3_client = boto3.client("s3")
         
         #Get S3 bucket and key
         
@@ -1337,7 +1339,7 @@ class ReadS3ParquetMixin():
         self.S3Key = self.urlParts.path.lstrip('/')
         
     def read(self):
-      self.response = S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
+      self.response = self.S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
       data_frame = pandas.read_parquet(self.response)
       for row in data_frame.to_dict(orient="records"):
             self.counter += 1
@@ -1491,7 +1493,6 @@ class EvaluateDictToJsonMixin():
         self.default_entity_type = self.config.get('default_entity_type', None)
 
     def evaluate(self, message):
-
         if self.default_data_source:
             if 'DATA_SOURCE' not in message.keys():
                 message['DATA_SOURCE'] = self.default_data_source
@@ -2082,28 +2083,28 @@ class FilterQueueDictToJsonStdoutThread(ReadEvaluatePrintLoopThread, ReadQueueMi
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
-class FilterS3AvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3AvroMixin, EvaluateDictToJsonMixin, PrintQueueMixin):
+class FilterS3AvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3AvroMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "FilterS3AvroToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
             
-class FilterS3CsvToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3CsvMixin, EvaluateDictToJsonMixin, PrintQueueMixin):
+class FilterS3CsvToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3CsvMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "FilterS3CsvToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
             
-class FilterS3JsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3JsonMixin, EvaluateDictToJsonMixin, PrintQueueMixin):
+class FilterS3JsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3JsonMixin, EvaluateJsonToDictMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "FilterS3JsonToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
             
-class FilterS3ParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3ParquetMixin, EvaluateDictToJsonMixin, PrintQueueMixin):
+class FilterS3ParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3ParquetMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "FilterS3ParquetToDictQueueThread"))
