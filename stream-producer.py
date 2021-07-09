@@ -27,6 +27,7 @@ import pika
 import queue
 import random
 import re
+import s3fs
 import signal
 import string
 import sys
@@ -1203,26 +1204,62 @@ class ReadS3AvroMixin():
         
         #Instantiate boto3
         
-        self.S3_client = boto3.client("s3")
+      #  self.S3_client = boto3.client("s3")
         
         #Get S3 bucket and key
         
         self.urlParts = urllib.parse.urlparse(self.input_url)
         self.S3Bucket = self.urlParts.netloc
-        self.S3Key = self.urlParts.path.lstrip('/')
+        self.S3Key = self.urlParts.path
         
     def read(self):
-      self.response = self.S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
+     # self.response = self.S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
+    #  self.data = self.response['Body'].read()
+      self.fs = s3fs.S3FileSystem(anon=False)
+      self.fs.ls(self.S3Bucket)
       
-      with open(self.response, 'rb') as input_file:
-        avro_reader = fastavro.reader(input_file)
-        for record in avro_reader:
-          self.counter += 1
-          if self.record_min and self.counter < self.record_min:
-            continue
-          if self.record_max and self.counter > self.record_max:
-            break
-          yield record
+      with self.fs.open(self.S3Bucket+self.S3Key, 'rb') as input_file:
+            avro_reader = fastavro.reader(input_file)
+            for record in avro_reader:
+                self.counter += 1
+                if self.record_min and self.counter < self.record_min:
+                    continue
+                if self.record_max and self.counter > self.record_max:
+                    break
+                yield record
+                
+#      with open(io.BufferedReader(io.BytesIO(self.data)), 'rb') as input_file:
+#            print('test2')
+#            avro_reader = fastavro.reader(input_file)
+#            for record in avro_reader:
+#                self.counter += 1
+#                if self.record_min and self.counter < self.record_min:
+#                    continue
+#                if self.record_max and self.counter > self.record_max:
+#                    break
+#                yield record
+      
+      
+#      self.avroreader = fastavro.reader(io.BytesIO(self.data))
+#      reader = pandas.DataFrame.from_records(self.avroreader)
+#      for row in reader:
+#          self.counter += 1
+#          if self.record_min and self.counter < self.record_min:
+#            continue
+#          if self.record_max and self.counter > self.record_max:
+#            break
+#          assert type(row) == str
+#          yield row
+          
+          
+#      avro_reader = fastavro.reader(self.data.decode('latin-1'))
+#      for record in avro_reader:
+#        self.counter += 1
+#        if self.record_min and self.counter < self.record_min:
+#          continue
+#        if self.record_max and self.counter > self.record_max:
+#          break
+#        yield record
       
 # -----------------------------------------------------------------------------
 # Class: ReadS3CsvMixin
