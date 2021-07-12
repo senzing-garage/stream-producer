@@ -24,6 +24,7 @@ import multiprocessing
 import os
 import pandas
 import pika
+import pyarrow.parquet as pq
 import queue
 import random
 import re
@@ -1201,11 +1202,7 @@ class ReadS3AvroMixin():
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
         self.counter = 0
-        
-        #Instantiate boto3
-        
-      #  self.S3_client = boto3.client("s3")
-        
+
         #Get S3 bucket and key
         
         self.urlParts = urllib.parse.urlparse(self.input_url)
@@ -1213,8 +1210,6 @@ class ReadS3AvroMixin():
         self.S3Key = self.urlParts.path
         
     def read(self):
-     # self.response = self.S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
-    #  self.data = self.response['Body'].read()
       self.fs = s3fs.S3FileSystem(anon=False)
       self.fs.ls(self.S3Bucket)
       
@@ -1227,39 +1222,6 @@ class ReadS3AvroMixin():
                 if self.record_max and self.counter > self.record_max:
                     break
                 yield record
-                
-#      with open(io.BufferedReader(io.BytesIO(self.data)), 'rb') as input_file:
-#            print('test2')
-#            avro_reader = fastavro.reader(input_file)
-#            for record in avro_reader:
-#                self.counter += 1
-#                if self.record_min and self.counter < self.record_min:
-#                    continue
-#                if self.record_max and self.counter > self.record_max:
-#                    break
-#                yield record
-      
-      
-#      self.avroreader = fastavro.reader(io.BytesIO(self.data))
-#      reader = pandas.DataFrame.from_records(self.avroreader)
-#      for row in reader:
-#          self.counter += 1
-#          if self.record_min and self.counter < self.record_min:
-#            continue
-#          if self.record_max and self.counter > self.record_max:
-#            break
-#          assert type(row) == str
-#          yield row
-          
-          
-#      avro_reader = fastavro.reader(self.data.decode('latin-1'))
-#      for record in avro_reader:
-#        self.counter += 1
-#        if self.record_min and self.counter < self.record_min:
-#          continue
-#        if self.record_max and self.counter > self.record_max:
-#          break
-#        yield record
       
 # -----------------------------------------------------------------------------
 # Class: ReadS3CsvMixin
@@ -1365,20 +1327,17 @@ class ReadS3ParquetMixin():
         self.record_max = config.get('record_max')
         self.counter = 0
         
-        #Instantiate boto3
-        
-        self.S3_client = boto3.client("s3")
-        
         #Get S3 bucket and key
         
         self.urlParts = urllib.parse.urlparse(self.input_url)
         self.S3Bucket = self.urlParts.netloc
-        self.S3Key = self.urlParts.path.lstrip('/')
+        self.S3Key = self.urlParts.path
         
     def read(self):
-      self.response = self.S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
-      data_frame = pandas.read_parquet(self.response)
-      for row in data_frame.to_dict(orient="records"):
+        self.fs = s3fs.S3FileSystem(anon=False)
+      
+        data_frame = pq.ParquetDataset(self.S3Bucket+self.S3Key, filesystem=self.fs).read_pandas().to_pandas()
+        for row in data_frame.to_dict(orient="records"):
             self.counter += 1
             if self.record_min and self.counter < self.record_min:
                 continue
@@ -2141,7 +2100,7 @@ class FilterS3JsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3JsonMixin
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
             
-class FilterS3ParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3ParquetMixin, EvaluateNullObjectMixin, PrintQueueMixin):
+class FilterS3ParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3ParquetMixin, EvaluateMakeSerializeableDictMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "FilterS3ParquetToDictQueueThread"))
