@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 [markdownlint](https://dlaa.me/markdownlint/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] - 2021-07-07
+
+- Added a max message size to batching for SQS, RabbitMQ, and Kafka.
+
+## [1.4.1] - 2021-06-23
+
+### Added in 1.4.1
+
+- RabbitMQ virtual host is now a settable parameter.
+- Removed suppor for adding records to a queue from a websocket. Loading records via websocket has been moved to the Senzing API server.
+- Stream-producer no longer hangs if it cannot connect to the messaging server when first starting
+
 ## [1.4.0] - 2021-03-12
 
 ### Added in 1.4.0
