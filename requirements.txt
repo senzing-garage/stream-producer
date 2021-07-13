@@ -7,4 +7,5 @@ pandas
 pika
 psutil
 pyarrow
+s3fs
 websockets
