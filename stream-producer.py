@@ -6,14 +6,20 @@
 # -----------------------------------------------------------------------------
 
 import argparse
+import asyncio
+import collections
+import csv
 import gzip
 import json
+import io
 import linecache
 import logging
 import multiprocessing
 import os
+import queue
 import random
 import re
+import s3fs
 import signal
 import string
 import sys
@@ -22,10 +28,13 @@ import time
 import urllib.parse
 import urllib.request
 import boto3
+from botocore import UNSIGNED
+from botocore.config import Config
 import pika
 import confluent_kafka
 import fastavro
 import pandas
+import pyarrow.parquet as pq
 
 __all__ = []
 __version__ = "1.4.2"  # See https://www.python.org/dev/peps/pep-0396/
@@ -1040,34 +1049,6 @@ class ReadFileCsvMixin():
                 yield row
 
 # -----------------------------------------------------------------------------
-# Class: ReadFileMixin
-# -----------------------------------------------------------------------------
-
-
-class ReadFileMixin():
-
-    def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileMixin"))
-        self.input_url = config.get('input_url')
-        self.record_min = config.get('record_min')
-        self.record_max = config.get('record_max')
-        self.counter = 0
-
-    def read(self):
-        with open(self.input_url, 'r') as input_file:
-            for line in input_file:
-                self.counter += 1
-                if self.record_min and self.counter < self.record_min:
-                    continue
-                if self.record_max and self.counter > self.record_max:
-                    break
-                line = line.strip()
-                if not line:
-                    continue
-                assert isinstance(line, str)
-                yield line
-
-# -----------------------------------------------------------------------------
 # Class: ReadFileGzippedMixin
 # -----------------------------------------------------------------------------
 
@@ -1095,36 +1076,34 @@ class ReadFileGzippedMixin():
                 assert isinstance(line, str)
                 yield line
 
+
 # -----------------------------------------------------------------------------
-# Class: ReadUrlGzippedMixin
+# Class: ReadFileMixin
 # -----------------------------------------------------------------------------
 
 
-class ReadUrlGzippedMixin():
-
+class ReadFileMixin():
+  
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadUrlGzippedMixin"))
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
         self.counter = 0
 
     def read(self):
-
-        gzipped_data = urllib.request.urlopen(self.input_url, timeout=5)
-        data = gzip.GzipFile(fileobj=gzipped_data)
-        for line in data:
-            self.counter += 1
-            if self.record_min and self.counter < self.record_min:
-                continue
-            if self.record_max and self.counter > self.record_max:
-                break
-            line = line.strip()
-            if not line:
-                continue
-            result = json.loads(line)
-            assert isinstance(result, dict)
-            yield result
+        with open(self.input_url, 'r') as input_file:
+            for line in input_file:
+                self.counter += 1
+                if self.record_min and self.counter < self.record_min:
+                    continue
+                if self.record_max and self.counter > self.record_max:
+                    break
+                line = line.strip()
+                if not line:
+                    continue
+                assert isinstance(line, str)
+                yield line
 
 # -----------------------------------------------------------------------------
 # Class: ReadFileParquetMixin
@@ -1178,6 +1157,163 @@ class ReadQueueMixin():
             yield message
 
 # -----------------------------------------------------------------------------
+# Class: ReadS3AvroMixin
+# -----------------------------------------------------------------------------
+
+
+class ReadS3AvroMixin():
+
+    def __init__(self, config={}, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3AvroMixin"))
+        self.input_url = config.get('input_url')
+        self.record_min = config.get('record_min')
+        self.record_max = config.get('record_max')
+        self.counter = 0
+
+        #Get S3 bucket and key
+        
+        self.urlParts = urllib.parse.urlparse(self.input_url)
+        self.S3Bucket = self.urlParts.netloc
+        self.S3Key = self.urlParts.path
+        
+    def read(self):
+      self.fs = s3fs.S3FileSystem(anon=False)
+      self.fs.ls(self.S3Bucket)
+      
+      with self.fs.open(self.S3Bucket+self.S3Key, 'rb') as input_file:
+            avro_reader = fastavro.reader(input_file)
+            for record in avro_reader:
+                self.counter += 1
+                if self.record_min and self.counter < self.record_min:
+                    continue
+                if self.record_max and self.counter > self.record_max:
+                    break
+                yield record
+      
+# -----------------------------------------------------------------------------
+# Class: ReadS3CsvMixin
+# -----------------------------------------------------------------------------
+
+
+class ReadS3CsvMixin():
+
+    def __init__(self, config={}, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3CsvMixin"))
+        self.input_url = config.get('input_url')
+        self.record_min = config.get('record_min')
+        self.record_max = config.get('record_max')
+        self.rows_in_chunk = config.get('csv_rows_in_chunk')
+        self.delimiter = config.get('csv_delimiter')
+        self.counter = 0
+        
+        #Instantiate boto3
+        
+        self.S3_client = boto3.client("s3")
+        
+        #Get S3 bucket and key
+        
+        self.urlParts = urllib.parse.urlparse(self.input_url)
+        self.S3Bucket = self.urlParts.netloc
+        self.S3Key = self.urlParts.path.lstrip('/')
+        
+    def read(self):
+      self.response = self.S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
+      self.body = self.response['Body']
+      self.csv_string = self.body.read().decode('utf-8')
+
+      reader = pandas.read_csv(io.StringIO(self.csv_string), skipinitialspace=True, dtype=str, chunksize=self.rows_in_chunk, delimiter=self.delimiter)
+
+      for data_frame in reader:
+        data_frame.fillna('', inplace=True)
+        for row in data_frame.to_dict(orient="records"):
+          # Remove items that have '' value
+          row = {i: j for i, j in row.items() if j != ''}
+          
+          self.counter += 1
+          if self.record_min and self.counter < self.record_min:
+            continue
+          if self.record_max and self.counter > self.record_max:
+            break
+          assert isinstance(row, dict)
+          yield row
+      
+# -----------------------------------------------------------------------------
+# Class: ReadS3JsosMixin
+# -----------------------------------------------------------------------------
+
+
+class ReadS3JsonMixin():
+
+    def __init__(self, config={}, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3JsonMixin"))
+        self.input_url = config.get('input_url')
+        self.record_min = config.get('record_min')
+        self.record_max = config.get('record_max')
+        self.rows_in_chunk = config.get('csv_rows_in_chunk')
+        self.delimiter = config.get('csv_delimiter')
+        self.counter = 0
+        
+        #Instantiate boto3
+        
+        self.S3_client = boto3.client("s3")
+        
+        #Get S3 bucket and key
+        
+        self.urlParts = urllib.parse.urlparse(self.input_url)
+        self.S3Bucket = self.urlParts.netloc
+        self.S3Key = self.urlParts.path.lstrip('/')
+        
+    def read(self):
+      self.response = self.S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
+      self.data = self.response["Body"].read().decode()
+      self.data = io.StringIO(self.data)
+      
+      for line in self.data:
+        self.counter +=1
+        if self.record_min and self.counter < self.record_min:
+           continue
+        if self.record_max and self.counter > self.record_max:
+            break
+        line = line.strip()
+        if not line:
+            continue
+        assert isinstance(line, str)
+        yield line
+
+#------------------------------------------------------------------------------
+# Class: ReadS3ParquetMixin
+# -----------------------------------------------------------------------------
+
+
+class ReadS3ParquetMixin():
+
+    def __init__(self, config={}, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3ParquetMixin"))
+        self.input_url = config.get('input_url')
+        self.record_min = config.get('record_min')
+        self.record_max = config.get('record_max')
+        self.counter = 0
+        
+        #Get S3 bucket and key
+        
+        self.urlParts = urllib.parse.urlparse(self.input_url)
+        self.S3Bucket = self.urlParts.netloc
+        self.S3Key = self.urlParts.path
+        
+    def read(self):
+        self.fs = s3fs.S3FileSystem(anon=False)
+      
+        data_frame = pq.ParquetDataset(self.S3Bucket+self.S3Key, filesystem=self.fs).read_pandas().to_pandas()
+        for row in data_frame.to_dict(orient="records"):
+            self.counter += 1
+            if self.record_min and self.counter < self.record_min:
+                continue
+            if self.record_max and self.counter > self.record_max:
+                break
+            assert isinstance(row, dict)
+            yield row
+      
+# -----------------------------------------------------------------------------
 # Class: ReadUrlAvroMixin
 # -----------------------------------------------------------------------------
 
@@ -1201,6 +1337,37 @@ class ReadUrlAvroMixin():
                 if self.record_max and self.counter > self.record_max:
                     break
                 yield record
+
+# -----------------------------------------------------------------------------
+# Class: ReadUrlGzippedMixin
+# -----------------------------------------------------------------------------
+
+
+class ReadUrlGzippedMixin():
+
+    def __init__(self, config={}, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "ReadUrlGzippedMixin"))
+        self.input_url = config.get('input_url')
+        self.record_min = config.get('record_min')
+        self.record_max = config.get('record_max')
+        self.counter = 0
+
+    def read(self):
+
+        gzipped_data = urllib.request.urlopen(self.input_url, timeout=5)
+        data = gzip.GzipFile(fileobj=gzipped_data)
+        for line in data:
+            self.counter += 1
+            if self.record_min and self.counter < self.record_min:
+                continue
+            if self.record_max and self.counter > self.record_max:
+                break
+            line = line.strip()
+            if not line:
+                continue
+            result = json.loads(line)
+            assert isinstance(result, dict)
+            yield result
 
 # -----------------------------------------------------------------------------
 # Class: ReadUrlMixin
@@ -1257,7 +1424,6 @@ class EvaluateDictToJsonMixin():
         self.default_entity_type = self.config.get('default_entity_type', None)
 
     def evaluate(self, message):
-
         if self.default_data_source:
             if 'DATA_SOURCE' not in message.keys():
                 message['DATA_SOURCE'] = self.default_data_source
@@ -1816,6 +1982,18 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
 
 # =============================================================================
 # Filter* classes created with mixins
+#
+# Filter class formats
+# Filter[File|Queue|Url][Avro|Csv|GzippedJson|Json|Parquet|Dict]To[Dict|Json][Queue|Kafka|Rabbitmq|Stdout|Sqs|SqsBatch|]Thread
+#
+# Descriptions
+# 1. "Filter"
+# 2. input source: [File | Queue | Url]
+# 3. input format: [Avro | Csv | GzippedJson | Json | Parquet | Dict]
+# 4. "To"
+# 5. output format: [Dict | Json]
+# 6. output destination: [Queue | Kafka | Rabbitmq | Stdout | Sqs | SqsBatch]
+# 7. "Thread"
 # =============================================================================
 
 
@@ -1898,7 +2076,34 @@ class FilterQueueDictToJsonStdoutThread(ReadEvaluatePrintLoopThread, ReadQueueMi
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
+class FilterS3AvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3AvroMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterS3AvroToDictQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+            
+class FilterS3CsvToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3CsvMixin, EvaluateNullObjectMixin, PrintQueueMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterS3CsvToDictQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+            
+class FilterS3JsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3JsonMixin, EvaluateJsonToDictMixin, PrintQueueMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterS3JsonToDictQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+            
+class FilterS3ParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3ParquetMixin, EvaluateMakeSerializeableDictMixin, PrintQueueMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterS3ParquetToDictQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+            
 class FilterUrlAvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlAvroMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
@@ -2045,6 +2250,8 @@ def dohelper_avro(args, write_thread):
     read_thread = FilterFileAvroToDictQueueThread
     if parsed_file_name.scheme in ['http', 'https']:
         read_thread = FilterUrlAvroToDictQueueThread
+    elif parsed_file_name.scheme in ['s3']:
+        read_thread = FilterS3AvroToDictQueueThread
 
     # Cascading defaults.
 
@@ -2068,11 +2275,19 @@ def dohelper_avro(args, write_thread):
 
 def dohelper_csv(args, write_thread):
     ''' Read file of CSV, print to write_thread. '''
+    
+    # Get context variables.
+
+    config = get_configuration(args)
+    input_url = config.get("input_url")
+    parsed_file_name = urllib.parse.urlparse(input_url)
 
     # Determine Read thread.
 
     read_thread = FilterFileCsvToDictQueueThread
-
+    if parsed_file_name.scheme in ['s3']:
+        read_thread = FilterS3CsvToDictQueueThread
+        
     # Cascading defaults.
 
     options_to_defaults_map = {}
@@ -2142,6 +2357,8 @@ def dohelper_json(args, write_thread):
     read_thread = FilterFileJsonToDictQueueThread  # Default.
     if parsed_file_name.scheme in ['http', 'https']:
         read_thread = FilterUrlJsonToDictQueueThread
+    elif parsed_file_name.scheme in ['s3']:
+        read_thread = FilterS3JsonToDictQueueThread
 
     # Cascading defaults.
 
@@ -2166,10 +2383,18 @@ def dohelper_json(args, write_thread):
 def dohelper_parquet(args, write_thread):
     ''' Read file of Parquet, print to write_thread. '''
 
+    # Get context variables.
+
+    config = get_configuration(args)
+    input_url = config.get("input_url")
+    parsed_file_name = urllib.parse.urlparse(input_url)
+    
     # Determine Read thread.
 
     read_thread = FilterFileParquetToDictQueueThread
-
+    if parsed_file_name.scheme in ['s3']:
+        read_thread = FilterS3ParquetToDictQueueThread
+        
     # Cascading defaults.
 
     options_to_defaults_map = {}
