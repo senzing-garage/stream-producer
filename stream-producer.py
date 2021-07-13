@@ -1234,7 +1234,7 @@ class ReadS3CsvMixin():
             continue
           if self.record_max and self.counter > self.record_max:
             break
-          assert type(row) == dict
+          assert isinstance(row, dict)
           yield row
       
 # -----------------------------------------------------------------------------
@@ -1310,7 +1310,7 @@ class ReadS3ParquetMixin():
                 continue
             if self.record_max and self.counter > self.record_max:
                 break
-            assert type(row) == dict
+            assert isinstance(row, dict)
             yield row
       
 # -----------------------------------------------------------------------------
