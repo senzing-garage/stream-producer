@@ -2383,6 +2383,12 @@ def dohelper_json(args, write_thread):
 def dohelper_parquet(args, write_thread):
     ''' Read file of Parquet, print to write_thread. '''
 
+    # Get context variables.
+
+    config = get_configuration(args)
+    input_url = config.get("input_url")
+    parsed_file_name = urllib.parse.urlparse(input_url)
+    
     # Determine Read thread.
 
     read_thread = FilterFileParquetToDictQueueThread
