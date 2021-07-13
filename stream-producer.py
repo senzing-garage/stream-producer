@@ -2275,6 +2275,12 @@ def dohelper_avro(args, write_thread):
 
 def dohelper_csv(args, write_thread):
     ''' Read file of CSV, print to write_thread. '''
+    
+    # Get context variables.
+
+    config = get_configuration(args)
+    input_url = config.get("input_url")
+    parsed_file_name = urllib.parse.urlparse(input_url)
 
     # Determine Read thread.
 
