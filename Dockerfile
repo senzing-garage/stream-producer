@@ -1,7 +1,7 @@
-ARG BASE_IMAGE=debian:10.2
+ARG BASE_IMAGE=debian:10.9
 FROM ${BASE_IMAGE}
 
-ENV REFRESHED_AT=2021-03-11
+ENV REFRESHED_AT=2021-07-14
 
 LABEL Name="senzing/stream-producer" \
       Maintainer="support@senzing.com" \
