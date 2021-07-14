@@ -5,7 +5,7 @@ ENV REFRESHED_AT=2021-03-11
 
 LABEL Name="senzing/stream-producer" \
       Maintainer="support@senzing.com" \
-      Version="1.4.0"
+      Version="1.4.2"
 
 HEALTHCHECK CMD ["/app/healthcheck.sh"]
 
@@ -24,18 +24,9 @@ RUN apt-get update \
 
 # Install packages via PIP.
 
-RUN pip3 install --upgrade pip
-RUN pip3 install \
-      asyncio \
-      boto3 \
-      confluent_kafka \
-      fastavro \
-      fastparquet \
-      pandas \
-      pika \
-      psutil \
-      pyarrow \
-      websockets
+COPY requirements.txt ./
+RUN pip3 install --upgrade pip \
+ && pip3 install -r requirements.txt
 
 # Copy files from repository.
 
