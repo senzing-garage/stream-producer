@@ -24,18 +24,9 @@ RUN apt-get update \
 
 # Install packages via PIP.
 
-RUN pip3 install --upgrade pip
-RUN pip3 install \
-      asyncio \
-      boto3 \
-      confluent_kafka \
-      fastavro \
-      fastparquet \
-      pandas \
-      pika \
-      psutil \
-      pyarrow \
-      websockets
+COPY requirements.txt ./
+RUN pip3 install --upgrade pip \
+ && pip3 install -r requirements.txt
 
 # Copy files from repository.
 
