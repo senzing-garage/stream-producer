@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 [markdownlint](https://dlaa.me/markdownlint/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2021-09-08
+
+### Added in 1.6.0
+
+- Added subcommands for Azure Queue:
+  - `avro-to-azure-queue`
+  - `csv-to-azure-queue`
+  - `gzipped-json-to-azure-queue`
+  - `json-to-azure-queue`
+  - `parquet-to-azure-queue`
+
 ## [1.5.1] - 2021-07-15
 
 ### Added in 1.5.1
