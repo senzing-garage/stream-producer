@@ -7,15 +7,20 @@
 
 import argparse
 import asyncio
+import boto3
+from botocore import UNSIGNED
+from botocore.config import Config
 import collections
 import csv
 import gzip
-import json
 import io
+import json
 import linecache
 import logging
 import multiprocessing
 import os
+import pandas
+import pika
 import queue
 import random
 import re
@@ -27,19 +32,17 @@ import threading
 import time
 import urllib.parse
 import urllib.request
-import boto3
-from botocore import UNSIGNED
-from botocore.config import Config
-import pika
+
 import confluent_kafka
 import fastavro
-import pandas
+
+from azure.servicebus import ServiceBusClient, ServiceBusMessage
 import pyarrow.parquet as pq
 
 __all__ = []
-__version__ = "1.4.2"  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = "1.6.0"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-07-07'
-__updated__ = '2021-07-07'
+__updated__ = '2021-09-07'
 
 SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -58,6 +61,16 @@ QUEUE_SENTINEL = ".{0}.".format(''.join([random.choice(string.ascii_letters + st
 # 1) Command line options, 2) Environment variables, 3) Configuration files, 4) Default values
 
 configuration_locator = {
+    "azure_connection_string": {
+        "default": None,
+        "env": "SENZING_AZURE_CONNECTION_STRING",
+        "cli": "azure-connection-string",
+    },
+    "azure_queue_name": {
+        "default": None,
+        "env": "SENZING_AZURE_QUEUE_NAME",
+        "cli": "azure-queue-name",
+    },
     "csv_rows_in_chunk": {
         "default": 10000,
         "env": "SENZING_CSV_ROWS_IN_CHUNK",
@@ -244,6 +257,10 @@ def get_parser():
     ''' Parse commandline arguments. '''
 
     subcommands = {
+        'avro-to-azure-queue': {
+            "help": 'Read Avro file and send to Azure Queue.',
+            "argument_aspects": ["input-url", "avro", "azure"]
+        },
         'avro-to-kafka': {
             "help": 'Read Avro file and send to Kafka.',
             "argument_aspects": ["input-url", "avro", "kafka"]
@@ -263,6 +280,10 @@ def get_parser():
         'avro-to-stdout': {
             "help": 'Read Avro file and print to STDOUT.',
             "argument_aspects": ["input-url", "avro", "stdout"]
+        },
+        'csv-to-azure-queue': {
+            "help": 'Read CSV file and send to Azure Queue.',
+            "argument_aspects": ["input-url", "csv", "azure"]
         },
         'csv-to-kafka': {
             "help": 'Read CSV file and send to Kafka.',
@@ -284,6 +305,10 @@ def get_parser():
             "help": 'Read CSV file and print to STDOUT.',
             "argument_aspects": ["input-url", "csv", "stdout"]
         },
+        'gzipped-json-to-azure-queue': {
+            "help": 'Read gzipped JSON file and send to Azure Queue.',
+            "argument_aspects": ["input-url", "json", "azure"]
+        },
         'gzipped-json-to-kafka': {
             "help": 'Read gzipped JSON file and send to Kafka.',
             "argument_aspects": ["input-url", "json", "kafka"]
@@ -304,6 +329,10 @@ def get_parser():
             "help": 'Read gzipped JSON file and print to STDOUT.',
             "argument_aspects": ["input-url", "json", "stdout"]
         },
+        'json-to-azure-queue': {
+            "help": 'Read JSON file and send to Azure Queue.',
+            "argument_aspects": ["input-url", "json", "azure"]
+        },
         'json-to-kafka': {
             "help": 'Read JSON file and send to Kafka.',
             "argument_aspects": ["input-url", "json", "kafka"]
@@ -323,6 +352,10 @@ def get_parser():
         'json-to-stdout': {
             "help": 'Read JSON file and print to STDOUT.',
             "argument_aspects": ["input-url", "json", "stdout"]
+        },
+        'parquet-to-azure-queue': {
+            "help": 'Read Parquet file and send to Azure Queue.',
+            "argument_aspects": ["input-url", "parquet", "azure"]
         },
         'parquet-to-kafka': {
             "help": 'Read Parquet file and send to Kafka.',
@@ -365,6 +398,30 @@ def get_parser():
     # Define argument_aspects.
 
     argument_aspects = {
+        "azure": {
+            "--azure-connection-string": {
+                "dest": "azure_connection_string",
+                "metavar": "SENZING_AZURE_CONNECTION_STRING",
+                "help": "Azure Service Bus Queue connection string. Default: none"
+            },
+            "--azure-queue-name": {
+                "dest": "azure_queue_name",
+                "metavar": "SENZING_AZURE_QUEUE_NAME",
+                "help": "Azure Service Bus Queue name. Default: none"
+            }
+        },
+        "csv": {
+            "--csv-rows-in-chunk": {
+                "dest": "csv_rows_in_chunk",
+                "metavar": "SENZING_CSV_ROWS_IN_CHUNK",
+                "help": "The number of csv lines to read into memory and process at one time. Default: 10000"
+            },
+            "--csv-delimiter": {
+                "dest": "csv_delimiter",
+                "metavar": "SENZING_CSV_DELIMITER",
+                "help": "The character used to separate column values in a csv row. Default: ,"
+            }
+        },
         "input-url": {
             "--default-data-source": {
                 "dest": "default_data_source",
@@ -482,18 +539,6 @@ def get_parser():
                 "metavar": "SENZING_SQS_QUEUE_URL",
                 "help": "AWS SQS URL. Default: none"
             },
-        },
-        "csv": {
-            "--csv-rows-in-chunk": {
-                "dest": "csv_rows_in_chunk",
-                "metavar": "SENZING_CSV_ROWS_IN_CHUNK",
-                "help": "The number of csv lines to read into memory and process at one time. Default: 10000"
-            },
-            "--csv-delimiter": {
-                "dest": "csv_delimiter",
-                "metavar": "SENZING_CSV_DELIMITER",
-                "help": "The character used to separate column values in a csv row. Default: ,"
-            }
         }
     }
 
@@ -1076,14 +1121,13 @@ class ReadFileGzippedMixin():
                 assert isinstance(line, str)
                 yield line
 
-
 # -----------------------------------------------------------------------------
 # Class: ReadFileMixin
 # -----------------------------------------------------------------------------
 
 
 class ReadFileMixin():
-  
+
     def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "ReadFileMixin"))
         self.input_url = config.get('input_url')
@@ -1170,17 +1214,17 @@ class ReadS3AvroMixin():
         self.record_max = config.get('record_max')
         self.counter = 0
 
-        #Get S3 bucket and key
-        
+        # Get S3 bucket and key
+
         self.urlParts = urllib.parse.urlparse(self.input_url)
         self.S3Bucket = self.urlParts.netloc
         self.S3Key = self.urlParts.path
-        
+
     def read(self):
       self.fs = s3fs.S3FileSystem(anon=False)
       self.fs.ls(self.S3Bucket)
-      
-      with self.fs.open(self.S3Bucket+self.S3Key, 'rb') as input_file:
+
+      with self.fs.open(self.S3Bucket + self.S3Key, 'rb') as input_file:
             avro_reader = fastavro.reader(input_file)
             for record in avro_reader:
                 self.counter += 1
@@ -1189,7 +1233,7 @@ class ReadS3AvroMixin():
                 if self.record_max and self.counter > self.record_max:
                     break
                 yield record
-      
+
 # -----------------------------------------------------------------------------
 # Class: ReadS3CsvMixin
 # -----------------------------------------------------------------------------
@@ -1205,19 +1249,19 @@ class ReadS3CsvMixin():
         self.rows_in_chunk = config.get('csv_rows_in_chunk')
         self.delimiter = config.get('csv_delimiter')
         self.counter = 0
-        
-        #Instantiate boto3
-        
+
+        # Instantiate boto3
+
         self.S3_client = boto3.client("s3")
-        
-        #Get S3 bucket and key
-        
+
+        # Get S3 bucket and key
+
         self.urlParts = urllib.parse.urlparse(self.input_url)
         self.S3Bucket = self.urlParts.netloc
         self.S3Key = self.urlParts.path.lstrip('/')
-        
+
     def read(self):
-      self.response = self.S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
+      self.response = self.S3_client.get_object(Bucket=self.S3Bucket, Key=self.S3Key)
       self.body = self.response['Body']
       self.csv_string = self.body.read().decode('utf-8')
 
@@ -1228,7 +1272,7 @@ class ReadS3CsvMixin():
         for row in data_frame.to_dict(orient="records"):
           # Remove items that have '' value
           row = {i: j for i, j in row.items() if j != ''}
-          
+
           self.counter += 1
           if self.record_min and self.counter < self.record_min:
             continue
@@ -1236,7 +1280,7 @@ class ReadS3CsvMixin():
             break
           assert isinstance(row, dict)
           yield row
-      
+
 # -----------------------------------------------------------------------------
 # Class: ReadS3JsosMixin
 # -----------------------------------------------------------------------------
@@ -1252,24 +1296,24 @@ class ReadS3JsonMixin():
         self.rows_in_chunk = config.get('csv_rows_in_chunk')
         self.delimiter = config.get('csv_delimiter')
         self.counter = 0
-        
-        #Instantiate boto3
-        
+
+        # Instantiate boto3
+
         self.S3_client = boto3.client("s3")
-        
-        #Get S3 bucket and key
-        
+
+        # Get S3 bucket and key
+
         self.urlParts = urllib.parse.urlparse(self.input_url)
         self.S3Bucket = self.urlParts.netloc
         self.S3Key = self.urlParts.path.lstrip('/')
-        
+
     def read(self):
-      self.response = self.S3_client.get_object(Bucket = self.S3Bucket, Key = self.S3Key)
+      self.response = self.S3_client.get_object(Bucket=self.S3Bucket, Key=self.S3Key)
       self.data = self.response["Body"].read().decode()
       self.data = io.StringIO(self.data)
-      
+
       for line in self.data:
-        self.counter +=1
+        self.counter += 1
         if self.record_min and self.counter < self.record_min:
            continue
         if self.record_max and self.counter > self.record_max:
@@ -1293,17 +1337,17 @@ class ReadS3ParquetMixin():
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
         self.counter = 0
-        
-        #Get S3 bucket and key
-        
+
+        # Get S3 bucket and key
+
         self.urlParts = urllib.parse.urlparse(self.input_url)
         self.S3Bucket = self.urlParts.netloc
         self.S3Key = self.urlParts.path
-        
+
     def read(self):
         self.fs = s3fs.S3FileSystem(anon=False)
-      
-        data_frame = pq.ParquetDataset(self.S3Bucket+self.S3Key, filesystem=self.fs).read_pandas().to_pandas()
+
+        data_frame = pq.ParquetDataset(self.S3Bucket + self.S3Key, filesystem=self.fs).read_pandas().to_pandas()
         for row in data_frame.to_dict(orient="records"):
             self.counter += 1
             if self.record_min and self.counter < self.record_min:
@@ -1312,7 +1356,7 @@ class ReadS3ParquetMixin():
                 break
             assert isinstance(row, dict)
             yield row
-      
+
 # -----------------------------------------------------------------------------
 # Class: ReadUrlAvroMixin
 # -----------------------------------------------------------------------------
@@ -1398,7 +1442,6 @@ class ReadUrlMixin():
             result = json.loads(line)
             assert isinstance(result, dict)
             yield result
-
 
 # =============================================================================
 # Mixins: Evaluate*
@@ -1490,6 +1533,31 @@ class EvaluateMakeSerializeableDictMixin():
 # =============================================================================
 
 # -----------------------------------------------------------------------------
+# Class: PrintAzureQueueMixin
+# -----------------------------------------------------------------------------
+
+
+class PrintAzureQueueMixin():
+
+    def __init__(self, config=None, *args, **kwargs):
+        logging.debug(message_debug(996, threading.current_thread().name, "PrintAzureQueueMixin"))
+
+        self.connection_string = config.get("azure_connection_string")
+        self.queue_name = config.get("azure_queue_name")
+        self.servicebus_client = ServiceBusClient.from_connection_string(self.connection_string)
+        self.sender = self.servicebus_client.get_queue_sender(queue_name=self.queue_name)
+
+    def print(self, message):
+        assert isinstance(message, str)
+
+        service_bus_message = ServiceBusMessage(message)
+        self.sender.send_messages(service_bus_message)
+
+    def close(self):
+        self.sender.close()
+        self.servicebus_client.close()
+
+# -----------------------------------------------------------------------------
 # Class: PrintKafkaMixin
 # -----------------------------------------------------------------------------
 
@@ -1509,7 +1577,6 @@ class PrintKafkaMixin():
         # default Kafka max message size, but save some space for kafka to use, just in case
 
         self.max_message_size_in_bytes = 1000012 - (32 * 1024)
-
 
         if self.number_of_records_per_print <= 0:
             self.number_of_records_per_print = sys.maxsize
@@ -1778,7 +1845,7 @@ class PrintSqsMixin():
         # Query queue for max message size, then leave some overhead space in case SQS needs some itself
 
         response = self.sqs.get_queue_attributes(QueueUrl=self.queue_url, AttributeNames=['MaximumMessageSize'])
-        self.max_message_size_in_bytes = response.get('Attributes', { "MaximumMessageSize" : 256 * 1024}).get('MaximumMessageSize')
+        self.max_message_size_in_bytes = response.get('Attributes', { "MaximumMessageSize": 256 * 1024}).get('MaximumMessageSize')
         self.max_message_size_in_bytes = int(self.max_message_size_in_bytes) - (32 * 1024)
 
     def print(self, message):
@@ -1827,7 +1894,6 @@ class PrintSqsMixin():
         )
         self.message_buffer = '['
         self.num_messages = 0
-
 
 # -----------------------------------------------------------------------------
 # Class: PrintSqsBatchMixin
@@ -2037,6 +2103,14 @@ class FilterFileParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFilePa
             base.__init__(self, *args, **kwargs)
 
 
+class FilterQueueDictToJsonAzureQueueThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintAzureQueueMixin):
+
+    def __init__(self, *args, **kwargs):
+        logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonAzureQueueThread"))
+        for base in type(self).__bases__:
+            base.__init__(self, *args, **kwargs)
+
+
 class FilterQueueDictToJsonKafkaThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintKafkaMixin):
 
     def __init__(self, *args, **kwargs):
@@ -2076,34 +2150,39 @@ class FilterQueueDictToJsonStdoutThread(ReadEvaluatePrintLoopThread, ReadQueueMi
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
+
 class FilterS3AvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3AvroMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "FilterS3AvroToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
-            
+
+
 class FilterS3CsvToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3CsvMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "FilterS3CsvToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
-            
+
+
 class FilterS3JsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3JsonMixin, EvaluateJsonToDictMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "FilterS3JsonToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
-            
+
+
 class FilterS3ParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3ParquetMixin, EvaluateMakeSerializeableDictMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
         logging.debug(message_debug(997, threading.current_thread().name, "FilterS3ParquetToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
-            
+
+
 class FilterUrlAvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlAvroMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
@@ -2126,7 +2205,6 @@ class FilterUrlJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlMixin, 
         logging.debug(message_debug(997, threading.current_thread().name, "FilterUrlJsonToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
-
 
 # -----------------------------------------------------------------------------
 # *_processor
@@ -2275,7 +2353,7 @@ def dohelper_avro(args, write_thread):
 
 def dohelper_csv(args, write_thread):
     ''' Read file of CSV, print to write_thread. '''
-    
+
     # Get context variables.
 
     config = get_configuration(args)
@@ -2287,7 +2365,7 @@ def dohelper_csv(args, write_thread):
     read_thread = FilterFileCsvToDictQueueThread
     if parsed_file_name.scheme in ['s3']:
         read_thread = FilterS3CsvToDictQueueThread
-        
+
     # Cascading defaults.
 
     options_to_defaults_map = {}
@@ -2388,13 +2466,13 @@ def dohelper_parquet(args, write_thread):
     config = get_configuration(args)
     input_url = config.get("input_url")
     parsed_file_name = urllib.parse.urlparse(input_url)
-    
+
     # Determine Read thread.
 
     read_thread = FilterFileParquetToDictQueueThread
     if parsed_file_name.scheme in ['s3']:
         read_thread = FilterS3ParquetToDictQueueThread
-        
+
     # Cascading defaults.
 
     options_to_defaults_map = {}
@@ -2414,11 +2492,16 @@ def dohelper_parquet(args, write_thread):
         governor=governor
     )
 
-
 # -----------------------------------------------------------------------------
 # do_* functions
 #   Common function signature: do_XXX(args)
 # -----------------------------------------------------------------------------
+
+
+def do_avro_to_azure_queue(args):
+    ''' Read file of JSON, print to Azure Queue. '''
+    write_thread = FilterQueueDictToJsonAzureQueueThread
+    dohelper_avro(args, write_thread)
 
 
 def do_avro_to_kafka(args):
@@ -2449,6 +2532,12 @@ def do_avro_to_stdout(args):
     ''' Read file of AVRO, print to STDOUT. '''
     write_thread = FilterQueueDictToJsonStdoutThread
     dohelper_avro(args, write_thread)
+
+
+def do_csv_to_azure_queue(args):
+    ''' Read file of CSV, print to Azure Queue. '''
+    write_thread = FilterQueueDictToJsonAzureQueueThread
+    dohelper_csv(args, write_thread)
 
 
 def do_csv_to_kafka(args):
@@ -2497,6 +2586,12 @@ def do_docker_acceptance_test(args):
     logging.info(exit_template(config))
 
 
+def do_gzipped_json_to_azure_queue(args):
+    ''' Read file of JSON, print to Azure Queue. '''
+    write_thread = FilterQueueDictToJsonAzureQueueThread
+    dohelper_gzipped_json(args, write_thread)
+
+
 def do_gzipped_json_to_kafka(args):
     ''' Read file of JSON, print to Kafka. '''
     write_thread = FilterQueueDictToJsonKafkaThread
@@ -2527,6 +2622,12 @@ def do_gzipped_json_to_stdout(args):
     dohelper_gzipped_json(args, write_thread)
 
 
+def do_json_to_azure_queue(args):
+    ''' Read file of JSON, print to Azure Queue. '''
+    write_thread = FilterQueueDictToJsonAzureQueueThread
+    dohelper_json(args, write_thread)
+
+
 def do_json_to_kafka(args):
     ''' Read file of JSON, print to Kafka. '''
     write_thread = FilterQueueDictToJsonKafkaThread
@@ -2555,6 +2656,12 @@ def do_json_to_stdout(args):
     ''' Read file of JSON, print to STDOUT. '''
     write_thread = FilterQueueDictToJsonStdoutThread
     dohelper_json(args, write_thread)
+
+
+def do_parquet_to_azure_queue(args):
+    ''' Read file of Parquet, print to Azure Queue. '''
+    write_thread = FilterQueueDictToJsonAzureQueueThread
+    dohelper_parquet(args, write_thread)
 
 
 def do_parquet_to_kafka(args):
@@ -2623,7 +2730,6 @@ def do_version(args):
     ''' Log version information. '''
 
     logging.info(message_info(294, __version__, __updated__))
-
 
 # -----------------------------------------------------------------------------
 # Main
