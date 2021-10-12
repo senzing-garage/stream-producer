@@ -7,7 +7,6 @@ GIT_VERSION := $(shell git describe --always --tags --long --dirty | sed -e 's/\
 
 DOCKER_IMAGE_TAG ?= $(GIT_REPOSITORY_NAME):$(GIT_VERSION)
 DOCKER_IMAGE_NAME := senzing/stream-producer
-BASE_IMAGE ?= debian:10.10
 
 # -----------------------------------------------------------------------------
 # The first "make" target runs as default.
@@ -23,7 +22,6 @@ default: help
 .PHONY: docker-build
 docker-build:
 	docker build \
-		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
 		--tag $(DOCKER_IMAGE_NAME) \
 		--tag $(DOCKER_IMAGE_NAME):$(GIT_VERSION) \
 		.
@@ -39,7 +37,7 @@ docker-rmi-for-build:
 		$(DOCKER_IMAGE_NAME)
 
 .PHONY: clean
-clean: docker-rmi-for-build docker-rmi-for-build-development-cache
+clean: docker-rmi-for-build
 
 # -----------------------------------------------------------------------------
 # Help

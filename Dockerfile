@@ -1,11 +1,11 @@
-ARG BASE_IMAGE=debian:10.10
+ARG BASE_IMAGE=debian:10.10@sha256:e5cfab8012b17d80f93a7f567797b0c8a2839069d4f50e499152162152518663
 FROM ${BASE_IMAGE}
 
-ENV REFRESHED_AT=2021-09-08
+ENV REFRESHED_AT=2021-10-11
 
 LABEL Name="senzing/stream-producer" \
       Maintainer="support@senzing.com" \
-      Version="1.6.1"
+      Version="1.6.2"
 
 HEALTHCHECK CMD ["/app/healthcheck.sh"]
 
@@ -17,7 +17,7 @@ USER root
 
 RUN apt-get update \
  && apt-get -y install \
-    librdkafka-dev \
+      librdkafka-dev \
       python3-dev \
       python3-pip \
  && rm -rf /var/lib/apt/lists/*
@@ -28,7 +28,7 @@ COPY requirements.txt ./
 RUN pip3 install --upgrade pip \
  && pip3 install -r requirements.txt \
  && rm /requirements.txt
- 
+
 # Copy files from repository.
 
 COPY ./rootfs /
