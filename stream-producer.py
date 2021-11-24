@@ -604,6 +604,7 @@ message_dictionary = {
     "300": "senzing-" + SENZING_PRODUCT_ID + "{0:04d}W",
     "310": "Did not send record identified by {0}: {1}. Exceeds SENZING_RECORD_SIZE_MAX by {2} bytes.",
     "311": "Did not send record identified by {0}: {1}. Exceeds queue message size limit by {2} bytes.",
+    "312": "Did not send record because it exceeds queue message size limit of {2} by {1} bytes. It does not have a {0} identifier",
     "404": "Buffer error: {0} for line #{1} '{2}'.",
     "405": "Kafka error: {0} for line #{1} '{2}'.",
     "406": "Not implemented error: {0} for line #{1} '{2}'.",
@@ -1601,10 +1602,13 @@ class PrintKafkaMixin():
 
         new_record_size_in_bytes = len(message.encode('utf-8'))
         if new_record_size_in_bytes + 2 > self.max_message_size_in_bytes:
-            record = json.dumps(message)
-            record_id = record.get(self.record_identifier)
             record_overage = new_record_size_in_bytes + 2 - self.max_message_size_in_bytes
-            logging.warning(message_warning(311, self.record_identifier, record_id, record_overage))
+            record = json.loads(message)
+            record_id = record.get(self.record_identifier)
+            if record_id is not None:            
+                logging.warning(message_warning(311, self.record_identifier, record_id, record_overage))
+            else:
+                logging.warning(message_warning(312, self.record_identifier, record_overage, self.max_message_size_in_bytes))
             return
 
         # Check if the new record would overflow the message and if so, send the existing messages
@@ -1739,10 +1743,13 @@ class PrintRabbitmqMixin():
 
         new_record_size_in_bytes = len(message.encode('utf-8'))
         if new_record_size_in_bytes + 2 > self.max_message_size_in_bytes:
-            record = json.dumps(message)
-            record_id = record.get(self.record_identifier)
             record_overage = new_record_size_in_bytes + 2 - self.max_message_size_in_bytes
-            logging.warning(message_warning(311, self.record_identifier, record_id, record_overage))
+            record = json.loads(message)
+            record_id = record.get(self.record_identifier)
+            if record_id is not None:            
+                logging.warning(message_warning(311, self.record_identifier, record_id, record_overage))
+            else:
+                logging.warning(message_warning(312, self.record_identifier, record_overage, self.max_message_size_in_bytes))
             return
 
         # Check if the new record would overflow the message and if so, send the existing messages
@@ -1856,10 +1863,13 @@ class PrintSqsMixin():
 
         new_record_size_in_bytes = len(message.encode('utf-8'))
         if new_record_size_in_bytes + 2 > self.max_message_size_in_bytes:
-            record = json.dumps(message)
-            record_id = record.get(self.record_identifier)
             record_overage = new_record_size_in_bytes + 2 - self.max_message_size_in_bytes
-            logging.warning(message_warning(311, self.record_identifier, record_id, record_overage))
+            record = json.loads(message)
+            record_id = record.get(self.record_identifier)
+            if record_id is not None:            
+                logging.warning(message_warning(311, self.record_identifier, record_id, record_overage))
+            else:
+                logging.warning(message_warning(312, self.record_identifier, record_overage, self.max_message_size_in_bytes))
             return
 
         # Check if the new record would overflow the message and if so, send the existing messages
