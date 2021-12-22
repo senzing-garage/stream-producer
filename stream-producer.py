@@ -1788,6 +1788,7 @@ class PrintRabbitmqMixin():
 
     def send_message_buffer(self):
         self.message_buffer += ']'
+        # BEM  need to handle Nacks
         self.channel.basic_publish(
             exchange=self.rabbitmq_exchange,
             routing_key=self.rabbitmq_routing_key,
