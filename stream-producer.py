@@ -40,9 +40,9 @@ from azure.servicebus import ServiceBusClient, ServiceBusMessage
 import pyarrow.parquet as pq
 
 __all__ = []
-__version__ = "1.6.0"  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = "1.6.4"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-07-07'
-__updated__ = '2021-09-07'
+__updated__ = '2021-21-23'
 
 SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -1605,7 +1605,7 @@ class PrintKafkaMixin():
             record_overage = new_record_size_in_bytes + 2 - self.max_message_size_in_bytes
             record = json.loads(message)
             record_id = record.get(self.record_identifier)
-            if record_id is not None:            
+            if record_id is not None:
                 logging.warning(message_warning(311, self.record_identifier, record_id, record_overage))
             else:
                 logging.warning(message_warning(312, self.record_identifier, record_overage, self.max_message_size_in_bytes))
@@ -1745,7 +1745,7 @@ class PrintRabbitmqMixin():
             record_overage = new_record_size_in_bytes + 2 - self.max_message_size_in_bytes
             record = json.loads(message)
             record_id = record.get(self.record_identifier)
-            if record_id is not None:            
+            if record_id is not None:
                 logging.warning(message_warning(311, self.record_identifier, record_id, record_overage))
             else:
                 logging.warning(message_warning(312, self.record_identifier, record_overage, self.max_message_size_in_bytes))
@@ -1876,7 +1876,7 @@ class PrintSqsMixin():
             record_overage = new_record_size_in_bytes + 2 - self.max_message_size_in_bytes
             record = json.loads(message)
             record_id = record.get(self.record_identifier)
-            if record_id is not None:            
+            if record_id is not None:
                 logging.warning(message_warning(311, self.record_identifier, record_id, record_overage))
             else:
                 logging.warning(message_warning(312, self.record_identifier, record_overage, self.max_message_size_in_bytes))
