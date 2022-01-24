@@ -6,7 +6,6 @@
 # -----------------------------------------------------------------------------
 
 # Import from standard library. https://docs.python.org/3/library/
-# Import from https://pypi.org/
 
 import argparse
 import asyncio
@@ -34,6 +33,8 @@ import time
 import urllib.parse
 import urllib.request
 
+# Import from https://pypi.org/
+
 from azure.servicebus import ServiceBusClient, ServiceBusMessage
 import boto3
 from botocore import UNSIGNED
@@ -42,8 +43,8 @@ import s3fs
 
 import pyarrow.parquet as pq
 
-
 # Metadata
+
 __all__ = []
 __version__ = "1.6.3"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-07-07'
