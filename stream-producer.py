@@ -5,12 +5,13 @@
 # - Uses a "pipes and filters" design pattern
 # -----------------------------------------------------------------------------
 
+# Import from standard library. https://docs.python.org/3/library/
+
 import argparse
 import asyncio
-import boto3
-from botocore import UNSIGNED
 from botocore.config import Config
 import collections
+import confluent_kafka
 import csv
 import gzip
 import io
@@ -24,7 +25,6 @@ import pika
 import queue
 import random
 import re
-import s3fs
 import signal
 import string
 import sys
@@ -33,11 +33,17 @@ import time
 import urllib.parse
 import urllib.request
 
-import confluent_kafka
-import fastavro
+# Import from https://pypi.org/
 
 from azure.servicebus import ServiceBusClient, ServiceBusMessage
+import boto3
+from botocore import UNSIGNED
+import fastavro
+import s3fs
+
 import pyarrow.parquet as pq
+
+# Metadata
 
 __all__ = []
 __version__ = "1.6.4"  # See https://www.python.org/dev/peps/pep-0396/
@@ -2802,6 +2808,7 @@ if __name__ == "__main__":
         parser.print_help()
         if len(os.getenv("SENZING_DOCKER_LAUNCHED", "")):
             args = argparse.Namespace(subcommand='sleep')
+            subcommand = 'sleep'
             do_sleep(args)
         exit_silently()
 
