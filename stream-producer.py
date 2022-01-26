@@ -46,9 +46,9 @@ import pyarrow.parquet as pq
 # Metadata
 
 __all__ = []
-__version__ = "1.6.3"  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = "1.6.4"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-07-07'
-__updated__ = '2022-01-24'
+__updated__ = '2021-21-23'
 
 SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -1680,7 +1680,6 @@ class PrintRabbitmqMixin():
     def __init__(self, config=None, *args, **kwargs):
         logging.debug(message_debug(996, threading.current_thread().name, "PrintRabbitmqMixin"))
 
-        rabbitmq_delivery_mode = 2
         rabbitmq_host = config.get("rabbitmq_host")
         rabbitmq_password = config.get("rabbitmq_password")
         rabbitmq_port = config.get("rabbitmq_port")
@@ -1705,7 +1704,6 @@ class PrintRabbitmqMixin():
         # Construct Pika objects.
 
         self.rabbitmq_properties = pika.BasicProperties(
-            delivery_mode=rabbitmq_delivery_mode
         )
         credentials = pika.PlainCredentials(
             username=rabbitmq_username,
@@ -1723,6 +1721,7 @@ class PrintRabbitmqMixin():
         try:
             self.connection = pika.BlockingConnection(rabbitmq_connection_parameters)
             self.channel = self.connection.channel()
+            self.channel.confirm_delivery()
             self.channel.exchange_declare(exchange=self.rabbitmq_exchange, passive=rabbitmq_passive_declare)
             message_queue = self.channel.queue_declare(queue=self.rabbitmq_queue, passive=rabbitmq_passive_declare)
 
@@ -1739,7 +1738,7 @@ class PrintRabbitmqMixin():
                 exit_error(414, self.rabbitmq_exchange, self.rabbitmq_queue)
             else:
                 exit_error(410, err)
-        except BaseException as err:
+        except Exception as err:
             exit_error(410, err)
 
     def print(self, message):
@@ -1776,8 +1775,8 @@ class PrintRabbitmqMixin():
             if self.num_messages == self.number_of_records_per_print:
                 self.send_message_buffer()
 
-        except BaseException as err:
-            logging.warning(message_warning(411, err, message))
+        except Exception as err:
+            logging.error(message_error(411, err, message))
 
         # Log progress. Using a "cheap" serialization technique.
         output_counter = self.config.get('output_counter')
@@ -1794,12 +1793,23 @@ class PrintRabbitmqMixin():
 
     def send_message_buffer(self):
         self.message_buffer += ']'
-        self.channel.basic_publish(
-            exchange=self.rabbitmq_exchange,
-            routing_key=self.rabbitmq_routing_key,
-            body=self.message_buffer,
-            properties=self.rabbitmq_properties
-        )
+
+	sent=False
+
+	while not sent:
+	  try:
+            self.channel.basic_publish(
+                 exchange=self.rabbitmq_exchange,
+                 routing_key=self.rabbitmq_routing_key,
+                 body=self.message_buffer,
+                 properties=self.rabbitmq_properties,
+		 mandatory=True
+            )
+	    sent = True
+	  except pika.exceptions.NackError as err:
+	    time.sleep(1)
+	    pass
+
         self.message_buffer = '['
         self.num_messages = 0
 
