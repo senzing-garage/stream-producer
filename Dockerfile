@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=debian:10.11@sha256:94ccfd1c5115a6903cbb415f043a0b04e307be3f37b768cf6d6d3edff0021da3
+ARG BASE_IMAGE=debian:11.2-slim@sha256:b0d53c872fd640c2af2608ba1e693cfc7dedea30abcd8f584b23d583ec6dadc7
 FROM ${BASE_IMAGE}
 
 ENV REFRESHED_AT=2022-01-06
@@ -16,18 +16,18 @@ USER root
 # Install packages via apt.
 
 RUN apt-get update \
- && apt-get -y install \
+      && apt-get -y install \
       librdkafka-dev \
       python3-dev \
       python3-pip \
- && rm -rf /var/lib/apt/lists/*
+      && rm -rf /var/lib/apt/lists/*
 
 # Install packages via PIP.
 
 COPY requirements.txt ./
 RUN pip3 install --upgrade pip \
- && pip3 install -r requirements.txt \
- && rm requirements.txt
+      && pip3 install -r requirements.txt \
+      && rm requirements.txt
 
 # Copy files from repository.
 
