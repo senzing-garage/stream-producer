@@ -16,18 +16,18 @@ USER root
 # Install packages via apt.
 
 RUN apt-get update \
-      && apt-get -y install \
+ && apt-get -y install \
       librdkafka-dev \
       python3-dev \
       python3-pip \
-      && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/*
 
 # Install packages via PIP.
 
 COPY requirements.txt ./
 RUN pip3 install --upgrade pip \
-      && pip3 install -r requirements.txt \
-      && rm requirements.txt
+ && pip3 install -r requirements.txt \
+ && rm requirements.txt
 
 # Copy files from repository.
 
