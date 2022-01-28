@@ -1085,9 +1085,11 @@ class ReadFileAvroMixin():
 class ReadFileCsvMixin():
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(996,
-                                    threading.current_thread().name,
-                                    "ReadFileCsvMixin"))
+        logging.debug(message_debug(
+            996,
+            threading.current_thread().name,
+            "ReadFileCsvMixin"
+        ))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
