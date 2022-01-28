@@ -1841,24 +1841,24 @@ class PrintRabbitmqMixin():
     def send_message_buffer(self):
         self.message_buffer += ']'
 
-    sent = False
+        sent = False
 
-    while not sent:
-        try:
-            self.channel.basic_publish(
-                exchange=self.rabbitmq_exchange,
-                routing_key=self.rabbitmq_routing_key,
-                body=self.message_buffer,
-                properties=self.rabbitmq_properties,
-                mandatory=True
-            )
-            sent = True
-        except pika.exceptions.NackError as err:
-            time.sleep(1)
-            pass
+        while not sent:
+            try:
+                self.channel.basic_publish(
+                    exchange=self.rabbitmq_exchange,
+                    routing_key=self.rabbitmq_routing_key,
+                    body=self.message_buffer,
+                    properties=self.rabbitmq_properties,
+                    mandatory=True
+                )
+                sent = True
+            except pika.exceptions.NackError as err:
+                time.sleep(1)
+                pass
 
-        self.message_buffer = '['
-        self.num_messages = 0
+            self.message_buffer = '['
+            self.num_messages = 0
 
 # -----------------------------------------------------------------------------
 # Class: PrintQueueMixin
