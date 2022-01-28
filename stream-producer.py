@@ -1857,8 +1857,8 @@ class PrintRabbitmqMixin():
                 time.sleep(1)
                 pass
 
-            self.message_buffer = '['
-            self.num_messages = 0
+        self.message_buffer = '['
+        self.num_messages = 0
 
 # -----------------------------------------------------------------------------
 # Class: PrintQueueMixin
