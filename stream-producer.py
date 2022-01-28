@@ -50,7 +50,8 @@ __version__ = "1.6.4"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-07-07'
 __updated__ = '2021-21-23'
 
-SENZING_PRODUCT_ID = "5014"  # See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
+# See https://github.com/Senzing/knowledge-base/blob/master/lists/senzing-product-ids.md
+SENZING_PRODUCT_ID = "5014"
 log_format = '%(asctime)s %(message)s'
 
 # Working with bytes.
@@ -61,7 +62,8 @@ GIGABYTES = 1024 * MEGABYTES
 
 # Random sentinel to indicate end of service
 
-QUEUE_SENTINEL = ".{0}.".format(''.join([random.choice(string.ascii_letters + string.digits) for n in range(32)]))
+QUEUE_SENTINEL = ".{0}.".format(''.join(
+    [random.choice(string.ascii_letters + string.digits) for n in range(32)]))
 
 # The "configuration_locator" describes where configuration variables are in:
 # 1) Command line options, 2) Environment variables, 3) Configuration files, 4) Default values
@@ -561,8 +563,10 @@ def get_parser():
 
     # Parse command line arguments.
 
-    parser = argparse.ArgumentParser(prog="stream-producer.py", description="Queue messages. For more information, see https://github.com/Senzing/stream-producer")
-    subparsers = parser.add_subparsers(dest='subcommand', help='Subcommands (SENZING_SUBCOMMAND):')
+    parser = argparse.ArgumentParser(
+        prog="stream-producer.py", description="Queue messages. For more information, see https://github.com/Senzing/stream-producer")
+    subparsers = parser.add_subparsers(
+        dest='subcommand', help='Subcommands (SENZING_SUBCOMMAND):')
 
     for subcommand_key, subcommand_values in subcommands.items():
         subcommand_help = subcommand_values.get('help', "")
@@ -657,7 +661,8 @@ message_dictionary = {
 
 def message(index, *args):
     index_string = str(index)
-    template = message_dictionary.get(index_string, "No message for index {0}.".format(index_string))
+    template = message_dictionary.get(
+        index_string, "No message for index {0}.".format(index_string))
     return template.format(*args)
 
 
@@ -915,7 +920,8 @@ def exit_template(config):
     stop_time = time.time()
     config['stop_time'] = stop_time
     config['elapsed_time'] = stop_time - config.get('start_time', stop_time)
-    config['rate'] = int(config.get('output_counter', 0) / config.get('elapsed_time', 1))
+    config['rate'] = int(config.get('output_counter', 0) /
+                         config.get('elapsed_time', 1))
     if debug:
         final_config = config
     else:
@@ -1023,8 +1029,10 @@ class MonitorThread(threading.Thread):
                 total = self.config.get(key)
                 interval = total - value
                 stats["{0}_interval".format(key)] = interval
-                stats["{0}_line_number_in_file".format(key)] = self.record_min + total
-                stats["{0}_rate_interval".format(key)] = int(interval / sleep_time_in_seconds)
+                stats["{0}_line_number_in_file".format(
+                    key)] = self.record_min + total
+                stats["{0}_rate_interval".format(key)] = int(
+                    interval / sleep_time_in_seconds)
                 stats["{0}_rate_total".format(key)] = int(total / uptime)
                 stats["{0}_total".format(key)] = total
                 last[key] = total
@@ -1051,7 +1059,8 @@ class MonitorThread(threading.Thread):
 class ReadFileAvroMixin():
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileAvroMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "ReadFileAvroMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
@@ -1076,7 +1085,8 @@ class ReadFileAvroMixin():
 class ReadFileCsvMixin():
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileCsvMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "ReadFileCsvMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
@@ -1085,7 +1095,8 @@ class ReadFileCsvMixin():
         self.counter = 0
 
     def read(self):
-        reader = pandas.read_csv(self.input_url, skipinitialspace=True, dtype=str, chunksize=self.rows_in_chunk, delimiter=self.delimiter)
+        reader = pandas.read_csv(self.input_url, skipinitialspace=True,
+                                 dtype=str, chunksize=self.rows_in_chunk, delimiter=self.delimiter)
         for data_frame in reader:
             data_frame.fillna('', inplace=True)
             for row in data_frame.to_dict(orient="records"):
@@ -1108,7 +1119,8 @@ class ReadFileCsvMixin():
 class ReadFileGzippedMixin():
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileGzippedMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "ReadFileGzippedMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
@@ -1136,7 +1148,8 @@ class ReadFileGzippedMixin():
 class ReadFileMixin():
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "ReadFileMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
@@ -1164,7 +1177,8 @@ class ReadFileMixin():
 class ReadFileParquetMixin():
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileParquetMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "ReadFileParquetMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
@@ -1189,7 +1203,8 @@ class ReadFileParquetMixin():
 class ReadQueueMixin():
 
     def __init__(self, read_queue=None, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadQueueMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "ReadQueueMixin"))
         self.read_queue = read_queue
 
     def read(self):
@@ -1215,7 +1230,8 @@ class ReadQueueMixin():
 class ReadS3AvroMixin():
 
     def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3AvroMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "ReadS3AvroMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
@@ -1228,10 +1244,10 @@ class ReadS3AvroMixin():
         self.S3Key = self.urlParts.path
 
     def read(self):
-      self.fs = s3fs.S3FileSystem(anon=False)
-      self.fs.ls(self.S3Bucket)
+        self.fs = s3fs.S3FileSystem(anon=False)
+        self.fs.ls(self.S3Bucket)
 
-      with self.fs.open(self.S3Bucket + self.S3Key, 'rb') as input_file:
+        with self.fs.open(self.S3Bucket + self.S3Key, 'rb') as input_file:
             avro_reader = fastavro.reader(input_file)
             for record in avro_reader:
                 self.counter += 1
@@ -1249,7 +1265,8 @@ class ReadS3AvroMixin():
 class ReadS3CsvMixin():
 
     def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3CsvMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "ReadS3CsvMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
@@ -1268,25 +1285,27 @@ class ReadS3CsvMixin():
         self.S3Key = self.urlParts.path.lstrip('/')
 
     def read(self):
-      self.response = self.S3_client.get_object(Bucket=self.S3Bucket, Key=self.S3Key)
-      self.body = self.response['Body']
-      self.csv_string = self.body.read().decode('utf-8')
+        self.response = self.S3_client.get_object(
+            Bucket=self.S3Bucket, Key=self.S3Key)
+        self.body = self.response['Body']
+        self.csv_string = self.body.read().decode('utf-8')
 
-      reader = pandas.read_csv(io.StringIO(self.csv_string), skipinitialspace=True, dtype=str, chunksize=self.rows_in_chunk, delimiter=self.delimiter)
+        reader = pandas.read_csv(io.StringIO(self.csv_string), skipinitialspace=True,
+                                 dtype=str, chunksize=self.rows_in_chunk, delimiter=self.delimiter)
 
-      for data_frame in reader:
-        data_frame.fillna('', inplace=True)
-        for row in data_frame.to_dict(orient="records"):
-          # Remove items that have '' value
-          row = {i: j for i, j in row.items() if j != ''}
+        for data_frame in reader:
+            data_frame.fillna('', inplace=True)
+            for row in data_frame.to_dict(orient="records"):
+                # Remove items that have '' value
+                row = {i: j for i, j in row.items() if j != ''}
 
-          self.counter += 1
-          if self.record_min and self.counter < self.record_min:
-            continue
-          if self.record_max and self.counter > self.record_max:
-            break
-          assert isinstance(row, dict)
-          yield row
+                self.counter += 1
+                if self.record_min and self.counter < self.record_min:
+                    continue
+                if self.record_max and self.counter > self.record_max:
+                    break
+                assert isinstance(row, dict)
+                yield row
 
 # -----------------------------------------------------------------------------
 # Class: ReadS3JsosMixin
@@ -1296,7 +1315,8 @@ class ReadS3CsvMixin():
 class ReadS3JsonMixin():
 
     def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3JsonMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "ReadS3JsonMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
@@ -1315,23 +1335,24 @@ class ReadS3JsonMixin():
         self.S3Key = self.urlParts.path.lstrip('/')
 
     def read(self):
-      self.response = self.S3_client.get_object(Bucket=self.S3Bucket, Key=self.S3Key)
-      self.data = self.response["Body"].read().decode()
-      self.data = io.StringIO(self.data)
+        self.response = self.S3_client.get_object(
+            Bucket=self.S3Bucket, Key=self.S3Key)
+        self.data = self.response["Body"].read().decode()
+        self.data = io.StringIO(self.data)
 
-      for line in self.data:
-        self.counter += 1
-        if self.record_min and self.counter < self.record_min:
-           continue
-        if self.record_max and self.counter > self.record_max:
-            break
-        line = line.strip()
-        if not line:
-            continue
-        assert isinstance(line, str)
-        yield line
+        for line in self.data:
+            self.counter += 1
+            if self.record_min and self.counter < self.record_min:
+                continue
+            if self.record_max and self.counter > self.record_max:
+                break
+            line = line.strip()
+            if not line:
+                continue
+            assert isinstance(line, str)
+            yield line
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Class: ReadS3ParquetMixin
 # -----------------------------------------------------------------------------
 
@@ -1339,7 +1360,8 @@ class ReadS3JsonMixin():
 class ReadS3ParquetMixin():
 
     def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadS3ParquetMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "ReadS3ParquetMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
@@ -1354,7 +1376,8 @@ class ReadS3ParquetMixin():
     def read(self):
         self.fs = s3fs.S3FileSystem(anon=False)
 
-        data_frame = pq.ParquetDataset(self.S3Bucket + self.S3Key, filesystem=self.fs).read_pandas().to_pandas()
+        data_frame = pq.ParquetDataset(
+            self.S3Bucket + self.S3Key, filesystem=self.fs).read_pandas().to_pandas()
         for row in data_frame.to_dict(orient="records"):
             self.counter += 1
             if self.record_min and self.counter < self.record_min:
@@ -1372,7 +1395,8 @@ class ReadS3ParquetMixin():
 class ReadUrlAvroMixin():
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadFileAvroMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "ReadFileAvroMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
@@ -1397,7 +1421,8 @@ class ReadUrlAvroMixin():
 class ReadUrlGzippedMixin():
 
     def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadUrlGzippedMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "ReadUrlGzippedMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
@@ -1428,7 +1453,8 @@ class ReadUrlGzippedMixin():
 class ReadUrlMixin():
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "ReadUrlMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "ReadUrlMixin"))
         self.input_url = config.get('input_url')
         self.record_min = config.get('record_min')
         self.record_max = config.get('record_max')
@@ -1469,7 +1495,8 @@ class ReadUrlMixin():
 class EvaluateDictToJsonMixin():
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "EvaluateDictToJsonMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "EvaluateDictToJsonMixin"))
         self.default_data_source = self.config.get('default_data_source', None)
         self.default_entity_type = self.config.get('default_entity_type', None)
 
@@ -1490,7 +1517,8 @@ class EvaluateDictToJsonMixin():
 class EvaluateJsonToDictMixin():
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "EvaluateJsonToDictMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "EvaluateJsonToDictMixin"))
 
     def evaluate(self, message):
         return json.loads(message)
@@ -1503,7 +1531,8 @@ class EvaluateJsonToDictMixin():
 class EvaluateNullObjectMixin():
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "EvaluateNullObjectMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "EvaluateNullObjectMixin"))
 
     def evaluate(self, message):
         return message
@@ -1516,7 +1545,8 @@ class EvaluateNullObjectMixin():
 class EvaluateMakeSerializeableDictMixin():
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "EvaluateMakeSerializeableDictMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "EvaluateMakeSerializeableDictMixin"))
 
     def evaluate(self, message):
         new_message = {}
@@ -1547,12 +1577,15 @@ class EvaluateMakeSerializeableDictMixin():
 class PrintAzureQueueMixin():
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "PrintAzureQueueMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "PrintAzureQueueMixin"))
 
         self.connection_string = config.get("azure_connection_string")
         self.queue_name = config.get("azure_queue_name")
-        self.servicebus_client = ServiceBusClient.from_connection_string(self.connection_string)
-        self.sender = self.servicebus_client.get_queue_sender(queue_name=self.queue_name)
+        self.servicebus_client = ServiceBusClient.from_connection_string(
+            self.connection_string)
+        self.sender = self.servicebus_client.get_queue_sender(
+            queue_name=self.queue_name)
 
     def print(self, message):
         assert isinstance(message, str)
@@ -1572,7 +1605,8 @@ class PrintAzureQueueMixin():
 class PrintKafkaMixin():
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "PrintKafkaMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "PrintKafkaMixin"))
         self.config = config
         self.kafka_poll_interval = config.get("kafka_poll_interval")
         self.kafka_topic = config.get('kafka_topic')
@@ -1597,9 +1631,11 @@ class PrintKafkaMixin():
         self.kafka_producer = confluent_kafka.Producer(kafka_configuration)
 
     def on_kafka_delivery(self, error, message):
-        logging.debug(message_debug(103, message.topic(), message.value(), message.error(), error))
+        logging.debug(message_debug(103, message.topic(),
+                      message.value(), message.error(), error))
         if error is not None:
-            logging.warning(message_warning(408, message.topic(), message.value(), message.error(), error))
+            logging.warning(message_warning(408, message.topic(),
+                            message.value(), message.error(), error))
 
     def print(self, message):
         assert isinstance(message, str)
@@ -1612,9 +1648,11 @@ class PrintKafkaMixin():
             record = json.loads(message)
             record_id = record.get(self.record_identifier)
             if record_id is not None:
-                logging.warning(message_warning(311, self.record_identifier, record_id, record_overage))
+                logging.warning(message_warning(
+                    311, self.record_identifier, record_id, record_overage))
             else:
-                logging.warning(message_warning(312, self.record_identifier, record_overage, self.max_message_size_in_bytes))
+                logging.warning(message_warning(
+                    312, self.record_identifier, record_overage, self.max_message_size_in_bytes))
             return
 
         # Check if the new record would overflow the message and if so, send the existing messages
@@ -1648,7 +1686,8 @@ class PrintKafkaMixin():
         if output_counter % self.record_monitor == 0:
             if output_counter != self.config.get('output_counter_reported'):
                 self.config['output_counter_reported'] = output_counter
-                logging.info(message_debug(104, threading.current_thread().name, output_counter))
+                logging.info(message_debug(
+                    104, threading.current_thread().name, output_counter))
 
         # Poll Kafka for callbacks.
 
@@ -1663,10 +1702,10 @@ class PrintKafkaMixin():
     def send_message_buffer(self):
         self.message_buffer += ']'
         self.kafka_producer.produce(
-                    self.kafka_topic,
-                    self.message_buffer,
-                    on_delivery=self.on_kafka_delivery
-                )
+            self.kafka_topic,
+            self.message_buffer,
+            on_delivery=self.on_kafka_delivery
+        )
         self.message_buffer = '['
         self.num_messages = 0
 
@@ -1678,7 +1717,8 @@ class PrintKafkaMixin():
 class PrintRabbitmqMixin():
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "PrintRabbitmqMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "PrintRabbitmqMixin"))
 
         rabbitmq_host = config.get("rabbitmq_host")
         rabbitmq_password = config.get("rabbitmq_password")
@@ -1719,16 +1759,20 @@ class PrintRabbitmqMixin():
         # Open connection to RabbitMQ.
 
         try:
-            self.connection = pika.BlockingConnection(rabbitmq_connection_parameters)
+            self.connection = pika.BlockingConnection(
+                rabbitmq_connection_parameters)
             self.channel = self.connection.channel()
             self.channel.confirm_delivery()
-            self.channel.exchange_declare(exchange=self.rabbitmq_exchange, passive=rabbitmq_passive_declare)
-            message_queue = self.channel.queue_declare(queue=self.rabbitmq_queue, passive=rabbitmq_passive_declare)
+            self.channel.exchange_declare(
+                exchange=self.rabbitmq_exchange, passive=rabbitmq_passive_declare)
+            message_queue = self.channel.queue_declare(
+                queue=self.rabbitmq_queue, passive=rabbitmq_passive_declare)
 
             # if we are actively declaring, then we need to bind. If passive declare, we assume it is already set up
 
             if not rabbitmq_passive_declare:
-                self.channel.queue_bind(exchange=self.rabbitmq_exchange, routing_key=self.rabbitmq_routing_key, queue=message_queue.method.queue)
+                self.channel.queue_bind(
+                    exchange=self.rabbitmq_exchange, routing_key=self.rabbitmq_routing_key, queue=message_queue.method.queue)
         except (pika.exceptions.AMQPConnectionError) as err:
             exit_error(412, err, rabbitmq_host)
         except (pika.exceptions.ChannelClosedByBroker) as err:
@@ -1752,9 +1796,11 @@ class PrintRabbitmqMixin():
             record = json.loads(message)
             record_id = record.get(self.record_identifier)
             if record_id is not None:
-                logging.warning(message_warning(311, self.record_identifier, record_id, record_overage))
+                logging.warning(message_warning(
+                    311, self.record_identifier, record_id, record_overage))
             else:
-                logging.warning(message_warning(312, self.record_identifier, record_overage, self.max_message_size_in_bytes))
+                logging.warning(message_warning(
+                    312, self.record_identifier, record_overage, self.max_message_size_in_bytes))
             return
 
         # Check if the new record would overflow the message and if so, send the existing messages
@@ -1783,7 +1829,8 @@ class PrintRabbitmqMixin():
         if output_counter % self.record_monitor == 0:
             if output_counter != self.config.get('output_counter_reported'):
                 self.config['output_counter_reported'] = output_counter
-                logging.info(message_debug(104, threading.current_thread().name, output_counter))
+                logging.info(message_debug(
+                    104, threading.current_thread().name, output_counter))
 
     def close(self):
         if self.num_messages > 0:
@@ -1794,21 +1841,21 @@ class PrintRabbitmqMixin():
     def send_message_buffer(self):
         self.message_buffer += ']'
 
-	sent=False
+    sent = False
 
-	while not sent:
-	  try:
+    while not sent:
+        try:
             self.channel.basic_publish(
-                 exchange=self.rabbitmq_exchange,
-                 routing_key=self.rabbitmq_routing_key,
-                 body=self.message_buffer,
-                 properties=self.rabbitmq_properties,
-		 mandatory=True
+                exchange=self.rabbitmq_exchange,
+                routing_key=self.rabbitmq_routing_key,
+                body=self.message_buffer,
+                properties=self.rabbitmq_properties,
+                mandatory=True
             )
-	    sent = True
-	  except pika.exceptions.NackError as err:
-	    time.sleep(1)
-	    pass
+            sent = True
+        except pika.exceptions.NackError as err:
+            time.sleep(1)
+            pass
 
         self.message_buffer = '['
         self.num_messages = 0
@@ -1821,7 +1868,8 @@ class PrintRabbitmqMixin():
 class PrintQueueMixin():
 
     def __init__(self, print_queue=None, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "PrintQueueMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "PrintQueueMixin"))
         self.print_queue = print_queue
 
     def print(self, message):
@@ -1839,7 +1887,8 @@ class PrintQueueMixin():
 class PrintSqsMixin():
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "PrintSqsMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "PrintSqsMixin"))
         config = kwargs.get("config", {})
         self.counter = 0
         self.queue_url = config.get("sqs_queue_url")
@@ -1867,9 +1916,12 @@ class PrintSqsMixin():
 
         # Query queue for max message size, then leave some overhead space in case SQS needs some itself
 
-        response = self.sqs.get_queue_attributes(QueueUrl=self.queue_url, AttributeNames=['MaximumMessageSize'])
-        self.max_message_size_in_bytes = response.get('Attributes', { "MaximumMessageSize": 256 * 1024}).get('MaximumMessageSize')
-        self.max_message_size_in_bytes = int(self.max_message_size_in_bytes) - (32 * 1024)
+        response = self.sqs.get_queue_attributes(
+            QueueUrl=self.queue_url, AttributeNames=['MaximumMessageSize'])
+        self.max_message_size_in_bytes = response.get(
+            'Attributes', {"MaximumMessageSize": 256 * 1024}).get('MaximumMessageSize')
+        self.max_message_size_in_bytes = int(
+            self.max_message_size_in_bytes) - (32 * 1024)
 
     def print(self, message):
         self.counter += 1
@@ -1883,9 +1935,11 @@ class PrintSqsMixin():
             record = json.loads(message)
             record_id = record.get(self.record_identifier)
             if record_id is not None:
-                logging.warning(message_warning(311, self.record_identifier, record_id, record_overage))
+                logging.warning(message_warning(
+                    311, self.record_identifier, record_id, record_overage))
             else:
-                logging.warning(message_warning(312, self.record_identifier, record_overage, self.max_message_size_in_bytes))
+                logging.warning(message_warning(
+                    312, self.record_identifier, record_overage, self.max_message_size_in_bytes))
             return
 
         # Check if the new record would overflow the message and if so, send the existing messages
@@ -1904,7 +1958,8 @@ class PrintSqsMixin():
             self.send_message_buffer()
 
         if self.counter % self.record_monitor == 0:
-            logging.info(message_debug(104, threading.current_thread().name, self.counter))
+            logging.info(message_debug(
+                104, threading.current_thread().name, self.counter))
 
     def close(self):
         if self.num_messages > 0:
@@ -1929,7 +1984,8 @@ class PrintSqsMixin():
 class PrintSqsBatchMixin():
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "PrintSqsMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "PrintSqsMixin"))
         config = kwargs.get("config", {})
         self.counter = 0
         self.queue_url = config.get("sqs_queue_url")
@@ -1968,7 +2024,8 @@ class PrintSqsBatchMixin():
             )
             self.messages = []
         if self.counter % self.record_monitor == 0:
-            logging.info(message_debug(104, threading.current_thread().name, self.counter))
+            logging.info(message_debug(
+                104, threading.current_thread().name, self.counter))
 
     def close(self):
         entries = []
@@ -1994,7 +2051,8 @@ class PrintSqsBatchMixin():
 class PrintStdoutMixin():
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(996, threading.current_thread().name, "PrintStdoutMixin"))
+        logging.debug(message_debug(
+            996, threading.current_thread().name, "PrintStdoutMixin"))
         config = kwargs.get("config", {})
         self.counter = 0
         self.record_monitor = config.get("record_monitor")
@@ -2004,7 +2062,8 @@ class PrintStdoutMixin():
         assert isinstance(message, str)
         print(message)
         if self.counter % self.record_monitor == 0:
-            logging.info(message_debug(104, threading.current_thread().name, self.counter))
+            logging.info(message_debug(
+                104, threading.current_thread().name, self.counter))
 
     def close(self):
         pass
@@ -2026,7 +2085,8 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
 
     def __init__(self, config=None, counter_name=None, governor=None, *args, **kwargs):
         threading.Thread.__init__(self)
-        logging.debug(message_debug(997, threading.current_thread().name, "ReadEvaluatePrintLoopThread"))
+        logging.debug(message_debug(
+            997, threading.current_thread().name, "ReadEvaluatePrintLoopThread"))
         self.config = config
         self.counter_name = counter_name
         self.governor = governor
@@ -2040,7 +2100,8 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
         assert isinstance(record_json, str)
         record_overage = len(record_json) - self.record_size_max
         record_id = record.get(self.record_identifier)
-        logging.warning(message_warning(310, self.record_identifier, record_id, record_overage))
+        logging.warning(message_warning(
+            310, self.record_identifier, record_id, record_overage))
 
     def run(self):
         '''Read-Evaluate-Print Loop (REPL).'''
@@ -2062,7 +2123,8 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
                     continue
 
             self.govern()
-            logging.debug(message_debug(902, threading.current_thread().name, self.counter_name, message))
+            logging.debug(message_debug(
+                902, threading.current_thread().name, self.counter_name, message))
             self.print(self.evaluate(message))
             self.config[self.counter_name] += 1
 
@@ -2092,7 +2154,8 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
 class FilterFileAvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileAvroMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterFileAvroToDictQueueThread"))
+        logging.debug(message_debug(
+            997, threading.current_thread().name, "FilterFileAvroToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -2100,7 +2163,8 @@ class FilterFileAvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileAvroM
 class FilterFileCsvToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileCsvMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterFileCsvToDictQueueThread"))
+        logging.debug(message_debug(
+            997, threading.current_thread().name, "FilterFileCsvToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -2108,7 +2172,8 @@ class FilterFileCsvToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileCsvMix
 class FilterFileGzippedJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileGzippedMixin, EvaluateJsonToDictMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterFileGzippedJsonToDictQueueThread"))
+        logging.debug(message_debug(997, threading.current_thread(
+        ).name, "FilterFileGzippedJsonToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -2116,7 +2181,8 @@ class FilterFileGzippedJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFi
 class FilterFileJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileMixin, EvaluateJsonToDictMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterFileJsonToDictQueueThread"))
+        logging.debug(message_debug(
+            997, threading.current_thread().name, "FilterFileJsonToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -2124,7 +2190,8 @@ class FilterFileJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileMixin
 class FilterFileParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileParquetMixin, EvaluateMakeSerializeableDictMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterFileParquetToDictQueueThread"))
+        logging.debug(message_debug(
+            997, threading.current_thread().name, "FilterFileParquetToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -2132,7 +2199,8 @@ class FilterFileParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFilePa
 class FilterQueueDictToJsonAzureQueueThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintAzureQueueMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonAzureQueueThread"))
+        logging.debug(message_debug(997, threading.current_thread(
+        ).name, "FilterQueueDictToJsonAzureQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -2140,7 +2208,8 @@ class FilterQueueDictToJsonAzureQueueThread(ReadEvaluatePrintLoopThread, ReadQue
 class FilterQueueDictToJsonKafkaThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintKafkaMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonKafkaThread"))
+        logging.debug(message_debug(
+            997, threading.current_thread().name, "FilterQueueDictToJsonKafkaThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -2148,7 +2217,8 @@ class FilterQueueDictToJsonKafkaThread(ReadEvaluatePrintLoopThread, ReadQueueMix
 class FilterQueueDictToJsonRabbitmqThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintRabbitmqMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonRabbitmqThread"))
+        logging.debug(message_debug(997, threading.current_thread(
+        ).name, "FilterQueueDictToJsonRabbitmqThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -2156,7 +2226,8 @@ class FilterQueueDictToJsonRabbitmqThread(ReadEvaluatePrintLoopThread, ReadQueue
 class FilterQueueDictToJsonSqsThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintSqsMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonSqsThread"))
+        logging.debug(message_debug(
+            997, threading.current_thread().name, "FilterQueueDictToJsonSqsThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -2164,7 +2235,8 @@ class FilterQueueDictToJsonSqsThread(ReadEvaluatePrintLoopThread, ReadQueueMixin
 class FilterQueueDictToJsonSqsBatchThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintSqsBatchMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonSqsBatchThread"))
+        logging.debug(message_debug(997, threading.current_thread(
+        ).name, "FilterQueueDictToJsonSqsBatchThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -2172,7 +2244,8 @@ class FilterQueueDictToJsonSqsBatchThread(ReadEvaluatePrintLoopThread, ReadQueue
 class FilterQueueDictToJsonStdoutThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintStdoutMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterQueueDictToJsonStdoutThread"))
+        logging.debug(message_debug(
+            997, threading.current_thread().name, "FilterQueueDictToJsonStdoutThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -2180,7 +2253,8 @@ class FilterQueueDictToJsonStdoutThread(ReadEvaluatePrintLoopThread, ReadQueueMi
 class FilterS3AvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3AvroMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterS3AvroToDictQueueThread"))
+        logging.debug(message_debug(
+            997, threading.current_thread().name, "FilterS3AvroToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -2188,7 +2262,8 @@ class FilterS3AvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3AvroMixin
 class FilterS3CsvToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3CsvMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterS3CsvToDictQueueThread"))
+        logging.debug(message_debug(
+            997, threading.current_thread().name, "FilterS3CsvToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -2196,7 +2271,8 @@ class FilterS3CsvToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3CsvMixin, 
 class FilterS3JsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3JsonMixin, EvaluateJsonToDictMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterS3JsonToDictQueueThread"))
+        logging.debug(message_debug(
+            997, threading.current_thread().name, "FilterS3JsonToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -2204,7 +2280,8 @@ class FilterS3JsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3JsonMixin
 class FilterS3ParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3ParquetMixin, EvaluateMakeSerializeableDictMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterS3ParquetToDictQueueThread"))
+        logging.debug(message_debug(
+            997, threading.current_thread().name, "FilterS3ParquetToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -2212,7 +2289,8 @@ class FilterS3ParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3Parque
 class FilterUrlAvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlAvroMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterUrlAvroToDictQueueThread"))
+        logging.debug(message_debug(
+            997, threading.current_thread().name, "FilterUrlAvroToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -2220,7 +2298,8 @@ class FilterUrlAvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlAvroMix
 class FilterUrlGzippedJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlGzippedMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterUrlGzippedJsonToDictQueueThread"))
+        logging.debug(message_debug(997, threading.current_thread(
+        ).name, "FilterUrlGzippedJsonToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -2228,7 +2307,8 @@ class FilterUrlGzippedJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrl
 class FilterUrlJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlMixin, EvaluateNullObjectMixin, PrintQueueMixin):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread().name, "FilterUrlJsonToDictQueueThread"))
+        logging.debug(message_debug(
+            997, threading.current_thread().name, "FilterUrlJsonToDictQueueThread"))
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
@@ -2306,7 +2386,8 @@ def pipeline_read_write(
                 read_queue=read_queue,
                 governor=governor
             )
-            thread.name = "Process-0-{0}-{1}".format(thread.__class__.__name__, i)
+            thread.name = "Process-0-{0}-{1}".format(
+                thread.__class__.__name__, i)
             threads.append(thread)
             thread.start()
 
