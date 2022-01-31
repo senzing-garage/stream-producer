@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 [markdownlint](https://dlaa.me/markdownlint/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.6] - 2021-01-31
+
+### Changed in 1.6.6
+
+ - Added support for Kafka configuration (`SENZING_KAFKA_CONFIGURATION`)
+
 ## [1.6.5] - 2021-01-28
 
 ### Changed in 1.6.5
