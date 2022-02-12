@@ -119,6 +119,11 @@ configuration_locator = {
         "env": "SENZING_KAFKA_BOOTSTRAP_SERVER",
         "cli": "kafka-bootstrap-server",
     },
+    "kafka_configuration": {
+        "default": {},
+        "env": "SENZING_KAFKA_CONFIGURATION",
+        "cli": "kafka-configuration",
+    },
     "kafka_group": {
         "default": "senzing-kafka-group",
         "env": "SENZING_KAFKA_GROUP",
@@ -482,6 +487,11 @@ def get_parser():
                 "dest": "kafka_bootstrap_server",
                 "metavar": "SENZING_KAFKA_BOOTSTRAP_SERVER",
                 "help": "Kafka bootstrap server. Default: localhost:9092"
+            },
+            "--kafka-configuration": {
+                "dest": "kafka_configuration",
+                "metavar": "SENZING_KAFKA_CONFIGURATION",
+                "help": "A JSON string with extra configuration parameters. Default: none"
             },
             "--kafka-group": {
                 "dest": "kafka_group",
@@ -1625,11 +1635,17 @@ class PrintKafkaMixin():
         if self.number_of_records_per_print <= 0:
             self.number_of_records_per_print = sys.maxsize
 
+        # Construct Kafka configuration.
+
         kafka_configuration = {
             'bootstrap.servers': config.get('kafka_bootstrap_server')
         }
         if config.get('kafka_group'):
             kafka_configuration['group.id'] = config.get('kafka_group')
+
+        kafka_configuration.update(json.loads(self.config.get('kafka_configuration')))
+
+        # Create Kafka producer
 
         self.kafka_producer = confluent_kafka.Producer(kafka_configuration)
 
