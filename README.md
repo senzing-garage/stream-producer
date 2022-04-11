@@ -269,7 +269,7 @@ see [Environment Variables](https://github.com/Senzing/knowledge-base/blob/maste
     ```console
     sudo docker build \
       --tag senzing/stream-producer \
-      https://github.com/senzing/stream-producer.git
+      https://github.com/senzing/stream-producer.git#main
     ```
 
 1. **Option #2:** Using `docker` command and local repository.
