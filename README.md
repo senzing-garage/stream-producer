@@ -87,7 +87,7 @@ optional arguments:
 
 At [Senzing](http://senzing.com),
 we strive to create GitHub documentation in a
-"[don't make me think](https://github.com/Senzing/knowledge-base/blob/master/WHATIS/dont-make-me-think.md)" style.
+"[don't make me think](https://github.com/Senzing/knowledge-base/blob/main/WHATIS/dont-make-me-think.md)" style.
 For the most part, instructions are copy and paste.
 Whenever thinking is needed, it's marked with a "thinking" icon :thinking:.
 Whenever customization is needed, it's marked with a "pencil" icon :pencil2:.
@@ -112,7 +112,7 @@ describing where we can improve.   Now on with the show...
 - **Space:** This repository and demonstration require 6 GB free disk space.
 - **Time:** Budget 40 minutes to get the demonstration up-and-running, depending on CPU and network speeds.
 - **Background knowledge:** This repository assumes a working knowledge of:
-  - [Docker](https://github.com/Senzing/knowledge-base/blob/master/WHATIS/docker.md)
+  - [Docker](https://github.com/Senzing/knowledge-base/blob/main/WHATIS/docker.md)
 
 ## Demonstrate using Command Line Interface
 
@@ -125,11 +125,11 @@ These are "one-time tasks" which may already have been completed.
    Example:
 
     ```console
-    pip3 install -r https://raw.githubusercontent.com/Senzing/stream-producer/master/requirements.txt
+    pip3 install -r https://raw.githubusercontent.com/Senzing/stream-producer/main/requirements.txt
     ```
 
     1. See [requirements.txt](requirements.txt) for list.
-        1. [Installation hints](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/install-python-dependencies.md)
+        1. [Installation hints](https://github.com/Senzing/knowledge-base/blob/main/HOWTO/install-python-dependencies.md)
 
 ### Download
 
@@ -150,7 +150,7 @@ These are "one-time tasks" which may already have been completed.
         ```console
         curl -X GET \
           --output ${SENZING_DOWNLOAD_FILE} \
-          https://raw.githubusercontent.com/Senzing/stream-producer/master/stream-producer.py
+          https://raw.githubusercontent.com/Senzing/stream-producer/main/stream-producer.py
         ```
 
     1. Make file executable.
@@ -182,7 +182,7 @@ These are "one-time tasks" which may already have been completed.
 These are "one-time tasks" which may already have been completed.
 
 1. The following software programs need to be installed:
-    1. [docker](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/install-docker.md)
+    1. [docker](https://github.com/Senzing/knowledge-base/blob/main/HOWTO/install-docker.md)
 
 ### Docker network
 
@@ -242,14 +242,14 @@ The following instructions are used when modifying and building the Docker image
 These are "one-time tasks" which may already have been completed.
 
 1. The following software programs need to be installed:
-    1. [git](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/install-git.md)
-    1. [make](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/install-make.md)
-    1. [docker](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/install-docker.md)
+    1. [git](https://github.com/Senzing/knowledge-base/blob/main/HOWTO/install-git.md)
+    1. [make](https://github.com/Senzing/knowledge-base/blob/main/HOWTO/install-make.md)
+    1. [docker](https://github.com/Senzing/knowledge-base/blob/main/HOWTO/install-docker.md)
 
 ### Clone repository
 
 For more information on environment variables,
-see [Environment Variables](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md).
+see [Environment Variables](https://github.com/Senzing/knowledge-base/blob/main/lists/environment-variables.md).
 
 1. Set these environment variable values:
 
@@ -260,7 +260,7 @@ see [Environment Variables](https://github.com/Senzing/knowledge-base/blob/maste
     export GIT_REPOSITORY_DIR="${GIT_ACCOUNT_DIR}/${GIT_REPOSITORY}"
     ```
 
-1. Using the environment variables values just set, follow steps in [clone-repository](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/clone-repository.md) to install the Git repository.
+1. Using the environment variables values just set, follow steps in [clone-repository](https://github.com/Senzing/knowledge-base/blob/main/HOWTO/clone-repository.md) to install the Git repository.
 
 ### Build Docker image
 
@@ -333,7 +333,7 @@ This example shows how to load a file of JSONlines onto a RabbitMQ queue using t
 1. :thinking: **Optional:** If limiting the number of records is desired, identify the maximum number of records to send.
    To load all records in the file, set the value to "0".
    For more information, see
-   [SENZING_RECORD_MAX](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md#senzing_record_max)
+   [SENZING_RECORD_MAX](https://github.com/Senzing/knowledge-base/blob/main/lists/environment-variables.md#senzing_record_max)
    Example:
 
     ```console
@@ -366,7 +366,7 @@ This example shows how to load a file of JSONlines onto an AWS SQS queue using t
 
 1. :pencil2: For AWS access, set environment variables.
    For more information, see
-   [How to set AWS environment variables](https://github.com/Senzing/knowledge-base/blob/master/HOWTO/set-aws-environment-variables.md)
+   [How to set AWS environment variables](https://github.com/Senzing/knowledge-base/blob/main/HOWTO/set-aws-environment-variables.md)
    Example:
 
     ```console
@@ -399,7 +399,7 @@ This example shows how to load a file of JSONlines onto an AWS SQS queue using t
 1. :thinking: **Optional:** If limiting the number of records is desired, identify the maximum number of records to send.
    To load all records in the file, set the value to "0".
    For more information, see
-   [SENZING_RECORD_MAX](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md#senzing_record_max)
+   [SENZING_RECORD_MAX](https://github.com/Senzing/knowledge-base/blob/main/lists/environment-variables.md#senzing_record_max)
    Example:
 
     ```console
@@ -428,7 +428,7 @@ The following examples require initialization described in
 
 1. Example docker and docker-compose invocations can be seen in
    [Tests](tests/README.md#test-docker)
-1. There is a [tutorial](https://github.com/Senzing/docker-compose-demo/tree/master/docs/docker-compose-sqs-postgresql-advanced) showing AWS SQS usage.
+1. There is a [tutorial](https://github.com/Senzing/docker-compose-demo/tree/main/docs/docker-compose-sqs-postgresql-advanced) showing AWS SQS usage.
 
 1. `docker run` command for populating Amazon SQS.
    Example:
@@ -454,7 +454,7 @@ The following examples require initialization described in
 
 Configuration values specified by environment variable or command line parameter.
 
-- **[SENZING_NETWORK](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md#senzing_network)**
+- **[SENZING_NETWORK](https://github.com/Senzing/knowledge-base/blob/main/lists/environment-variables.md#senzing_network)**
 
 ### AWS configuration
 
@@ -465,9 +465,9 @@ This library may be configured via environment variables  or `~/.aws/config` fil
 
 Example environment variables for configuration:
 
-- **[AWS_ACCESS_KEY_ID](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md#aws_access_key_id)**
-- **[AWS_SECRET_ACCESS_KEY](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md#aws_secret_access_key)**
-- **[AWS_DEFAULT_REGION](https://github.com/Senzing/knowledge-base/blob/master/lists/environment-variables.md#aws_default_region)**
+- **[AWS_ACCESS_KEY_ID](https://github.com/Senzing/knowledge-base/blob/main/lists/environment-variables.md#aws_access_key_id)**
+- **[AWS_SECRET_ACCESS_KEY](https://github.com/Senzing/knowledge-base/blob/main/lists/environment-variables.md#aws_secret_access_key)**
+- **[AWS_DEFAULT_REGION](https://github.com/Senzing/knowledge-base/blob/main/lists/environment-variables.md#aws_default_region)**
 
 References:
 
