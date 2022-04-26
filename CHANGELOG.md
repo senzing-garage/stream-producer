@@ -6,13 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 [markdownlint](https://dlaa.me/markdownlint/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.6.6] - 2021-01-31
+## [1.7.0] - 2022-04-27
+
+### Changed in 1.7.0
+
+- Added support for Stream loader directives
+  - `SENZING_STREAM_LOADER_DIRECTIVE_NAME`
+  - `SENZING_STREAM_LOADER_DIRECTIVE_ACTION`
+
+## [1.6.6] - 2022-01-31
 
 ### Changed in 1.6.6
 
- - Added support for Kafka configuration (`SENZING_KAFKA_CONFIGURATION`)
+- Added support for Kafka configuration (`SENZING_KAFKA_CONFIGURATION`)
 
-## [1.6.5] - 2021-01-28
+## [1.6.5] - 2022-01-28
 
 ### Changed in 1.6.5
 
