@@ -4,7 +4,9 @@ ignore=
 disable=
     broad-except,
     consider-using-f-string,
+    consider-using-with,
     dangerous-default-value,
+    duplicate-code,
     import-error,
     invalid-name,
     keyword-arg-before-vararg,
@@ -23,4 +25,6 @@ disable=
     too-many-instance-attributes,
     too-many-lines,
     too-many-locals,
+    unnecessary-dict-index-lookup,
+    unspecified-encoding,
     unused-argument,
