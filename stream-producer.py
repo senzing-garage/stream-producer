@@ -8,11 +8,6 @@
 # Import from standard library. https://docs.python.org/3/library/
 
 import argparse
-import asyncio
-from botocore.config import Config
-import collections
-import confluent_kafka
-import csv
 import gzip
 import io
 import json
@@ -20,9 +15,6 @@ import linecache
 import logging
 import multiprocessing
 import os
-import pandas
-import pika
-import queue
 import random
 import re
 import signal
@@ -35,13 +27,14 @@ import urllib.request
 
 # Import from https://pypi.org/
 
-from azure.servicebus import ServiceBusClient, ServiceBusMessage
 import boto3
-from botocore import UNSIGNED
+import confluent_kafka
 import fastavro
-import s3fs
-
+import pandas
+import pika
 import pyarrow.parquet as pq
+import s3fs
+from azure.servicebus import ServiceBusClient, ServiceBusMessage
 
 # Metadata
 
@@ -234,6 +227,16 @@ configuration_locator = {
         "env": "SENZING_SLEEP_TIME_IN_SECONDS",
         "cli": "sleep-time-in-seconds"
     },
+    "stream_loader_directive_action": {
+        "default": "addRecord",
+        "env": "SENZING_STREAM_LOADER_DIRECTIVE_ACTION",
+        "cli": "stream-loader-directive-action"
+    },
+    "stream_loader_directive_name": {
+        "default": None,
+        "env": "SENZING_STREAM_LOADER_DIRECTIVE_NAME",
+        "cli": "stream-loader-directive-name"
+    },
     "sqs_delay_seconds": {
         "default": 0,
         "env": "SENZING_SQS_DELAY_SECONDS",
@@ -272,123 +275,123 @@ def get_parser():
     subcommands = {
         'avro-to-azure-queue': {
             "help": 'Read Avro file and send to Azure Queue.',
-            "argument_aspects": ["input-url", "avro", "azure"]
+            "argument_aspects": ["input-url", "avro", "azure", "transform"]
         },
         'avro-to-kafka': {
             "help": 'Read Avro file and send to Kafka.',
-            "argument_aspects": ["input-url", "avro", "kafka"]
+            "argument_aspects": ["input-url", "avro", "kafka", "transform"]
         },
         'avro-to-rabbitmq': {
             "help": 'Read Avro file and send to RabbitMQ.',
-            "argument_aspects": ["input-url", "avro", "rabbitmq"]
+            "argument_aspects": ["input-url", "avro", "rabbitmq", "transform"]
         },
         'avro-to-sqs': {
             "help": 'Read Avro file and print to AWS SQS.',
-            "argument_aspects": ["input-url", "avro", "sqs"]
+            "argument_aspects": ["input-url", "avro", "sqs", "transform"]
         },
         'avro-to-sqs-batch': {
             "help": 'Read Avro file and print to AWS SQS using batch. DEPRECATED: Use avro-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
-            "argument_aspects": ["input-url", "avro", "sqs"]
+            "argument_aspects": ["input-url", "avro", "sqs", "transform"]
         },
         'avro-to-stdout': {
             "help": 'Read Avro file and print to STDOUT.',
-            "argument_aspects": ["input-url", "avro", "stdout"]
+            "argument_aspects": ["input-url", "avro", "stdout", "transform"]
         },
         'csv-to-azure-queue': {
             "help": 'Read CSV file and send to Azure Queue.',
-            "argument_aspects": ["input-url", "csv", "azure"]
+            "argument_aspects": ["input-url", "csv", "azure", "transform"]
         },
         'csv-to-kafka': {
             "help": 'Read CSV file and send to Kafka.',
-            "argument_aspects": ["input-url", "csv", "kafka"]
+            "argument_aspects": ["input-url", "csv", "kafka", "transform"]
         },
         'csv-to-rabbitmq': {
             "help": 'Read CSV file and send to RabbitMQ.',
-            "argument_aspects": ["input-url", "csv", "rabbitmq"]
+            "argument_aspects": ["input-url", "csv", "rabbitmq", "transform"]
         },
         'csv-to-sqs': {
             "help": 'Read CSV file and print to SQS.',
-            "argument_aspects": ["input-url", "csv", "sqs"]
+            "argument_aspects": ["input-url", "csv", "sqs", "transform"]
         },
         'csv-to-sqs-batch': {
             "help": 'Read CSV file and print to SQS using batch. DEPRECATED: Use csv-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
-            "argument_aspects": ["input-url", "csv", "sqs"]
+            "argument_aspects": ["input-url", "csv", "sqs", "transform"]
         },
         'csv-to-stdout': {
             "help": 'Read CSV file and print to STDOUT.',
-            "argument_aspects": ["input-url", "csv", "stdout"]
+            "argument_aspects": ["input-url", "csv", "stdout", "transform"]
         },
         'gzipped-json-to-azure-queue': {
             "help": 'Read gzipped JSON file and send to Azure Queue.',
-            "argument_aspects": ["input-url", "json", "azure"]
+            "argument_aspects": ["input-url", "json", "azure", "transform"]
         },
         'gzipped-json-to-kafka': {
             "help": 'Read gzipped JSON file and send to Kafka.',
-            "argument_aspects": ["input-url", "json", "kafka"]
+            "argument_aspects": ["input-url", "json", "kafka", "transform"]
         },
         'gzipped-json-to-rabbitmq': {
             "help": 'Read gzipped JSON file and send to RabbitMQ.',
-            "argument_aspects": ["input-url", "json", "rabbitmq"]
+            "argument_aspects": ["input-url", "json", "rabbitmq", "transform"]
         },
         'gzipped-json-to-sqs': {
             "help": 'Read gzipped JSON file and send to AWS SQS.',
-            "argument_aspects": ["input-url", "json", "sqs"]
+            "argument_aspects": ["input-url", "json", "sqs", "transform"]
         },
         'gzipped-json-to-sqs-batch': {
             "help": 'Read gzipped JSON file and send to AWS SQS using batch. DEPRECATED: Use gzipped-json-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
-            "argument_aspects": ["input-url", "json", "sqs"]
+            "argument_aspects": ["input-url", "json", "sqs", "transform"]
         },
         'gzipped-json-to-stdout': {
             "help": 'Read gzipped JSON file and print to STDOUT.',
-            "argument_aspects": ["input-url", "json", "stdout"]
+            "argument_aspects": ["input-url", "json", "stdout", "transform"]
         },
         'json-to-azure-queue': {
             "help": 'Read JSON file and send to Azure Queue.',
-            "argument_aspects": ["input-url", "json", "azure"]
+            "argument_aspects": ["input-url", "json", "azure", "transform"]
         },
         'json-to-kafka': {
             "help": 'Read JSON file and send to Kafka.',
-            "argument_aspects": ["input-url", "json", "kafka"]
+            "argument_aspects": ["input-url", "json", "kafka", "transform"]
         },
         'json-to-rabbitmq': {
             "help": 'Read JSON file and send to RabbitMQ.',
-            "argument_aspects": ["input-url", "json", "rabbitmq"]
+            "argument_aspects": ["input-url", "json", "rabbitmq", "transform"]
         },
         'json-to-sqs': {
             "help": 'Read JSON file and send to AWS SQS.',
-            "argument_aspects": ["input-url", "json", "sqs"]
+            "argument_aspects": ["input-url", "json", "sqs", "transform"]
         },
         'json-to-sqs-batch': {
             "help": 'Read JSON file and send to AWS SQS using batch. DEPRECATED: Use json-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
-            "argument_aspects": ["input-url", "json", "sqs"]
+            "argument_aspects": ["input-url", "json", "sqs", "transform"]
         },
         'json-to-stdout': {
             "help": 'Read JSON file and print to STDOUT.',
-            "argument_aspects": ["input-url", "json", "stdout"]
+            "argument_aspects": ["input-url", "json", "stdout", "transform"]
         },
         'parquet-to-azure-queue': {
             "help": 'Read Parquet file and send to Azure Queue.',
-            "argument_aspects": ["input-url", "parquet", "azure"]
+            "argument_aspects": ["input-url", "parquet", "azure", "transform"]
         },
         'parquet-to-kafka': {
             "help": 'Read Parquet file and send to Kafka.',
-            "argument_aspects": ["input-url", "parquet", "kafka"]
+            "argument_aspects": ["input-url", "parquet", "kafka", "transform"]
         },
         'parquet-to-rabbitmq': {
             "help": 'Read Parquet file and send to RabbitMQ.',
-            "argument_aspects": ["input-url", "parquet", "rabbitmq"]
+            "argument_aspects": ["input-url", "parquet", "rabbitmq", "transform"]
         },
         'parquet-to-sqs': {
             "help": 'Read Parquet file and print to AWS SQS.',
-            "argument_aspects": ["input-url", "parquet", "sqs"]
+            "argument_aspects": ["input-url", "parquet", "sqs", "transform"]
         },
         'parquet-to-sqs-batch': {
             "help": 'Read Parquet file and print to AWS SQS using batch. DEPRECATED: Use parquet-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
-            "argument_aspects": ["input-url", "parquet", "sqs"]
+            "argument_aspects": ["input-url", "parquet", "sqs", "transform"]
         },
         'parquet-to-stdout': {
             "help": 'Read Parquet file and print to STDOUT.',
-            "argument_aspects": ["input-url", "parquet", "stdout"]
+            "argument_aspects": ["input-url", "parquet", "stdout", "transform"]
         },
         'sleep': {
             "help": 'Do nothing but sleep. For Docker testing.',
@@ -549,6 +552,18 @@ def get_parser():
                 "dest": "rabbitmq_virtual_host",
                 "metavar": "SENZING_RABBITMQ_VIRTUAL_HOST",
                 "help": "RabbitMQ virtual host. Default: None, which will use the RabbitMQ defined default virtual host"
+            },
+        },
+        "transform": {
+            "--stream-loader-directive-action": {
+                "dest": "stream_loader_directive_action",
+                "metavar": "SENZING_STREAM_LOADER_DIRECTIVE_ACTION",
+                "help": "Directive value used in Senzing Stream-loader. Default: none"
+            },
+            "--stream-loader-directive-name": {
+                "dest": "stream_loader_directive_name",
+                "metavar": "SENZING_STREAM_LOADER_DIRECTIVE_NAME",
+                "help": "Directive key used in Senzing Stream-loader. Default: none"
             },
         },
         "sqs": {
@@ -1512,6 +1527,8 @@ class EvaluateDictToJsonMixin():
             996, threading.current_thread().name, "EvaluateDictToJsonMixin"))
         self.default_data_source = self.config.get('default_data_source', None)
         self.default_entity_type = self.config.get('default_entity_type', None)
+        self.stream_loader_directive_action = self.config.get('stream_loader_directive_action', None)
+        self.stream_loader_directive_name = self.config.get('stream_loader_directive_name', None)
 
     def evaluate(self, message):
         if self.default_data_source:
@@ -1520,6 +1537,12 @@ class EvaluateDictToJsonMixin():
         if self.default_entity_type:
             if 'ENTITY_TYPE' not in message.keys():
                 message['ENTITY_TYPE'] = self.default_entity_type
+        if self.stream_loader_directive_name:
+            if self.stream_loader_directive_name not in message.keys():
+                message[self.stream_loader_directive_name] = {
+                    "action": self.stream_loader_directive_action
+                }
+
         return json.dumps(message)
 
 # -----------------------------------------------------------------------------
@@ -1650,11 +1673,21 @@ class PrintKafkaMixin():
         self.kafka_producer = confluent_kafka.Producer(kafka_configuration)
 
     def on_kafka_delivery(self, error, message):
-        logging.debug(message_debug(103, message.topic(),
-                      message.value(), message.error(), error))
+        logging.debug(
+            message_debug(
+                103,
+                message.topic(),
+                message.value(),
+                message.error(),
+                error))
         if error is not None:
-            logging.warning(message_warning(408, message.topic(),
-                            message.value(), message.error(), error))
+            logging.warning(
+                message_warning(
+                    408,
+                    message.topic(),
+                    message.value(),
+                    message.error(),
+                    error))
 
     def print(self, message):
         assert isinstance(message, str)
@@ -1872,9 +1905,8 @@ class PrintRabbitmqMixin():
                     mandatory=True
                 )
                 sent = True
-            except pika.exceptions.NackError as err:
+            except pika.exceptions.NackError:
                 time.sleep(1)
-                pass
 
         self.message_buffer = '['
         self.num_messages = 0
@@ -2337,12 +2369,12 @@ class FilterUrlJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlMixin, 
 
 
 def pipeline_read_write(
-    args=None,
-    options_to_defaults_map=None,
-    read_thread=None,
-    write_thread=None,
-    monitor_thread=None,
-    governor=None,
+        args=None,
+        options_to_defaults_map=None,
+        read_thread=None,
+        write_thread=None,
+        monitor_thread=None,
+        governor=None,
 ):
 
     # Get context from CLI, environment variables, and ini files.
@@ -2906,7 +2938,7 @@ if __name__ == "__main__":
         args = argparse.Namespace(subcommand=subcommand)
     else:
         parser.print_help()
-        if len(os.getenv("SENZING_DOCKER_LAUNCHED", "")):
+        if len(os.getenv("SENZING_DOCKER_LAUNCHED", "")) > 0:
             args = argparse.Namespace(subcommand='sleep')
             subcommand = 'sleep'
             do_sleep(args)

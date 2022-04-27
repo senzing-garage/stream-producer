@@ -18,7 +18,7 @@ import websockets
 __all__ = []
 __version__ = "1.0.0"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2021-01-18'
-__updated__ = '2021-01-19'
+__updated__ = '2022-04-27'
 
 SENZING_PRODUCT_ID = "9999"  # See https://github.com/Senzing/knowledge-base/blob/main/lists/senzing-product-ids.md
 log_format = '%(asctime)s %(message)s'
@@ -217,7 +217,6 @@ def message(index, *args):
 
 
 def message_generic(generic_index, index, *args):
-    index_string = str(index)
     return "{0} {1}".format(message(generic_index, index), message(index, *args))
 
 
@@ -367,7 +366,7 @@ def redact_configuration(config):
     for key in keys_to_redact:
         try:
             result.pop(key)
-        except:
+        except Exception:
             pass
     return result
 
@@ -570,7 +569,7 @@ if __name__ == "__main__":
         args = argparse.Namespace(subcommand=subcommand)
     else:
         parser.print_help()
-        if len(os.getenv("SENZING_DOCKER_LAUNCHED", "")):
+        if len(os.getenv("SENZING_DOCKER_LAUNCHED", "")) > 0:
             subcommand = "sleep"
             args = argparse.Namespace(subcommand=subcommand)
             do_sleep(args)
