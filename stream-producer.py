@@ -36,12 +36,12 @@ import pyarrow.parquet as pq
 import s3fs
 from azure.servicebus import ServiceBusClient, ServiceBusMessage
 
-# Metadata
+# Metadata.
 
 __all__ = []
-__version__ = "1.6.4"  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = "1.7.1"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-07-07'
-__updated__ = '2021-21-23'
+__updated__ = '2022-05-05'
 
 # See https://github.com/Senzing/knowledge-base/blob/main/lists/senzing-product-ids.md
 SENZING_PRODUCT_ID = "5014"
@@ -113,7 +113,7 @@ configuration_locator = {
         "cli": "kafka-bootstrap-server",
     },
     "kafka_configuration": {
-        "default": {},
+        "default": "{}",
         "env": "SENZING_KAFKA_CONFIGURATION",
         "cli": "kafka-configuration",
     },
