@@ -39,9 +39,9 @@ from azure.servicebus import ServiceBusClient, ServiceBusMessage
 # Metadata.
 
 __all__ = []
-__version__ = "1.7.1"  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = "1.7.3"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-07-07'
-__updated__ = '2022-05-05'
+__updated__ = '2022-07-29'
 
 # See https://github.com/Senzing/knowledge-base/blob/main/lists/senzing-product-ids.md
 SENZING_PRODUCT_ID = "5014"
@@ -62,10 +62,10 @@ QUEUE_SENTINEL = ".{0}.".format(''.join(
 # 1) Command line options, 2) Environment variables, 3) Configuration files, 4) Default values
 
 configuration_locator = {
-    "azure_connection_string": {
+    "azure_queue_connection_string": {
         "default": None,
-        "env": "SENZING_AZURE_CONNECTION_STRING",
-        "cli": "azure-connection-string",
+        "env": "SENZING_AZURE_QUEUE_CONNECTION_STRING",
+        "cli": "azure-queue-connection-string",
     },
     "azure_queue_name": {
         "default": None,
@@ -415,9 +415,9 @@ def get_parser():
 
     argument_aspects = {
         "azure": {
-            "--azure-connection-string": {
-                "dest": "azure_connection_string",
-                "metavar": "SENZING_AZURE_CONNECTION_STRING",
+            "--azure-queue-connection-string": {
+                "dest": "azure_queue_connection_string",
+                "metavar": "SENZING_AZURE_QUEUE_CONNECTION_STRING",
                 "help": "Azure Service Bus Queue connection string. Default: none"
             },
             "--azure-queue-name": {
@@ -1616,7 +1616,7 @@ class PrintAzureQueueMixin():
         logging.debug(message_debug(
             996, threading.current_thread().name, "PrintAzureQueueMixin"))
 
-        self.connection_string = config.get("azure_connection_string")
+        self.connection_string = config.get("azure_queue_connection_string")
         self.queue_name = config.get("azure_queue_name")
         self.servicebus_client = ServiceBusClient.from_connection_string(
             self.connection_string)
