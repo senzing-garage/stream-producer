@@ -41,7 +41,7 @@ from azure.servicebus import ServiceBusClient, ServiceBusMessage
 __all__ = []
 __version__ = "1.7.3"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-07-07'
-__updated__ = '2022-07-29'
+__updated__ = '2022-08-01'
 
 # See https://github.com/Senzing/knowledge-base/blob/main/lists/senzing-product-ids.md
 SENZING_PRODUCT_ID = "5014"
@@ -91,11 +91,6 @@ configuration_locator = {
         "default": None,
         "env": "SENZING_DEFAULT_DATA_SOURCE",
         "cli": "default-data-source",
-    },
-    "default_entity_type": {
-        "default": None,
-        "env": "SENZING_DEFAULT_ENTITY_TYPE",
-        "cli": "default-entity-type"
     },
     "delay_in_seconds": {
         "default": 0,
@@ -443,11 +438,6 @@ def get_parser():
                 "dest": "default_data_source",
                 "metavar": "SENZING_DEFAULT_DATA_SOURCE",
                 "help": "Used when record does not have a `DATA_SOURCE` key. Default: None"
-            },
-            "--default-entity-type": {
-                "dest": "default_entity_type",
-                "metavar": "SENZING_DEFAULT_ENTITY_TYPE",
-                "help": "Used when record does not have a `ENTITY_TYPE` key. Default: None"
             },
             "--input-url": {
                 "dest": "input_url",
@@ -1526,7 +1516,6 @@ class EvaluateDictToJsonMixin():
         logging.debug(message_debug(
             996, threading.current_thread().name, "EvaluateDictToJsonMixin"))
         self.default_data_source = self.config.get('default_data_source', None)
-        self.default_entity_type = self.config.get('default_entity_type', None)
         self.stream_loader_directive_action = self.config.get('stream_loader_directive_action', None)
         self.stream_loader_directive_name = self.config.get('stream_loader_directive_name', None)
 
@@ -1534,9 +1523,6 @@ class EvaluateDictToJsonMixin():
         if self.default_data_source:
             if 'DATA_SOURCE' not in message.keys():
                 message['DATA_SOURCE'] = self.default_data_source
-        if self.default_entity_type:
-            if 'ENTITY_TYPE' not in message.keys():
-                message['ENTITY_TYPE'] = self.default_entity_type
         if self.stream_loader_directive_name:
             if self.stream_loader_directive_name not in message.keys():
                 message[self.stream_loader_directive_name] = {
