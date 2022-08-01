@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 [markdownlint](https://dlaa.me/markdownlint/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+- Removed support for `SENZING_DEFAULT_ENTITY_TYPE`
+
 ## [1.7.3] - 2022-07-29
 
 ### Changed in 1.7.3
