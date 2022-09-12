@@ -67,9 +67,7 @@ optional arguments:
     1. [Download](#download)
     1. [Run command](#run-command)
 1. [Demonstrate using Docker](#demonstrate-using-docker)
-    1. [Prerequisites for Docker](#prerequisites-for-docker)
-    1. [Docker network](#docker-network)
-    1. [Run Docker container](#run-docker-container)
+1. [Demonstrate using docker-compose](#demonstrate-using-docker-compose)
 1. [Develop](#develop)
     1. [Prerequisites for development](#prerequisites-for-development)
     1. [Clone repository](#clone-repository)
@@ -176,61 +174,48 @@ These are "one-time tasks" which may already have been completed.
 
 ## Demonstrate using Docker
 
-### Prerequisites for Docker
-
-:thinking: The following tasks need to be complete before proceeding.
-These are "one-time tasks" which may already have been completed.
-
-1. The following software programs need to be installed:
-    1. [docker](https://github.com/Senzing/knowledge-base/blob/main/HOWTO/install-docker.md)
-
-### Docker network
-
-:thinking: **Optional:**  Use if Docker container is part of a Docker network.
-
-1. List Docker networks.
-   Example:
-
-    ```console
-    sudo docker network ls
-    ```
-
-1. :pencil2: Specify Docker network.
-   Choose value from NAME column of `docker network ls`.
-   Example:
-
-    ```console
-    export SENZING_NETWORK=*nameofthe_network*
-    ```
-
-1. Construct parameter for `docker run`.
-   Example:
-
-    ```console
-    export SENZING_NETWORK_PARAMETER="--net ${SENZING_NETWORK}"
-    ```
-
-### Run Docker container
-
-Although the `Docker run` command looks complex,
-it accounts for all of the optional variations described above.
-Unset `*_PARAMETER` environment variables have no effect on the
-`docker run` command and may be removed or remain.
-
 1. Run Docker container.
    This command will print the `--help`, then sleep.
    Example:
 
     ```console
     sudo docker run \
-      --interactive \
       --rm \
-      --tty \
-      ${SENZING_NETWORK_PARAMETER} \
       senzing/stream-producer
     ```
 
 1. For more examples of use, see [Examples of Docker](#examples-of-docker).
+
+## Demonstrate using docker-compose
+
+1. Deploy the
+   [Backing Services](https://github.com/Senzing/knowledge-base/blob/main/HOWTO/deploy-rabbitmq-postgresql-backing-services.md#using-docker-compose)
+   required by the Stream Loader.
+
+1. Specify a directory to place artifacts in.
+   Example:
+
+    ```console
+    export SENZING_VOLUME=~/my-senzing
+    mkdir -p ${SENZING_VOLUME}
+    ```
+
+1. Download `docker-compose.yaml` file.
+   Example:
+
+    ```console
+    curl -X GET \
+      --output ${SENZING_VOLUME}/docker-compose.yaml \
+      https://raw.githubusercontent.com/Senzing/docker-python-demo/main/docker-compose.yaml
+    ```
+
+1. Bring up docker-compose stack.
+   Example:
+
+    ```console
+    docker-compose -f ${SENZING_VOLUME}/docker-compose.yaml pull
+    docker-compose -f ${SENZING_VOLUME}/docker-compose.yaml up
+    ```
 
 ## Develop
 
