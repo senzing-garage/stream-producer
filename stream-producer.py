@@ -24,6 +24,7 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+from pathlib import Path
 
 # Import from https://pypi.org/
 
@@ -39,9 +40,9 @@ from azure.servicebus import ServiceBusClient, ServiceBusMessage
 # Metadata.
 
 __all__ = []
-__version__ = "1.7.3"  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = "1.8.0"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-07-07'
-__updated__ = '2022-08-01'
+__updated__ = '2022-09-12'
 
 # See https://github.com/Senzing/knowledge-base/blob/main/lists/senzing-product-ids.md
 SENZING_PRODUCT_ID = "5014"
@@ -98,7 +99,7 @@ configuration_locator = {
         "cli": "delay-in-seconds"
     },
     "input_url": {
-        "default": "https://s3.amazonaws.com/public-read-access/TestDataSets/loadtest-dataset-1M.json",
+        "default": "file:///data",
         "env": "SENZING_INPUT_URL",
         "cli": "input-url",
     },
@@ -613,6 +614,7 @@ message_dictionary = {
     "103": "Kafka topic: {0}; message: {1}; error: {2}; error: {3}",
     "104": "Thread: {0} Records sent to queue: {1}",
     "120": "Sleeping for requested delay of {0} seconds.",
+    "125": "Processing file: {0}.",
     "127": "Monitor: {0}",
     "129": "{0} is running.",
     "130": "{0} has exited.",
@@ -1174,18 +1176,32 @@ class ReadFileMixin():
         self.counter = 0
 
     def read(self):
-        with open(self.input_url, 'r') as input_file:
-            for line in input_file:
-                self.counter += 1
-                if self.record_min and self.counter < self.record_min:
-                    continue
-                if self.record_max and self.counter > self.record_max:
-                    break
-                line = line.strip()
-                if not line:
-                    continue
-                assert isinstance(line, str)
-                yield line
+        if os.path.isdir(self.input_url):
+            files = Path(self.input_url).glob('*.json*')
+            for file in files:
+                logging.info(message_info(125, file))
+                with open(file, 'r') as input_file:
+                    for line in input_file:
+                        self.counter += 1
+                        line = line.strip()
+                        if not line:
+                            continue
+                        assert isinstance(line, str)
+                        yield line
+
+        else:
+            with open(self.input_url, 'r') as input_file:
+                for line in input_file:
+                    self.counter += 1
+                    if self.record_min and self.counter < self.record_min:
+                        continue
+                    if self.record_max and self.counter > self.record_max:
+                        break
+                    line = line.strip()
+                    if not line:
+                        continue
+                    assert isinstance(line, str)
+                    yield line
 
 # -----------------------------------------------------------------------------
 # Class: ReadFileParquetMixin

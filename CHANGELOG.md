@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Removed support for `SENZING_DEFAULT_ENTITY_TYPE`
 
+## [1.8.0] - 2022-09-12
+
+### Added in 1.8.0
+
+- Support for directory of `.json*` files
+
 ## [1.7.3] - 2022-07-29
 
 ### Changed in 1.7.3
