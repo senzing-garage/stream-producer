@@ -112,6 +112,51 @@ describing where we can improve.   Now on with the show...
 - **Background knowledge:** This repository assumes a working knowledge of:
   - [Docker](https://github.com/Senzing/knowledge-base/blob/main/WHATIS/docker.md)
 
+## Demonstrate using Docker
+
+1. Run Docker container.
+   This command will show help.
+   Example:
+
+    ```console
+    docker run \
+      --rm \
+      senzing/stream-producer --help
+    ```
+
+1. For more examples of use, see [Examples of Docker](#examples-of-docker).
+
+## Demonstrate using docker-compose
+
+1. Deploy the
+   [Backing Services](https://github.com/Senzing/knowledge-base/blob/main/HOWTO/deploy-rabbitmq-postgresql-backing-services.md#using-docker-compose)
+   required by the Stream Loader.
+
+1. Specify a directory to place artifacts in.
+   Example:
+
+    ```console
+    export SENZING_VOLUME=~/my-senzing
+    mkdir -p ${SENZING_VOLUME}
+    ```
+
+1. Download `docker-compose.yaml` file.
+   Example:
+
+    ```console
+    curl -X GET \
+      --output ${SENZING_VOLUME}/docker-compose.yaml \
+      https://raw.githubusercontent.com/Senzing/docker-python-demo/main/docker-compose.yaml
+    ```
+
+1. Bring up docker-compose stack.
+   Example:
+
+    ```console
+    docker-compose -f ${SENZING_VOLUME}/docker-compose.yaml pull
+    docker-compose -f ${SENZING_VOLUME}/docker-compose.yaml up
+    ```
+
 ## Demonstrate using Command Line Interface
 
 ### Prerequisites for CLI
@@ -171,51 +216,6 @@ These are "one-time tasks" which may already have been completed.
    ```
 
 1. For more examples of use, see [Examples of CLI](#examples-of-cli).
-
-## Demonstrate using Docker
-
-1. Run Docker container.
-   This command will print the `--help`, then sleep.
-   Example:
-
-    ```console
-    sudo docker run \
-      --rm \
-      senzing/stream-producer
-    ```
-
-1. For more examples of use, see [Examples of Docker](#examples-of-docker).
-
-## Demonstrate using docker-compose
-
-1. Deploy the
-   [Backing Services](https://github.com/Senzing/knowledge-base/blob/main/HOWTO/deploy-rabbitmq-postgresql-backing-services.md#using-docker-compose)
-   required by the Stream Loader.
-
-1. Specify a directory to place artifacts in.
-   Example:
-
-    ```console
-    export SENZING_VOLUME=~/my-senzing
-    mkdir -p ${SENZING_VOLUME}
-    ```
-
-1. Download `docker-compose.yaml` file.
-   Example:
-
-    ```console
-    curl -X GET \
-      --output ${SENZING_VOLUME}/docker-compose.yaml \
-      https://raw.githubusercontent.com/Senzing/docker-python-demo/main/docker-compose.yaml
-    ```
-
-1. Bring up docker-compose stack.
-   Example:
-
-    ```console
-    docker-compose -f ${SENZING_VOLUME}/docker-compose.yaml pull
-    docker-compose -f ${SENZING_VOLUME}/docker-compose.yaml up
-    ```
 
 ## Develop
 
