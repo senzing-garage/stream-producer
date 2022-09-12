@@ -153,7 +153,6 @@ describing where we can improve.   Now on with the show...
    Example:
 
     ```console
-    docker-compose -f ${SENZING_VOLUME}/docker-compose.yaml pull
     docker-compose -f ${SENZING_VOLUME}/docker-compose.yaml up
     ```
 
