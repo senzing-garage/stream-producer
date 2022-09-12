@@ -120,6 +120,7 @@ describing where we can improve.   Now on with the show...
     docker run \
       --rm \
       senzing/stream-producer --help
+
     ```
 
 1. For more examples of use, see [Examples of Docker](#examples-of-docker).
@@ -136,6 +137,7 @@ describing where we can improve.   Now on with the show...
     ```console
     export SENZING_VOLUME=~/my-senzing
     mkdir -p ${SENZING_VOLUME}
+
     ```
 
 1. Download `docker-compose.yaml` file.
@@ -144,7 +146,8 @@ describing where we can improve.   Now on with the show...
     ```console
     curl -X GET \
       --output ${SENZING_VOLUME}/docker-compose.yaml \
-      https://raw.githubusercontent.com/Senzing/docker-python-demo/main/docker-compose.yaml
+      https://raw.githubusercontent.com/Senzing/stream-producer/main/docker-compose.yaml
+
     ```
 
 1. Bring up docker-compose stack.
@@ -152,6 +155,7 @@ describing where we can improve.   Now on with the show...
 
     ```console
     docker-compose -f ${SENZING_VOLUME}/docker-compose.yaml up
+
     ```
 
 ## Demonstrate using Command Line Interface
@@ -166,6 +170,7 @@ These are "one-time tasks" which may already have been completed.
 
     ```console
     pip3 install -r https://raw.githubusercontent.com/Senzing/stream-producer/main/requirements.txt
+
     ```
 
     1. See [requirements.txt](requirements.txt) for list.
@@ -182,6 +187,7 @@ These are "one-time tasks" which may already have been completed.
 
         ```console
         export SENZING_DOWNLOAD_FILE=~/stream-producer.py
+
         ```
 
     1. Download file.
@@ -191,6 +197,7 @@ These are "one-time tasks" which may already have been completed.
         curl -X GET \
           --output ${SENZING_DOWNLOAD_FILE} \
           https://raw.githubusercontent.com/Senzing/stream-producer/main/stream-producer.py
+
         ```
 
     1. Make file executable.
@@ -198,6 +205,7 @@ These are "one-time tasks" which may already have been completed.
 
         ```console
         chmod +x ${SENZING_DOWNLOAD_FILE}
+
         ```
 
 1. :thinking: **Alternative:** The entire git repository can be downloaded by following instructions at
@@ -210,6 +218,7 @@ These are "one-time tasks" which may already have been completed.
 
    ```console
    ${SENZING_DOWNLOAD_FILE} --help
+
    ```
 
 1. For more examples of use, see [Examples of CLI](#examples-of-cli).
@@ -240,6 +249,7 @@ see [Environment Variables](https://github.com/Senzing/knowledge-base/blob/main/
     export GIT_REPOSITORY=stream-producer
     export GIT_ACCOUNT_DIR=~/${GIT_ACCOUNT}.git
     export GIT_REPOSITORY_DIR="${GIT_ACCOUNT_DIR}/${GIT_REPOSITORY}"
+
     ```
 
 1. Using the environment variables values just set, follow steps in [clone-repository](https://github.com/Senzing/knowledge-base/blob/main/HOWTO/clone-repository.md) to install the Git repository.
@@ -252,6 +262,7 @@ see [Environment Variables](https://github.com/Senzing/knowledge-base/blob/main/
     sudo docker build \
       --tag senzing/stream-producer \
       https://github.com/senzing/stream-producer.git#main
+
     ```
 
 1. **Option #2:** Using `docker` command and local repository.
@@ -259,6 +270,7 @@ see [Environment Variables](https://github.com/Senzing/knowledge-base/blob/main/
     ```console
     cd ${GIT_REPOSITORY_DIR}
     sudo docker build --tag senzing/stream-producer .
+
     ```
 
 1. **Option #3:** Using `make` command.
@@ -266,6 +278,7 @@ see [Environment Variables](https://github.com/Senzing/knowledge-base/blob/main/
     ```console
     cd ${GIT_REPOSITORY_DIR}
     sudo make docker-build
+
     ```
 
     Note: `sudo make docker-build-development-cache` can be used to create cached Docker layers.
@@ -286,6 +299,7 @@ This example shows how to load a file of JSONlines onto a RabbitMQ queue using t
 
     ```console
     ~/stream-producer.py json-to-rabbitmq --help
+
     ```
 
 1. :pencil2: Identify the file of JSON records on the local system to push to the RabbitMQ queue.
@@ -293,6 +307,7 @@ This example shows how to load a file of JSONlines onto a RabbitMQ queue using t
 
     ```console
     export SENZING_INPUT_URL=/path/to/my/records.json
+
     ```
 
    :pencil2: or identify a URL.
@@ -300,6 +315,7 @@ This example shows how to load a file of JSONlines onto a RabbitMQ queue using t
 
     ```console
     export SENZING_INPUT_URL=https://s3.amazonaws.com/public-read-access/TestDataSets/loadtest-dataset-1M.json
+
     ```
 
 1. :pencil2: Identify RabbitMQ connection information.
@@ -310,6 +326,7 @@ This example shows how to load a file of JSONlines onto a RabbitMQ queue using t
     export SENZING_RABBITMQ_QUEUE=senzing-rabbitmq-queue
     export SENZING_RABBITMQ_USERNAME=user
     export SENZING_RABBITMQ_PASSWORD=bitnami
+
     ```
 
 1. :thinking: **Optional:** If limiting the number of records is desired, identify the maximum number of records to send.
@@ -320,6 +337,7 @@ This example shows how to load a file of JSONlines onto a RabbitMQ queue using t
 
     ```console
     export SENZING_RECORD_MAX=5000
+
     ```
 
 1. Run `stream-producer.py`.
@@ -333,6 +351,7 @@ This example shows how to load a file of JSONlines onto a RabbitMQ queue using t
         --rabbitmq-queue ${SENZING_RABBITMQ_QUEUE} \
         --rabbitmq-username ${SENZING_RABBITMQ_USERNAME} \
         --record-max ${SENZING_RECORD_MAX}
+
     ```
 
 #### Upload file to AWS SQS
@@ -344,6 +363,7 @@ This example shows how to load a file of JSONlines onto an AWS SQS queue using t
 
     ```console
     ~/stream-producer.py json-to-sqs --help
+
     ```
 
 1. :pencil2: For AWS access, set environment variables.
@@ -355,6 +375,7 @@ This example shows how to load a file of JSONlines onto an AWS SQS queue using t
     export AWS_ACCESS_KEY_ID=$(aws configure get default.aws_access_key_id)
     export AWS_SECRET_ACCESS_KEY=$(aws configure get default.aws_secret_access_key)
     export AWS_DEFAULT_REGION=$(aws configure get default.region)
+
     ```
 
 1. :pencil2: Identify the file of JSON records on the local system to push to the AWS SQS queue.
@@ -362,6 +383,7 @@ This example shows how to load a file of JSONlines onto an AWS SQS queue using t
 
     ```console
     export SENZING_INPUT_URL=/path/to/my/records.json
+
     ```
 
    :pencil2: or identify a URL.
@@ -369,6 +391,7 @@ This example shows how to load a file of JSONlines onto an AWS SQS queue using t
 
     ```console
     export SENZING_INPUT_URL=https://s3.amazonaws.com/public-read-access/TestDataSets/loadtest-dataset-1M.json
+
     ```
 
 1. :pencil2: Identify the AWS SQS queue.
@@ -376,6 +399,7 @@ This example shows how to load a file of JSONlines onto an AWS SQS queue using t
 
     ```console
     export SENZING_SQS_QUEUE_URL=https://sqs.us-east-1.amazonaws.com/000000000000/queue-name
+
     ```
 
 1. :thinking: **Optional:** If limiting the number of records is desired, identify the maximum number of records to send.
@@ -386,6 +410,7 @@ This example shows how to load a file of JSONlines onto an AWS SQS queue using t
 
     ```console
     export SENZING_RECORD_MAX=100
+
     ```
 
 1. Run `stream-producer.py`.
@@ -396,6 +421,7 @@ This example shows how to load a file of JSONlines onto an AWS SQS queue using t
         --input-url ${SENZING_INPUT_URL} \
         --record-max ${SENZING_RECORD_MAX} \
         --sqs-queue-url ${SENZING_SQS_QUEUE_URL}
+
     ```
 
 #### More
@@ -428,6 +454,7 @@ The following examples require initialization described in
       --rm \
       --tty \
       senzing/stream-producer
+
     ```
 
 ## Advanced
