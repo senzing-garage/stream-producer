@@ -16,8 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Updated `Dockerfile` FROM instruction to `debian:11.5-slim@sha256:5cf1d98cd0805951484f33b34c1ab25aac7007bb41c8b9901d97e4be3cf3ab04`
 - Updated `requirements.txt` to:
-  - boto3:1.24.81
-  - pandas:1.5.0
+  - boto3==1.24.81
+  - pandas==1.5.0
 
 ## [1.8.0] - 2022-09-12
 
