@@ -40,9 +40,9 @@ from azure.servicebus import ServiceBusClient, ServiceBusMessage
 # Metadata.
 
 __all__ = []
-__version__ = "1.8.0"  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = "1.8.1"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-07-07'
-__updated__ = '2022-09-12'
+__updated__ = '2022-09-28'
 
 # See https://github.com/Senzing/knowledge-base/blob/main/lists/senzing-product-ids.md
 SENZING_PRODUCT_ID = "5014"
