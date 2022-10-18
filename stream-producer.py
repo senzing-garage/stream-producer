@@ -1725,7 +1725,9 @@ class PrintKafkaMixin():
         self.num_messages += 1
 
         try:
-            if self.num_messages == self.number_of_records_per_print:
+            if self.number_of_records_per_print == 1:
+                self.send_message_buffer()
+            elif self.num_messages == self.number_of_records_per_print:
                 self.send_message_buffer()
 
         except BufferError as err:
@@ -1766,6 +1768,8 @@ class PrintKafkaMixin():
         )
         if self.number_of_records_per_print > 1:
             self.message_buffer = '['
+        else:
+            self.message_buffer = ''
         self.num_messages = 0
 
 # -----------------------------------------------------------------------------
@@ -1880,7 +1884,9 @@ class PrintRabbitmqMixin():
         # Send message to RabbitMQ. if there are enough
 
         try:
-            if self.num_messages == self.number_of_records_per_print:
+            if self.number_of_records_per_print == 1:
+                self.send_message_buffer()
+            elif self.num_messages == self.number_of_records_per_print:
                 self.send_message_buffer()
 
         except Exception as err:
@@ -1921,6 +1927,8 @@ class PrintRabbitmqMixin():
 
         if self.number_of_records_per_print > 1:
             self.message_buffer = '['
+        else:
+            self.message_buffer = ''
         self.num_messages = 0
 
 # -----------------------------------------------------------------------------
@@ -2020,7 +2028,10 @@ class PrintSqsMixin():
         self.message_buffer += message
         self.num_messages += 1
 
-        if self.num_messages == self.number_of_records_per_print:
+
+        if self.number_of_records_per_print == 1:
+            self.send_message_buffer()
+        elif self.num_messages == self.number_of_records_per_print:
             self.send_message_buffer()
 
         if self.counter % self.record_monitor == 0:
@@ -2042,6 +2053,8 @@ class PrintSqsMixin():
         )
         if self.number_of_records_per_print > 1:
             self.message_buffer = '['
+        else:
+            self.message_buffer = ''
         self.num_messages = 0
 
 # -----------------------------------------------------------------------------
