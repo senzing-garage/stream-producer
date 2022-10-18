@@ -8,7 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+-
+
+## [1.8.2] - 2022-10-18
+
+### Changed in 1.8.2
+
 - Removed support for `SENZING_DEFAULT_ENTITY_TYPE`
+- Single messages are sent as JSON Objects, not JSON lists
 
 ## [1.8.1] - 2022-09-28
 

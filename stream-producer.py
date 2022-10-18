@@ -40,9 +40,9 @@ from azure.servicebus import ServiceBusClient, ServiceBusMessage
 # Metadata.
 
 __all__ = []
-__version__ = "1.8.1"  # See https://www.python.org/dev/peps/pep-0396/
+__version__ = "1.8.2"  # See https://www.python.org/dev/peps/pep-0396/
 __date__ = '2020-07-07'
-__updated__ = '2022-09-28'
+__updated__ = '2022-10-18'
 
 # See https://github.com/Senzing/knowledge-base/blob/main/lists/senzing-product-ids.md
 SENZING_PRODUCT_ID = "5014"
@@ -1650,7 +1650,10 @@ class PrintKafkaMixin():
         self.kafka_topic = config.get('kafka_topic')
         self.record_monitor = config.get("record_monitor")
         self.number_of_records_per_print = config.get("records_per_message")
-        self.message_buffer = '['
+        if self.number_of_records_per_print > 1:
+            self.message_buffer = '['
+        else:
+            self.message_buffer = ''
         self.num_messages = 0
 
         # default Kafka max message size, but save some space for kafka to use, just in case
@@ -1722,7 +1725,9 @@ class PrintKafkaMixin():
         self.num_messages += 1
 
         try:
-            if self.num_messages == self.number_of_records_per_print:
+            if self.number_of_records_per_print == 1:
+                self.send_message_buffer()
+            elif self.num_messages == self.number_of_records_per_print:
                 self.send_message_buffer()
 
         except BufferError as err:
@@ -1754,13 +1759,17 @@ class PrintKafkaMixin():
         self.kafka_producer.flush()
 
     def send_message_buffer(self):
-        self.message_buffer += ']'
+        if self.number_of_records_per_print > 1:
+            self.message_buffer += ']'
         self.kafka_producer.produce(
             self.kafka_topic,
             self.message_buffer,
             on_delivery=self.on_kafka_delivery
         )
-        self.message_buffer = '['
+        if self.number_of_records_per_print > 1:
+            self.message_buffer = '['
+        else:
+            self.message_buffer = ''
         self.num_messages = 0
 
 # -----------------------------------------------------------------------------
@@ -1785,7 +1794,10 @@ class PrintRabbitmqMixin():
         self.rabbitmq_routing_key = config.get("rabbitmq_routing_key")
         self.record_monitor = config.get("record_monitor")
         self.number_of_records_per_print = config.get("records_per_message")
-        self.message_buffer = '['
+        if self.number_of_records_per_print > 1:
+            self.message_buffer = '['
+        else:
+            self.message_buffer = ''
         self.num_messages = 0
 
         # default RabbitMQ max message size, but save some space for Rabbit to use, just in case
@@ -1872,7 +1884,9 @@ class PrintRabbitmqMixin():
         # Send message to RabbitMQ. if there are enough
 
         try:
-            if self.num_messages == self.number_of_records_per_print:
+            if self.number_of_records_per_print == 1:
+                self.send_message_buffer()
+            elif self.num_messages == self.number_of_records_per_print:
                 self.send_message_buffer()
 
         except Exception as err:
@@ -1893,7 +1907,8 @@ class PrintRabbitmqMixin():
         self.connection.close()
 
     def send_message_buffer(self):
-        self.message_buffer += ']'
+        if self.number_of_records_per_print > 1:
+            self.message_buffer += ']'
 
         sent = False
 
@@ -1910,7 +1925,10 @@ class PrintRabbitmqMixin():
             except pika.exceptions.NackError:
                 time.sleep(1)
 
-        self.message_buffer = '['
+        if self.number_of_records_per_print > 1:
+            self.message_buffer = '['
+        else:
+            self.message_buffer = ''
         self.num_messages = 0
 
 # -----------------------------------------------------------------------------
@@ -1948,7 +1966,10 @@ class PrintSqsMixin():
         self.record_monitor = config.get("record_monitor")
         self.sqs_delay_seconds = config.get("sqs_delay_seconds")
         self.number_of_records_per_print = config.get("records_per_message")
-        self.message_buffer = '['
+        if self.number_of_records_per_print > 1:
+            self.message_buffer = '['
+        else:
+            self.message_buffer = ''
         self.num_messages = 0
         self.record_identifier = config.get("record_identifier")
 
@@ -2007,7 +2028,10 @@ class PrintSqsMixin():
         self.message_buffer += message
         self.num_messages += 1
 
-        if self.num_messages == self.number_of_records_per_print:
+
+        if self.number_of_records_per_print == 1:
+            self.send_message_buffer()
+        elif self.num_messages == self.number_of_records_per_print:
             self.send_message_buffer()
 
         if self.counter % self.record_monitor == 0:
@@ -2019,14 +2043,18 @@ class PrintSqsMixin():
             self.send_message_buffer()
 
     def send_message_buffer(self):
-        self.message_buffer += ']'
+        if self.number_of_records_per_print > 1:
+            self.message_buffer += ']'
         self.sqs.send_message(
             QueueUrl=self.queue_url,
             DelaySeconds=self.sqs_delay_seconds,
             MessageAttributes={},
             MessageBody=(self.message_buffer),
         )
-        self.message_buffer = '['
+        if self.number_of_records_per_print > 1:
+            self.message_buffer = '['
+        else:
+            self.message_buffer = ''
         self.num_messages = 0
 
 # -----------------------------------------------------------------------------

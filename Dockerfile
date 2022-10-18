@@ -1,11 +1,11 @@
 ARG BASE_IMAGE=debian:11.5-slim@sha256:b46fc4e6813f6cbd9f3f6322c72ab974cc0e75a72ca02730a8861e98999875c7
 FROM ${BASE_IMAGE}
 
-ENV REFRESHED_AT=2022-10-11
+ENV REFRESHED_AT=2022-10-18
 
 LABEL Name="senzing/stream-producer" \
       Maintainer="support@senzing.com" \
-      Version="1.8.1"
+      Version="1.8.2"
 
 HEALTHCHECK CMD ["/app/healthcheck.sh"]
 
