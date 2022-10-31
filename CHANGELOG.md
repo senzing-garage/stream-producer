@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 -
 
+## [1.8.3] - 2022-10-27
+
+### Changed in 1.8.3
+
+- In `Dockerfile`, updated FROM instruction to `debian:11.5-slim@sha256:e8ad0bc7d0ee6afd46e904780942033ab83b42b446b58efa88d31ecf3adf4678`
+- In `requirements.txt`, updated:
+  - boto3==1.25.4
+  - fastavro==1.7.0
+  - pandas==1.5.1
+  - pika==1.3.1
+  - pyarrow==10.0.0
+  - websockets==10.4
+
 ## [1.8.2] - 2022-10-18
 
 ### Changed in 1.8.2

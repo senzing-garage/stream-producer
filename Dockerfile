@@ -5,7 +5,7 @@ ENV REFRESHED_AT=2022-10-27
 
 LABEL Name="senzing/stream-producer" \
       Maintainer="support@senzing.com" \
-      Version="1.8.2"
+      Version="1.8.3"
 
 HEALTHCHECK CMD ["/app/healthcheck.sh"]
 
