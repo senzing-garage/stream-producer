@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 -
 
+## [1.6.7] - 2023-06-15
+
+### Changed in 1.8.7
+
+- In `Dockerfile`, updated FROM instruction to `debian:11.7-slim@sha256:924df86f8aad741a0134b2de7d8e70c5c6863f839caadef62609c1be1340daf5`
+- In `requirements.txt`, updated:
+  - azure-servicebus==7.11.0
+  - boto3==1.26.153
+  - pandas==2.0.2
+  - pyarrow==12.0.1
+
 ## [1.8.6] - 2023-05-09
 
 ### Changed in 1.8.6
