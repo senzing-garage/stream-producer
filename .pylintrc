@@ -28,3 +28,4 @@ disable=
     unnecessary-dict-index-lookup,
     unspecified-encoding,
     unused-argument,
+    used-before-assignment,
