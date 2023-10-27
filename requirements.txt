@@ -1,5 +1,5 @@
 azure-servicebus==7.11.3
-boto3==1.28.71
+boto3==1.28.72
 confluent-kafka==2.3.0
 fastavro==1.8.4
 fastparquet==2023.10.0
