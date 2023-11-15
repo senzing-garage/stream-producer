@@ -10,6 +10,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 -
 
+## [1.8.9] - 2023-11-14
+
+### Changed in 1.8.9
+
+- In `Dockerfile`, updated FROM instruction to `debian:11.8-slim@sha256:19664a5752dddba7f59bb460410a0e1887af346e21877fa7cec78bfd3cb77da5`
+- In `requirements.txt`, updated:
+  - azure-servicebus==7.11.4
+  - boto3==1.28.85
+  - confluent-kafka==2.3.0
+  - fastavro==1.9.0
+  - fastparquet==2023.10.1
+  - pandas==2.1.3
+  - pyarrow==14.0.1
+  - websockets==12.0
+
 ## [1.8.8] - 2023-09-29
 
 ### Changed in 1.8.8
