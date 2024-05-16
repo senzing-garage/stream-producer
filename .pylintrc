@@ -16,6 +16,7 @@ disable=
     missing-module-docstring,
     no-member,
     no-self-use,
+    possibly-used-before-assignment,
     protected-access,
     redefined-argument-from-local,
     redefined-outer-name,
