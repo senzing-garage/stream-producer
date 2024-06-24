@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 -
 
+## [1.8.11] - 2024-06-24
+
+### Changed in 1.8.11
+
+- In `Dockerfile`, updated FROM instruction to `debian:11.9-slim@sha256:acc5810124f0929ab44fc7913c0ad936b074cbd3eadf094ac120190862ba36c4`
+- In `requirements.txt`, updated:
+  - s3fs==2024.6.0
+
 ## [1.8.10] - 2024-05-22
 
 ### Changed in 1.8.10
