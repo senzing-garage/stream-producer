@@ -1,6 +1,6 @@
 azure-servicebus==7.12.2
 boto3
-confluent-kafka==2.5.0
+confluent-kafka==2.5.3
 fastavro==1.9.5
 fastparquet==2024.5.0
 pandas==2.2.2
