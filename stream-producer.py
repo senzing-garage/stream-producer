@@ -41,12 +41,12 @@ from azure.servicebus import ServiceBusClient, ServiceBusMessage
 
 __all__ = []
 __version__ = "1.8.9"  # See https://www.python.org/dev/peps/pep-0396/
-__date__ = '2020-07-07'
-__updated__ = '2023-11-15'
+__date__ = "2020-07-07"
+__updated__ = "2023-11-15"
 
 # See https://github.com/Senzing/knowledge-base/blob/main/lists/senzing-product-ids.md
 SENZING_PRODUCT_ID = "5014"
-log_format = '%(asctime)s %(message)s'
+log_format = "%(asctime)s %(message)s"
 
 # Working with bytes.
 
@@ -56,8 +56,9 @@ GIGABYTES = 1024 * MEGABYTES
 
 # Random sentinel to indicate end of service
 
-QUEUE_SENTINEL = ".{0}.".format(''.join(
-    [random.choice(string.ascii_letters + string.digits) for n in range(32)]))
+QUEUE_SENTINEL = ".{0}.".format(
+    "".join([random.choice(string.ascii_letters + string.digits) for n in range(32)])
+)
 
 # The "configuration_locator" describes where configuration variables are in:
 # 1) Command line options, 2) Environment variables, 3) Configuration files, 4) Default values
@@ -76,18 +77,14 @@ configuration_locator = {
     "csv_rows_in_chunk": {
         "default": 10000,
         "env": "SENZING_CSV_ROWS_IN_CHUNK",
-        "cli": "csv-rows-in-chunk"
+        "cli": "csv-rows-in-chunk",
     },
     "csv_delimiter": {
         "default": ",",
         "env": "SENZING_CSV_DELIMITER",
-        "cli": "csv-delimiter"
+        "cli": "csv-delimiter",
     },
-    "debug": {
-        "default": False,
-        "env": "SENZING_DEBUG",
-        "cli": "debug"
-    },
+    "debug": {"default": False, "env": "SENZING_DEBUG", "cli": "debug"},
     "default_data_source": {
         "default": None,
         "env": "SENZING_DEFAULT_DATA_SOURCE",
@@ -96,7 +93,7 @@ configuration_locator = {
     "delay_in_seconds": {
         "default": 0,
         "env": "SENZING_DELAY_IN_SECONDS",
-        "cli": "delay-in-seconds"
+        "cli": "delay-in-seconds",
     },
     "input_url": {
         "default": "file:///data",
@@ -116,7 +113,7 @@ configuration_locator = {
     "kafka_group": {
         "default": "senzing-kafka-group",
         "env": "SENZING_KAFKA_GROUP",
-        "cli": "kafka-group"
+        "cli": "kafka-group",
     },
     "kafka_poll_interval": {
         "default": 100,
@@ -133,11 +130,7 @@ configuration_locator = {
         "env": "SENZING_MONITORING_PERIOD_IN_SECONDS",
         "cli": "monitoring-period-in-seconds",
     },
-    "password": {
-        "default": None,
-        "env": "SENZING_PASSWORD",
-        "cli": "password"
-    },
+    "password": {"default": None, "env": "SENZING_PASSWORD", "cli": "password"},
     "rabbitmq_exchange": {
         "default": "senzing-rabbitmq-exchange",
         "env": "SENZING_RABBITMQ_EXCHANGE",
@@ -186,7 +179,7 @@ configuration_locator = {
     "read_queue_maxsize": {
         "default": 50,
         "env": "SENZING_READ_QUEUE_MAXSIZE",
-        "cli": "read-queue-maxsize"
+        "cli": "read-queue-maxsize",
     },
     "record_identifier": {
         "default": "RECORD_ID",
@@ -211,37 +204,37 @@ configuration_locator = {
     "records_per_message": {
         "default": 1,
         "env": "SENZING_RECORDS_PER_MESSAGE",
-        "cli": "records-per-message"
+        "cli": "records-per-message",
     },
     "record_size_max": {
         "default": 0,
         "env": "SENZING_RECORD_SIZE_MAX",
-        "cli": "record-size-max"
+        "cli": "record-size-max",
     },
     "sleep_time_in_seconds": {
         "default": 0,
         "env": "SENZING_SLEEP_TIME_IN_SECONDS",
-        "cli": "sleep-time-in-seconds"
+        "cli": "sleep-time-in-seconds",
     },
     "stream_loader_directive_action": {
         "default": "addRecord",
         "env": "SENZING_STREAM_LOADER_DIRECTIVE_ACTION",
-        "cli": "stream-loader-directive-action"
+        "cli": "stream-loader-directive-action",
     },
     "stream_loader_directive_name": {
         "default": None,
         "env": "SENZING_STREAM_LOADER_DIRECTIVE_NAME",
-        "cli": "stream-loader-directive-name"
+        "cli": "stream-loader-directive-name",
     },
     "sqs_delay_seconds": {
         "default": 0,
         "env": "SENZING_SQS_DELAY_SECONDS",
-        "cli": "sqs-delay-seconds"
+        "cli": "sqs-delay-seconds",
     },
     "sqs_queue_url": {
         "default": None,
         "env": "SENZING_SQS_QUEUE_URL",
-        "cli": "sqs-queue-url"
+        "cli": "sqs-queue-url",
     },
     "subcommand": {
         "default": None,
@@ -250,7 +243,7 @@ configuration_locator = {
     "threads_per_print": {
         "default": 4,
         "env": "SENZING_THREADS_PER_PRINT",
-        "cli": "threads-per-print"
+        "cli": "threads-per-print",
     },
 }
 
@@ -266,144 +259,144 @@ keys_to_redact = [
 
 
 def get_parser():
-    ''' Parse commandline arguments. '''
+    """Parse commandline arguments."""
 
     subcommands = {
-        'avro-to-azure-queue': {
-            "help": 'Read Avro file and send to Azure Queue.',
-            "argument_aspects": ["input-url", "avro", "azure", "transform"]
+        "avro-to-azure-queue": {
+            "help": "Read Avro file and send to Azure Queue.",
+            "argument_aspects": ["input-url", "avro", "azure", "transform"],
         },
-        'avro-to-kafka': {
-            "help": 'Read Avro file and send to Kafka.',
-            "argument_aspects": ["input-url", "avro", "kafka", "transform"]
+        "avro-to-kafka": {
+            "help": "Read Avro file and send to Kafka.",
+            "argument_aspects": ["input-url", "avro", "kafka", "transform"],
         },
-        'avro-to-rabbitmq': {
-            "help": 'Read Avro file and send to RabbitMQ.',
-            "argument_aspects": ["input-url", "avro", "rabbitmq", "transform"]
+        "avro-to-rabbitmq": {
+            "help": "Read Avro file and send to RabbitMQ.",
+            "argument_aspects": ["input-url", "avro", "rabbitmq", "transform"],
         },
-        'avro-to-sqs': {
-            "help": 'Read Avro file and print to AWS SQS.',
-            "argument_aspects": ["input-url", "avro", "sqs", "transform"]
+        "avro-to-sqs": {
+            "help": "Read Avro file and print to AWS SQS.",
+            "argument_aspects": ["input-url", "avro", "sqs", "transform"],
         },
-        'avro-to-sqs-batch': {
-            "help": 'Read Avro file and print to AWS SQS using batch. DEPRECATED: Use avro-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
-            "argument_aspects": ["input-url", "avro", "sqs", "transform"]
+        "avro-to-sqs-batch": {
+            "help": "Read Avro file and print to AWS SQS using batch. DEPRECATED: Use avro-to-sqs and set SENZING_RECORDS_PER_MESSAGE",
+            "argument_aspects": ["input-url", "avro", "sqs", "transform"],
         },
-        'avro-to-stdout': {
-            "help": 'Read Avro file and print to STDOUT.',
-            "argument_aspects": ["input-url", "avro", "stdout", "transform"]
+        "avro-to-stdout": {
+            "help": "Read Avro file and print to STDOUT.",
+            "argument_aspects": ["input-url", "avro", "stdout", "transform"],
         },
-        'csv-to-azure-queue': {
-            "help": 'Read CSV file and send to Azure Queue.',
-            "argument_aspects": ["input-url", "csv", "azure", "transform"]
+        "csv-to-azure-queue": {
+            "help": "Read CSV file and send to Azure Queue.",
+            "argument_aspects": ["input-url", "csv", "azure", "transform"],
         },
-        'csv-to-kafka': {
-            "help": 'Read CSV file and send to Kafka.',
-            "argument_aspects": ["input-url", "csv", "kafka", "transform"]
+        "csv-to-kafka": {
+            "help": "Read CSV file and send to Kafka.",
+            "argument_aspects": ["input-url", "csv", "kafka", "transform"],
         },
-        'csv-to-rabbitmq': {
-            "help": 'Read CSV file and send to RabbitMQ.',
-            "argument_aspects": ["input-url", "csv", "rabbitmq", "transform"]
+        "csv-to-rabbitmq": {
+            "help": "Read CSV file and send to RabbitMQ.",
+            "argument_aspects": ["input-url", "csv", "rabbitmq", "transform"],
         },
-        'csv-to-sqs': {
-            "help": 'Read CSV file and print to SQS.',
-            "argument_aspects": ["input-url", "csv", "sqs", "transform"]
+        "csv-to-sqs": {
+            "help": "Read CSV file and print to SQS.",
+            "argument_aspects": ["input-url", "csv", "sqs", "transform"],
         },
-        'csv-to-sqs-batch': {
-            "help": 'Read CSV file and print to SQS using batch. DEPRECATED: Use csv-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
-            "argument_aspects": ["input-url", "csv", "sqs", "transform"]
+        "csv-to-sqs-batch": {
+            "help": "Read CSV file and print to SQS using batch. DEPRECATED: Use csv-to-sqs and set SENZING_RECORDS_PER_MESSAGE",
+            "argument_aspects": ["input-url", "csv", "sqs", "transform"],
         },
-        'csv-to-stdout': {
-            "help": 'Read CSV file and print to STDOUT.',
-            "argument_aspects": ["input-url", "csv", "stdout", "transform"]
+        "csv-to-stdout": {
+            "help": "Read CSV file and print to STDOUT.",
+            "argument_aspects": ["input-url", "csv", "stdout", "transform"],
         },
-        'gzipped-json-to-azure-queue': {
-            "help": 'Read gzipped JSON file and send to Azure Queue.',
-            "argument_aspects": ["input-url", "json", "azure", "transform"]
+        "gzipped-json-to-azure-queue": {
+            "help": "Read gzipped JSON file and send to Azure Queue.",
+            "argument_aspects": ["input-url", "json", "azure", "transform"],
         },
-        'gzipped-json-to-kafka': {
-            "help": 'Read gzipped JSON file and send to Kafka.',
-            "argument_aspects": ["input-url", "json", "kafka", "transform"]
+        "gzipped-json-to-kafka": {
+            "help": "Read gzipped JSON file and send to Kafka.",
+            "argument_aspects": ["input-url", "json", "kafka", "transform"],
         },
-        'gzipped-json-to-rabbitmq': {
-            "help": 'Read gzipped JSON file and send to RabbitMQ.',
-            "argument_aspects": ["input-url", "json", "rabbitmq", "transform"]
+        "gzipped-json-to-rabbitmq": {
+            "help": "Read gzipped JSON file and send to RabbitMQ.",
+            "argument_aspects": ["input-url", "json", "rabbitmq", "transform"],
         },
-        'gzipped-json-to-sqs': {
-            "help": 'Read gzipped JSON file and send to AWS SQS.',
-            "argument_aspects": ["input-url", "json", "sqs", "transform"]
+        "gzipped-json-to-sqs": {
+            "help": "Read gzipped JSON file and send to AWS SQS.",
+            "argument_aspects": ["input-url", "json", "sqs", "transform"],
         },
-        'gzipped-json-to-sqs-batch': {
-            "help": 'Read gzipped JSON file and send to AWS SQS using batch. DEPRECATED: Use gzipped-json-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
-            "argument_aspects": ["input-url", "json", "sqs", "transform"]
+        "gzipped-json-to-sqs-batch": {
+            "help": "Read gzipped JSON file and send to AWS SQS using batch. DEPRECATED: Use gzipped-json-to-sqs and set SENZING_RECORDS_PER_MESSAGE",
+            "argument_aspects": ["input-url", "json", "sqs", "transform"],
         },
-        'gzipped-json-to-stdout': {
-            "help": 'Read gzipped JSON file and print to STDOUT.',
-            "argument_aspects": ["input-url", "json", "stdout", "transform"]
+        "gzipped-json-to-stdout": {
+            "help": "Read gzipped JSON file and print to STDOUT.",
+            "argument_aspects": ["input-url", "json", "stdout", "transform"],
         },
-        'json-to-azure-queue': {
-            "help": 'Read JSON file and send to Azure Queue.',
-            "argument_aspects": ["input-url", "json", "azure", "transform"]
+        "json-to-azure-queue": {
+            "help": "Read JSON file and send to Azure Queue.",
+            "argument_aspects": ["input-url", "json", "azure", "transform"],
         },
-        'json-to-kafka': {
-            "help": 'Read JSON file and send to Kafka.',
-            "argument_aspects": ["input-url", "json", "kafka", "transform"]
+        "json-to-kafka": {
+            "help": "Read JSON file and send to Kafka.",
+            "argument_aspects": ["input-url", "json", "kafka", "transform"],
         },
-        'json-to-rabbitmq': {
-            "help": 'Read JSON file and send to RabbitMQ.',
-            "argument_aspects": ["input-url", "json", "rabbitmq", "transform"]
+        "json-to-rabbitmq": {
+            "help": "Read JSON file and send to RabbitMQ.",
+            "argument_aspects": ["input-url", "json", "rabbitmq", "transform"],
         },
-        'json-to-sqs': {
-            "help": 'Read JSON file and send to AWS SQS.',
-            "argument_aspects": ["input-url", "json", "sqs", "transform"]
+        "json-to-sqs": {
+            "help": "Read JSON file and send to AWS SQS.",
+            "argument_aspects": ["input-url", "json", "sqs", "transform"],
         },
-        'json-to-sqs-batch': {
-            "help": 'Read JSON file and send to AWS SQS using batch. DEPRECATED: Use json-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
-            "argument_aspects": ["input-url", "json", "sqs", "transform"]
+        "json-to-sqs-batch": {
+            "help": "Read JSON file and send to AWS SQS using batch. DEPRECATED: Use json-to-sqs and set SENZING_RECORDS_PER_MESSAGE",
+            "argument_aspects": ["input-url", "json", "sqs", "transform"],
         },
-        'json-to-stdout': {
-            "help": 'Read JSON file and print to STDOUT.',
-            "argument_aspects": ["input-url", "json", "stdout", "transform"]
+        "json-to-stdout": {
+            "help": "Read JSON file and print to STDOUT.",
+            "argument_aspects": ["input-url", "json", "stdout", "transform"],
         },
-        'parquet-to-azure-queue': {
-            "help": 'Read Parquet file and send to Azure Queue.',
-            "argument_aspects": ["input-url", "parquet", "azure", "transform"]
+        "parquet-to-azure-queue": {
+            "help": "Read Parquet file and send to Azure Queue.",
+            "argument_aspects": ["input-url", "parquet", "azure", "transform"],
         },
-        'parquet-to-kafka': {
-            "help": 'Read Parquet file and send to Kafka.',
-            "argument_aspects": ["input-url", "parquet", "kafka", "transform"]
+        "parquet-to-kafka": {
+            "help": "Read Parquet file and send to Kafka.",
+            "argument_aspects": ["input-url", "parquet", "kafka", "transform"],
         },
-        'parquet-to-rabbitmq': {
-            "help": 'Read Parquet file and send to RabbitMQ.',
-            "argument_aspects": ["input-url", "parquet", "rabbitmq", "transform"]
+        "parquet-to-rabbitmq": {
+            "help": "Read Parquet file and send to RabbitMQ.",
+            "argument_aspects": ["input-url", "parquet", "rabbitmq", "transform"],
         },
-        'parquet-to-sqs': {
-            "help": 'Read Parquet file and print to AWS SQS.',
-            "argument_aspects": ["input-url", "parquet", "sqs", "transform"]
+        "parquet-to-sqs": {
+            "help": "Read Parquet file and print to AWS SQS.",
+            "argument_aspects": ["input-url", "parquet", "sqs", "transform"],
         },
-        'parquet-to-sqs-batch': {
-            "help": 'Read Parquet file and print to AWS SQS using batch. DEPRECATED: Use parquet-to-sqs and set SENZING_RECORDS_PER_MESSAGE',
-            "argument_aspects": ["input-url", "parquet", "sqs", "transform"]
+        "parquet-to-sqs-batch": {
+            "help": "Read Parquet file and print to AWS SQS using batch. DEPRECATED: Use parquet-to-sqs and set SENZING_RECORDS_PER_MESSAGE",
+            "argument_aspects": ["input-url", "parquet", "sqs", "transform"],
         },
-        'parquet-to-stdout': {
-            "help": 'Read Parquet file and print to STDOUT.',
-            "argument_aspects": ["input-url", "parquet", "stdout", "transform"]
+        "parquet-to-stdout": {
+            "help": "Read Parquet file and print to STDOUT.",
+            "argument_aspects": ["input-url", "parquet", "stdout", "transform"],
         },
-        'sleep': {
-            "help": 'Do nothing but sleep. For Docker testing.',
+        "sleep": {
+            "help": "Do nothing but sleep. For Docker testing.",
             "arguments": {
                 "--sleep-time-in-seconds": {
                     "dest": "sleep_time_in_seconds",
                     "metavar": "SENZING_SLEEP_TIME_IN_SECONDS",
-                    "help": "Sleep time in seconds. DEFAULT: 0 (infinite)"
+                    "help": "Sleep time in seconds. DEFAULT: 0 (infinite)",
                 },
             },
         },
-        'version': {
-            "help": 'Print version of program.',
+        "version": {
+            "help": "Print version of program.",
         },
-        'docker-acceptance-test': {
-            "help": 'For Docker acceptance testing.',
+        "docker-acceptance-test": {
+            "help": "For Docker acceptance testing.",
         },
     }
 
@@ -414,184 +407,188 @@ def get_parser():
             "--azure-queue-connection-string": {
                 "dest": "azure_queue_connection_string",
                 "metavar": "SENZING_AZURE_QUEUE_CONNECTION_STRING",
-                "help": "Azure Service Bus Queue connection string. Default: none"
+                "help": "Azure Service Bus Queue connection string. Default: none",
             },
             "--azure-queue-name": {
                 "dest": "azure_queue_name",
                 "metavar": "SENZING_AZURE_QUEUE_NAME",
-                "help": "Azure Service Bus Queue name. Default: none"
-            }
+                "help": "Azure Service Bus Queue name. Default: none",
+            },
         },
         "csv": {
             "--csv-rows-in-chunk": {
                 "dest": "csv_rows_in_chunk",
                 "metavar": "SENZING_CSV_ROWS_IN_CHUNK",
-                "help": "The number of csv lines to read into memory and process at one time. Default: 10000"
+                "help": "The number of csv lines to read into memory and process at one time. Default: 10000",
             },
             "--csv-delimiter": {
                 "dest": "csv_delimiter",
                 "metavar": "SENZING_CSV_DELIMITER",
-                "help": "The character used to separate column values in a csv row. Default: ,"
-            }
+                "help": "The character used to separate column values in a csv row. Default: ,",
+            },
         },
         "input-url": {
             "--default-data-source": {
                 "dest": "default_data_source",
                 "metavar": "SENZING_DEFAULT_DATA_SOURCE",
-                "help": "Used when record does not have a `DATA_SOURCE` key. Default: None"
+                "help": "Used when record does not have a `DATA_SOURCE` key. Default: None",
             },
             "--input-url": {
                 "dest": "input_url",
                 "metavar": "SENZING_INPUT_URL",
-                "help": "File/URL of input file. Default: None"
+                "help": "File/URL of input file. Default: None",
             },
             "--record-identifier": {
                 "dest": "record_identifier",
                 "metavar": "SENZING_RECORD_IDENTIFIER",
-                "help": "Field that identifies record. Default: RECORD_ID"
+                "help": "Field that identifies record. Default: RECORD_ID",
             },
             "--record-max": {
                 "dest": "record_max",
                 "metavar": "SENZING_RECORD_MAX",
-                "help": "Highest record id. Default: None."
+                "help": "Highest record id. Default: None.",
             },
             "--record-min": {
                 "dest": "record_min",
                 "metavar": "SENZING_RECORD_MIN",
-                "help": "Lowest record id. Default: None"
+                "help": "Lowest record id. Default: None",
             },
             "--record-size-max": {
                 "dest": "record_size_max",
                 "metavar": "SENZING_RECORD_SIZE_MAX",
-                "help": "Maximum record size (in bytes) to accept. Default: None"
+                "help": "Maximum record size (in bytes) to accept. Default: None",
             },
             "--records-per-message": {
                 "dest": "records_per_message",
                 "metavar": "SENZING_RECORDS_PER_MESSAGE",
-                "help": "The number of records to include per message to the queue. Default: 1"
+                "help": "The number of records to include per message to the queue. Default: 1",
             },
             "--threads-per-print": {
                 "dest": "threads_per_print",
                 "metavar": "SENZING_THREADS_PER_PRINT",
-                "help": "Threads for print phase. Default: 4"
+                "help": "Threads for print phase. Default: 4",
             },
         },
         "kafka": {
             "--kafka-bootstrap-server": {
                 "dest": "kafka_bootstrap_server",
                 "metavar": "SENZING_KAFKA_BOOTSTRAP_SERVER",
-                "help": "Kafka bootstrap server. Default: localhost:9092"
+                "help": "Kafka bootstrap server. Default: localhost:9092",
             },
             "--kafka-configuration": {
                 "dest": "kafka_configuration",
                 "metavar": "SENZING_KAFKA_CONFIGURATION",
-                "help": "A JSON string with extra configuration parameters. Default: none"
+                "help": "A JSON string with extra configuration parameters. Default: none",
             },
             "--kafka-group": {
                 "dest": "kafka_group",
                 "metavar": "SENZING_KAFKA_GROUP",
-                "help": "Kafka group. Default: senzing-kafka-group"
+                "help": "Kafka group. Default: senzing-kafka-group",
             },
             "--kafka-topic": {
                 "dest": "kafka_topic",
                 "metavar": "SENZING_KAFKA_TOPIC",
-                "help": "Kafka topic. Default: senzing-kafka-topic"
+                "help": "Kafka topic. Default: senzing-kafka-topic",
             },
         },
         "rabbitmq": {
             "--rabbitmq-host": {
                 "dest": "rabbitmq_host",
                 "metavar": "SENZING_RABBITMQ_HOST",
-                "help": "RabbitMQ host. Default: localhost"
+                "help": "RabbitMQ host. Default: localhost",
             },
             "--rabbitmq-port": {
                 "dest": "rabbitmq_port",
                 "metavar": "SENZING_RABBITMQ_PORT",
-                "help": "RabbitMQ port. Default: 5672"
+                "help": "RabbitMQ port. Default: 5672",
             },
             "--rabbitmq-queue": {
                 "dest": "rabbitmq_queue",
                 "metavar": "SENZING_RABBITMQ_QUEUE",
-                "help": "RabbitMQ queue. Default: senzing-rabbitmq-queue"
+                "help": "RabbitMQ queue. Default: senzing-rabbitmq-queue",
             },
             "--rabbitmq-routing-key": {
                 "dest": "rabbitmq_routing_key",
                 "metavar": "SENZING_RABBITMQ_ROUTING_KEY",
-                "help": "RabbitMQ routing key. Default: senzing.records"
+                "help": "RabbitMQ routing key. Default: senzing.records",
             },
             "--rabbitmq-username": {
                 "dest": "rabbitmq_username",
                 "metavar": "SENZING_RABBITMQ_USERNAME",
-                "help": "RabbitMQ username. Default: user"
+                "help": "RabbitMQ username. Default: user",
             },
             "--rabbitmq-password": {
                 "dest": "rabbitmq_password",
                 "metavar": "SENZING_RABBITMQ_PASSWORD",
-                "help": "RabbitMQ password. Default: bitnami"
+                "help": "RabbitMQ password. Default: bitnami",
             },
             "--rabbitmq-exchange": {
                 "dest": "rabbitmq_exchange",
                 "metavar": "SENZING_RABBITMQ_EXCHANGE",
-                "help": "RabbitMQ exchange name. Default: empty string"
+                "help": "RabbitMQ exchange name. Default: empty string",
             },
             "--rabbitmq-use-existing-entities": {
                 "dest": "rabbitmq_use_existing_entities",
                 "metavar": "SENZING_RABBITMQ_USE_EXISTING_ENTITIES",
-                "help": "Connect to an existing exchange and queue using their settings. An error is thrown if the exchange or queue does not exist. If False, it will create the exchange and queue if they do not exist. If they exist, then it will attempt to connect, checking the settings match. Default: False"
+                "help": "Connect to an existing exchange and queue using their settings. An error is thrown if the exchange or queue does not exist. If False, it will create the exchange and queue if they do not exist. If they exist, then it will attempt to connect, checking the settings match. Default: False",
             },
             "--rabbitmq-virtual-host": {
                 "dest": "rabbitmq_virtual_host",
                 "metavar": "SENZING_RABBITMQ_VIRTUAL_HOST",
-                "help": "RabbitMQ virtual host. Default: None, which will use the RabbitMQ defined default virtual host"
+                "help": "RabbitMQ virtual host. Default: None, which will use the RabbitMQ defined default virtual host",
             },
         },
         "transform": {
             "--stream-loader-directive-action": {
                 "dest": "stream_loader_directive_action",
                 "metavar": "SENZING_STREAM_LOADER_DIRECTIVE_ACTION",
-                "help": "Directive value used in Senzing Stream-loader. Default: none"
+                "help": "Directive value used in Senzing Stream-loader. Default: none",
             },
             "--stream-loader-directive-name": {
                 "dest": "stream_loader_directive_name",
                 "metavar": "SENZING_STREAM_LOADER_DIRECTIVE_NAME",
-                "help": "Directive key used in Senzing Stream-loader. Default: none"
+                "help": "Directive key used in Senzing Stream-loader. Default: none",
             },
         },
         "sqs": {
             "--sqs-queue-url": {
                 "dest": "sqs_queue_url",
                 "metavar": "SENZING_SQS_QUEUE_URL",
-                "help": "AWS SQS URL. Default: none"
+                "help": "AWS SQS URL. Default: none",
             },
-        }
+        },
     }
 
     # Augment "subcommands" variable with arguments specified by aspects.
 
     for subcommand, subcommand_value in subcommands.items():
-        if 'argument_aspects' in subcommand_value:
-            for aspect in subcommand_value['argument_aspects']:
-                if 'arguments' not in subcommands[subcommand]:
-                    subcommands[subcommand]['arguments'] = {}
+        if "argument_aspects" in subcommand_value:
+            for aspect in subcommand_value["argument_aspects"]:
+                if "arguments" not in subcommands[subcommand]:
+                    subcommands[subcommand]["arguments"] = {}
                 arguments = argument_aspects.get(aspect, {})
                 for argument, argument_value in arguments.items():
-                    subcommands[subcommand]['arguments'][argument] = argument_value
+                    subcommands[subcommand]["arguments"][argument] = argument_value
 
     # Parse command line arguments.
 
     parser = argparse.ArgumentParser(
-        prog="stream-producer.py", description="Queue messages. For more information, see https://github.com/Senzing/stream-producer")
+        prog="stream-producer.py",
+        description="Queue messages. For more information, see https://github.com/Senzing/stream-producer",
+    )
     subparsers = parser.add_subparsers(
-        dest='subcommand', help='Subcommands (SENZING_SUBCOMMAND):')
+        dest="subcommand", help="Subcommands (SENZING_SUBCOMMAND):"
+    )
 
     for subcommand_key, subcommand_values in subcommands.items():
-        subcommand_help = subcommand_values.get('help', "")
-        subcommand_arguments = subcommand_values.get('arguments', {})
+        subcommand_help = subcommand_values.get("help", "")
+        subcommand_arguments = subcommand_values.get("arguments", {})
         subparser = subparsers.add_parser(subcommand_key, help=subcommand_help)
         for argument_key, argument_values in subcommand_arguments.items():
             subparser.add_argument(argument_key, **argument_values)
 
     return parser
+
 
 # -----------------------------------------------------------------------------
 # Message handling
@@ -679,7 +676,8 @@ message_dictionary = {
 def message(index, *args):
     index_string = str(index)
     template = message_dictionary.get(
-        index_string, "No message for index {0}.".format(index_string))
+        index_string, "No message for index {0}.".format(index_string)
+    )
     return template.format(*args)
 
 
@@ -704,7 +702,7 @@ def message_debug(index, *args):
 
 
 def get_exception():
-    ''' Get details about an exception. '''
+    """Get details about an exception."""
     exception_type, exception_object, traceback = sys.exc_info()
     frame = traceback.tb_frame
     line_number = traceback.tb_lineno
@@ -720,31 +718,32 @@ def get_exception():
         "traceback": traceback,
     }
 
+
 # -----------------------------------------------------------------------------
 # Configuration
 # -----------------------------------------------------------------------------
 
 
 def get_configuration(args):
-    ''' Order of precedence: CLI, OS environment variables, INI file, default. '''
+    """Order of precedence: CLI, OS environment variables, INI file, default."""
     result = {}
 
     # Copy default values into configuration dictionary.
 
     for key, value in list(configuration_locator.items()):
-        result[key] = value.get('default', None)
+        result[key] = value.get("default", None)
 
     # "Prime the pump" with command line args. This will be done again as the last step.
 
     for key, value in list(args.__dict__.items()):
-        new_key = key.format(subcommand.replace('-', '_'))
+        new_key = key.format(subcommand.replace("-", "_"))
         if value:
             result[new_key] = value
 
     # Copy OS environment variables into configuration dictionary.
 
     for key, value in list(configuration_locator.items()):
-        os_env_var = value.get('env', None)
+        os_env_var = value.get("env", None)
         if os_env_var:
             os_env_value = os.getenv(os_env_var, None)
             if os_env_value:
@@ -753,31 +752,31 @@ def get_configuration(args):
     # Copy 'args' into configuration dictionary.
 
     for key, value in list(args.__dict__.items()):
-        new_key = key.format(subcommand.replace('-', '_'))
+        new_key = key.format(subcommand.replace("-", "_"))
         if value:
             result[new_key] = value
 
     # Add program information.
 
-    result['program_version'] = __version__
-    result['program_updated'] = __updated__
+    result["program_version"] = __version__
+    result["program_updated"] = __updated__
 
     # Special case: subcommand from command-line
 
     if args.subcommand:
-        result['subcommand'] = args.subcommand
+        result["subcommand"] = args.subcommand
 
     # Special case: Change boolean strings to booleans.
 
     booleans = [
-        'debug',
-        'rabbitmq_use_existing_entities',
+        "debug",
+        "rabbitmq_use_existing_entities",
     ]
     for boolean in booleans:
         boolean_value = result.get(boolean)
         if isinstance(boolean_value, str):
             boolean_value_lower_case = boolean_value.lower()
-            if boolean_value_lower_case in ['true', '1', 't', 'y', 'yes']:
+            if boolean_value_lower_case in ["true", "1", "t", "y", "yes"]:
                 result[boolean] = True
             else:
                 result[boolean] = False
@@ -785,19 +784,19 @@ def get_configuration(args):
     # Special case: Change integer strings to integers.
 
     integers = [
-        'csv_rows_in_chunk',
-        'delay_in_seconds',
-        'kafka_poll_interval',
-        'monitoring_period_in_seconds',
-        'read_queue_maxsize',
-        'record_max',
-        'record_min',
-        'record_size_max',
-        'record_monitor',
-        'sleep_time_in_seconds',
-        'sqs_delay_seconds',
-        'threads_per_print',
-        'records_per_message'
+        "csv_rows_in_chunk",
+        "delay_in_seconds",
+        "kafka_poll_interval",
+        "monitoring_period_in_seconds",
+        "read_queue_maxsize",
+        "record_max",
+        "record_min",
+        "record_size_max",
+        "record_monitor",
+        "sleep_time_in_seconds",
+        "sqs_delay_seconds",
+        "threads_per_print",
+        "records_per_message",
     ]
     for integer in integers:
         integer_string = result.get(integer)
@@ -807,34 +806,34 @@ def get_configuration(args):
     # Initialize counters.
 
     counters = [
-        'input_counter',
-        'output_counter',
-        'output_counter_reported',
+        "input_counter",
+        "output_counter",
+        "output_counter_reported",
     ]
     for counter in counters:
         result[counter] = 0
 
     # Normalize SENZING_INPUT_URL
 
-    if result.get('input_url', "").startswith("file://"):
-        result['input_url'] = result.get('input_url')[7:]
+    if result.get("input_url", "").startswith("file://"):
+        result["input_url"] = result.get("input_url")[7:]
 
     return result
 
 
 def validate_configuration(config):
-    ''' Check aggregate configuration from commandline options, environment variables, config files, and defaults. '''
+    """Check aggregate configuration from commandline options, environment variables, config files, and defaults."""
 
     user_warning_messages = []
     user_error_messages = []
 
     # Perform subcommand specific checking.
 
-    subcommand = config.get('subcommand')
+    subcommand = config.get("subcommand")
 
-    if subcommand in ['task1']:
+    if subcommand in ["task1"]:
 
-        if not config.get('example'):
+        if not config.get("example"):
             user_error_messages.append(message_error(414))
 
     # Log warning messages.
@@ -859,7 +858,7 @@ def validate_configuration(config):
 
 
 def redact_configuration(config):
-    ''' Return a shallow copy of config with certain keys removed. '''
+    """Return a shallow copy of config with certain keys removed."""
     result = config.copy()
     for key in keys_to_redact:
         try:
@@ -867,6 +866,7 @@ def redact_configuration(config):
         except Exception:
             pass
     return result
+
 
 # -----------------------------------------------------------------------------
 # Class: Governor
@@ -891,6 +891,7 @@ class Governor:
     def __exit__(self, exception_type, exception_value, exception_traceback):
         self.close()
 
+
 # -----------------------------------------------------------------------------
 # Utility functions
 # -----------------------------------------------------------------------------
@@ -901,9 +902,9 @@ def bootstrap_signal_handler(signal, frame):
 
 
 def create_signal_handler_function(args):
-    ''' Tricky code.  Uses currying technique. Create a function for signal handling.
-        that knows about "args".
-    '''
+    """Tricky code.  Uses currying technique. Create a function for signal handling.
+    that knows about "args".
+    """
 
     def result_function(signal_number, frame):
         logging.info(message_info(298, args))
@@ -913,16 +914,16 @@ def create_signal_handler_function(args):
 
 
 def delay(config):
-    delay_in_seconds = config.get('delay_in_seconds')
+    delay_in_seconds = config.get("delay_in_seconds")
     if delay_in_seconds > 0:
         logging.info(message_info(120, delay_in_seconds))
         time.sleep(delay_in_seconds)
 
 
 def entry_template(config):
-    ''' Format of entry message. '''
+    """Format of entry message."""
     debug = config.get("debug", False)
-    config['start_time'] = time.time()
+    config["start_time"] = time.time()
     if debug:
         final_config = config
     else:
@@ -932,13 +933,14 @@ def entry_template(config):
 
 
 def exit_template(config):
-    ''' Format of exit message. '''
+    """Format of exit message."""
     debug = config.get("debug", False)
     stop_time = time.time()
-    config['stop_time'] = stop_time
-    config['elapsed_time'] = stop_time - config.get('start_time', stop_time)
-    config['rate'] = int(config.get('output_counter', 0) /
-                         config.get('elapsed_time', 1))
+    config["stop_time"] = stop_time
+    config["elapsed_time"] = stop_time - config.get("start_time", stop_time)
+    config["rate"] = int(
+        config.get("output_counter", 0) / config.get("elapsed_time", 1)
+    )
     if debug:
         final_config = config
     else:
@@ -948,7 +950,7 @@ def exit_template(config):
 
 
 def exit_error(index, *args):
-    ''' Log error message and exit program. '''
+    """Log error message and exit program."""
     logging.error(message_error(index, *args))
     logging.error(message_error(698))
     logging.shutdown()
@@ -956,8 +958,9 @@ def exit_error(index, *args):
 
 
 def exit_silently():
-    ''' Exit program. '''
+    """Exit program."""
     sys.exit(0)
+
 
 # -----------------------------------------------------------------------------
 # Class: MonitorThread
@@ -965,20 +968,20 @@ def exit_silently():
 
 
 class MonitorThread(threading.Thread):
-    '''
+    """
     Periodically log operational metrics.
-    '''
+    """
 
     def __init__(self, config=None, workers=None):
         threading.Thread.__init__(self)
         self.config = config
         self.workers = workers
-        self.record_min = config.get('record_min', 0)
+        self.record_min = config.get("record_min", 0)
         if self.record_min is None:
             self.record_min = 0
 
     def run(self):
-        '''Periodically monitor what is happening.'''
+        """Periodically monitor what is happening."""
 
         # Show that thread is starting in the log.
 
@@ -993,7 +996,7 @@ class MonitorThread(threading.Thread):
 
         # Define monitoring report interval.
 
-        sleep_time_in_seconds = self.config.get('monitoring_period_in_seconds')
+        sleep_time_in_seconds = self.config.get("monitoring_period_in_seconds")
 
         # Sleep-monitor loop.
 
@@ -1004,7 +1007,7 @@ class MonitorThread(threading.Thread):
 
         while active_workers > 0:
 
-            # Tricky code.  Essentially this is an interruptible
+            # Tricky code.  Essentially this is an interruptable
             # time.sleep(sleep_time_in_seconds)
 
             interval_in_seconds = 5
@@ -1026,7 +1029,7 @@ class MonitorThread(threading.Thread):
             # Calculate times.
 
             now = time.time()
-            uptime = now - self.config.get('start_time', now)
+            uptime = now - self.config.get("start_time", now)
 
             # Construct and log monitor statistics.
 
@@ -1046,16 +1049,17 @@ class MonitorThread(threading.Thread):
                 total = self.config.get(key)
                 interval = total - value
                 stats["{0}_interval".format(key)] = interval
-                stats["{0}_line_number_in_file".format(
-                    key)] = self.record_min + total
+                stats["{0}_line_number_in_file".format(key)] = self.record_min + total
                 stats["{0}_rate_interval".format(key)] = int(
-                    interval / sleep_time_in_seconds)
+                    interval / sleep_time_in_seconds
+                )
                 stats["{0}_rate_total".format(key)] = int(total / uptime)
                 stats["{0}_total".format(key)] = total
                 last[key] = total
 
             logging.info(message_info(127, json.dumps(stats, sort_keys=True)))
         logging.info(message_info(181))
+
 
 # =============================================================================
 # Mixins: Read*
@@ -1073,18 +1077,19 @@ class MonitorThread(threading.Thread):
 # -----------------------------------------------------------------------------
 
 
-class ReadFileAvroMixin():
+class ReadFileAvroMixin:
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "ReadFileAvroMixin"))
-        self.input_url = config.get('input_url')
-        self.record_min = config.get('record_min')
-        self.record_max = config.get('record_max')
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "ReadFileAvroMixin")
+        )
+        self.input_url = config.get("input_url")
+        self.record_min = config.get("record_min")
+        self.record_max = config.get("record_max")
         self.counter = 0
 
     def read(self):
-        with open(self.input_url, 'rb') as input_file:
+        with open(self.input_url, "rb") as input_file:
             avro_reader = fastavro.reader(input_file)
             for record in avro_reader:
                 self.counter += 1
@@ -1094,34 +1099,38 @@ class ReadFileAvroMixin():
                     break
                 yield record
 
+
 # -----------------------------------------------------------------------------
 # Class: ReadFileCsvMixin
 # -----------------------------------------------------------------------------
 
 
-class ReadFileCsvMixin():
+class ReadFileCsvMixin:
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(
-            996,
-            threading.current_thread().name,
-            "ReadFileCsvMixin"
-        ))
-        self.input_url = config.get('input_url')
-        self.record_min = config.get('record_min')
-        self.record_max = config.get('record_max')
-        self.rows_in_chunk = config.get('csv_rows_in_chunk')
-        self.delimiter = config.get('csv_delimiter')
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "ReadFileCsvMixin")
+        )
+        self.input_url = config.get("input_url")
+        self.record_min = config.get("record_min")
+        self.record_max = config.get("record_max")
+        self.rows_in_chunk = config.get("csv_rows_in_chunk")
+        self.delimiter = config.get("csv_delimiter")
         self.counter = 0
 
     def read(self):
-        reader = pandas.read_csv(self.input_url, skipinitialspace=True,
-                                 dtype=str, chunksize=self.rows_in_chunk, delimiter=self.delimiter)
+        reader = pandas.read_csv(
+            self.input_url,
+            skipinitialspace=True,
+            dtype=str,
+            chunksize=self.rows_in_chunk,
+            delimiter=self.delimiter,
+        )
         for data_frame in reader:
-            data_frame.fillna('', inplace=True)
+            data_frame.fillna("", inplace=True)
             for row in data_frame.to_dict(orient="records"):
                 # Remove items that have '' value
-                row = {i: j for i, j in row.items() if j != ''}
+                row = {i: j for i, j in row.items() if j != ""}
 
                 self.counter += 1
                 if self.record_min and self.counter < self.record_min:
@@ -1131,23 +1140,25 @@ class ReadFileCsvMixin():
                 assert isinstance(row, dict)
                 yield row
 
+
 # -----------------------------------------------------------------------------
 # Class: ReadFileGzippedMixin
 # -----------------------------------------------------------------------------
 
 
-class ReadFileGzippedMixin():
+class ReadFileGzippedMixin:
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "ReadFileGzippedMixin"))
-        self.input_url = config.get('input_url')
-        self.record_min = config.get('record_min')
-        self.record_max = config.get('record_max')
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "ReadFileGzippedMixin")
+        )
+        self.input_url = config.get("input_url")
+        self.record_min = config.get("record_min")
+        self.record_max = config.get("record_max")
         self.counter = 0
 
     def read(self):
-        with gzip.open(self.input_url, 'rt') as input_file:
+        with gzip.open(self.input_url, "rt") as input_file:
             for line in input_file:
                 self.counter += 1
                 if self.record_min and self.counter < self.record_min:
@@ -1160,27 +1171,29 @@ class ReadFileGzippedMixin():
                 assert isinstance(line, str)
                 yield line
 
+
 # -----------------------------------------------------------------------------
 # Class: ReadFileMixin
 # -----------------------------------------------------------------------------
 
 
-class ReadFileMixin():
+class ReadFileMixin:
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "ReadFileMixin"))
-        self.input_url = config.get('input_url')
-        self.record_min = config.get('record_min')
-        self.record_max = config.get('record_max')
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "ReadFileMixin")
+        )
+        self.input_url = config.get("input_url")
+        self.record_min = config.get("record_min")
+        self.record_max = config.get("record_max")
         self.counter = 0
 
     def read(self):
         if os.path.isdir(self.input_url):
-            files = Path(self.input_url).glob('*.json*')
+            files = Path(self.input_url).glob("*.json*")
             for file in files:
                 logging.info(message_info(125, file))
-                with open(file, 'r') as input_file:
+                with open(file, "r") as input_file:
                     for line in input_file:
                         self.counter += 1
                         line = line.strip()
@@ -1190,7 +1203,7 @@ class ReadFileMixin():
                         yield line
 
         else:
-            with open(self.input_url, 'r') as input_file:
+            with open(self.input_url, "r") as input_file:
                 for line in input_file:
                     self.counter += 1
                     if self.record_min and self.counter < self.record_min:
@@ -1203,19 +1216,21 @@ class ReadFileMixin():
                     assert isinstance(line, str)
                     yield line
 
+
 # -----------------------------------------------------------------------------
 # Class: ReadFileParquetMixin
 # -----------------------------------------------------------------------------
 
 
-class ReadFileParquetMixin():
+class ReadFileParquetMixin:
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "ReadFileParquetMixin"))
-        self.input_url = config.get('input_url')
-        self.record_min = config.get('record_min')
-        self.record_max = config.get('record_max')
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "ReadFileParquetMixin")
+        )
+        self.input_url = config.get("input_url")
+        self.record_min = config.get("record_min")
+        self.record_max = config.get("record_max")
         self.counter = 0
 
     def read(self):
@@ -1229,16 +1244,18 @@ class ReadFileParquetMixin():
             assert isinstance(row, dict)
             yield row
 
+
 # -----------------------------------------------------------------------------
 # Class: ReadQueueMixin
 # -----------------------------------------------------------------------------
 
 
-class ReadQueueMixin():
+class ReadQueueMixin:
 
     def __init__(self, read_queue=None, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "ReadQueueMixin"))
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "ReadQueueMixin")
+        )
         self.read_queue = read_queue
 
     def read(self):
@@ -1256,19 +1273,21 @@ class ReadQueueMixin():
 
             yield message
 
+
 # -----------------------------------------------------------------------------
 # Class: ReadS3AvroMixin
 # -----------------------------------------------------------------------------
 
 
-class ReadS3AvroMixin():
+class ReadS3AvroMixin:
 
     def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "ReadS3AvroMixin"))
-        self.input_url = config.get('input_url')
-        self.record_min = config.get('record_min')
-        self.record_max = config.get('record_max')
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "ReadS3AvroMixin")
+        )
+        self.input_url = config.get("input_url")
+        self.record_min = config.get("record_min")
+        self.record_max = config.get("record_max")
         self.counter = 0
 
         # Get S3 bucket and key
@@ -1281,7 +1300,7 @@ class ReadS3AvroMixin():
         self.fs = s3fs.S3FileSystem(anon=False)
         self.fs.ls(self.S3Bucket)
 
-        with self.fs.open(self.S3Bucket + self.S3Key, 'rb') as input_file:
+        with self.fs.open(self.S3Bucket + self.S3Key, "rb") as input_file:
             avro_reader = fastavro.reader(input_file)
             for record in avro_reader:
                 self.counter += 1
@@ -1291,21 +1310,23 @@ class ReadS3AvroMixin():
                     break
                 yield record
 
+
 # -----------------------------------------------------------------------------
 # Class: ReadS3CsvMixin
 # -----------------------------------------------------------------------------
 
 
-class ReadS3CsvMixin():
+class ReadS3CsvMixin:
 
     def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "ReadS3CsvMixin"))
-        self.input_url = config.get('input_url')
-        self.record_min = config.get('record_min')
-        self.record_max = config.get('record_max')
-        self.rows_in_chunk = config.get('csv_rows_in_chunk')
-        self.delimiter = config.get('csv_delimiter')
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "ReadS3CsvMixin")
+        )
+        self.input_url = config.get("input_url")
+        self.record_min = config.get("record_min")
+        self.record_max = config.get("record_max")
+        self.rows_in_chunk = config.get("csv_rows_in_chunk")
+        self.delimiter = config.get("csv_delimiter")
         self.counter = 0
 
         # Instantiate boto3
@@ -1316,22 +1337,26 @@ class ReadS3CsvMixin():
 
         self.urlParts = urllib.parse.urlparse(self.input_url)
         self.S3Bucket = self.urlParts.netloc
-        self.S3Key = self.urlParts.path.lstrip('/')
+        self.S3Key = self.urlParts.path.lstrip("/")
 
     def read(self):
-        self.response = self.S3_client.get_object(
-            Bucket=self.S3Bucket, Key=self.S3Key)
-        self.body = self.response['Body']
-        self.csv_string = self.body.read().decode('utf-8')
+        self.response = self.S3_client.get_object(Bucket=self.S3Bucket, Key=self.S3Key)
+        self.body = self.response["Body"]
+        self.csv_string = self.body.read().decode("utf-8")
 
-        reader = pandas.read_csv(io.StringIO(self.csv_string), skipinitialspace=True,
-                                 dtype=str, chunksize=self.rows_in_chunk, delimiter=self.delimiter)
+        reader = pandas.read_csv(
+            io.StringIO(self.csv_string),
+            skipinitialspace=True,
+            dtype=str,
+            chunksize=self.rows_in_chunk,
+            delimiter=self.delimiter,
+        )
 
         for data_frame in reader:
-            data_frame.fillna('', inplace=True)
+            data_frame.fillna("", inplace=True)
             for row in data_frame.to_dict(orient="records"):
                 # Remove items that have '' value
-                row = {i: j for i, j in row.items() if j != ''}
+                row = {i: j for i, j in row.items() if j != ""}
 
                 self.counter += 1
                 if self.record_min and self.counter < self.record_min:
@@ -1341,21 +1366,23 @@ class ReadS3CsvMixin():
                 assert isinstance(row, dict)
                 yield row
 
+
 # -----------------------------------------------------------------------------
 # Class: ReadS3JsosMixin
 # -----------------------------------------------------------------------------
 
 
-class ReadS3JsonMixin():
+class ReadS3JsonMixin:
 
     def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "ReadS3JsonMixin"))
-        self.input_url = config.get('input_url')
-        self.record_min = config.get('record_min')
-        self.record_max = config.get('record_max')
-        self.rows_in_chunk = config.get('csv_rows_in_chunk')
-        self.delimiter = config.get('csv_delimiter')
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "ReadS3JsonMixin")
+        )
+        self.input_url = config.get("input_url")
+        self.record_min = config.get("record_min")
+        self.record_max = config.get("record_max")
+        self.rows_in_chunk = config.get("csv_rows_in_chunk")
+        self.delimiter = config.get("csv_delimiter")
         self.counter = 0
 
         # Instantiate boto3
@@ -1366,11 +1393,10 @@ class ReadS3JsonMixin():
 
         self.urlParts = urllib.parse.urlparse(self.input_url)
         self.S3Bucket = self.urlParts.netloc
-        self.S3Key = self.urlParts.path.lstrip('/')
+        self.S3Key = self.urlParts.path.lstrip("/")
 
     def read(self):
-        self.response = self.S3_client.get_object(
-            Bucket=self.S3Bucket, Key=self.S3Key)
+        self.response = self.S3_client.get_object(Bucket=self.S3Bucket, Key=self.S3Key)
         self.data = self.response["Body"].read().decode()
         self.data = io.StringIO(self.data)
 
@@ -1386,19 +1412,21 @@ class ReadS3JsonMixin():
             assert isinstance(line, str)
             yield line
 
+
 # ------------------------------------------------------------------------------
 # Class: ReadS3ParquetMixin
 # -----------------------------------------------------------------------------
 
 
-class ReadS3ParquetMixin():
+class ReadS3ParquetMixin:
 
     def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "ReadS3ParquetMixin"))
-        self.input_url = config.get('input_url')
-        self.record_min = config.get('record_min')
-        self.record_max = config.get('record_max')
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "ReadS3ParquetMixin")
+        )
+        self.input_url = config.get("input_url")
+        self.record_min = config.get("record_min")
+        self.record_max = config.get("record_max")
         self.counter = 0
 
         # Get S3 bucket and key
@@ -1410,8 +1438,11 @@ class ReadS3ParquetMixin():
     def read(self):
         self.fs = s3fs.S3FileSystem(anon=False)
 
-        data_frame = pq.ParquetDataset(
-            self.S3Bucket + self.S3Key, filesystem=self.fs).read_pandas().to_pandas()
+        data_frame = (
+            pq.ParquetDataset(self.S3Bucket + self.S3Key, filesystem=self.fs)
+            .read_pandas()
+            .to_pandas()
+        )
         for row in data_frame.to_dict(orient="records"):
             self.counter += 1
             if self.record_min and self.counter < self.record_min:
@@ -1421,19 +1452,21 @@ class ReadS3ParquetMixin():
             assert isinstance(row, dict)
             yield row
 
+
 # -----------------------------------------------------------------------------
 # Class: ReadUrlAvroMixin
 # -----------------------------------------------------------------------------
 
 
-class ReadUrlAvroMixin():
+class ReadUrlAvroMixin:
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "ReadFileAvroMixin"))
-        self.input_url = config.get('input_url')
-        self.record_min = config.get('record_min')
-        self.record_max = config.get('record_max')
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "ReadFileAvroMixin")
+        )
+        self.input_url = config.get("input_url")
+        self.record_min = config.get("record_min")
+        self.record_max = config.get("record_max")
         self.counter = 0
 
     def read(self):
@@ -1447,19 +1480,21 @@ class ReadUrlAvroMixin():
                     break
                 yield record
 
+
 # -----------------------------------------------------------------------------
 # Class: ReadUrlGzippedMixin
 # -----------------------------------------------------------------------------
 
 
-class ReadUrlGzippedMixin():
+class ReadUrlGzippedMixin:
 
     def __init__(self, config={}, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "ReadUrlGzippedMixin"))
-        self.input_url = config.get('input_url')
-        self.record_min = config.get('record_min')
-        self.record_max = config.get('record_max')
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "ReadUrlGzippedMixin")
+        )
+        self.input_url = config.get("input_url")
+        self.record_min = config.get("record_min")
+        self.record_max = config.get("record_max")
         self.counter = 0
 
     def read(self):
@@ -1479,19 +1514,21 @@ class ReadUrlGzippedMixin():
             assert isinstance(result, dict)
             yield result
 
+
 # -----------------------------------------------------------------------------
 # Class: ReadUrlMixin
 # -----------------------------------------------------------------------------
 
 
-class ReadUrlMixin():
+class ReadUrlMixin:
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "ReadUrlMixin"))
-        self.input_url = config.get('input_url')
-        self.record_min = config.get('record_min')
-        self.record_max = config.get('record_max')
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "ReadUrlMixin")
+        )
+        self.input_url = config.get("input_url")
+        self.record_min = config.get("record_min")
+        self.record_max = config.get("record_max")
         self.counter = 0
 
     def read(self):
@@ -1510,6 +1547,7 @@ class ReadUrlMixin():
             assert isinstance(result, dict)
             yield result
 
+
 # =============================================================================
 # Mixins: Evaluate*
 #   Methods:
@@ -1518,7 +1556,7 @@ class ReadUrlMixin():
 #   - EvaluateDictToJsonMixin - Transform Python dictionary to JSON string
 #   - EvaluateJsonToDictMixin - Transform JSON string to Python dictionary
 #   - EvaluateNullObjectMixin - Simply pass on the message
-#   - EvaluateMakeSerializeableDictMixin - Make dictionary serializeable
+#   - EvaluateMakeSerializableDictMixin - Make dictionary serializable
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -1526,19 +1564,26 @@ class ReadUrlMixin():
 # -----------------------------------------------------------------------------
 
 
-class EvaluateDictToJsonMixin():
+class EvaluateDictToJsonMixin:
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "EvaluateDictToJsonMixin"))
-        self.default_data_source = self.config.get('default_data_source', None)
-        self.stream_loader_directive_action = self.config.get('stream_loader_directive_action', None)
-        self.stream_loader_directive_name = self.config.get('stream_loader_directive_name', None)
+        logging.debug(
+            message_debug(
+                996, threading.current_thread().name, "EvaluateDictToJsonMixin"
+            )
+        )
+        self.default_data_source = self.config.get("default_data_source", None)
+        self.stream_loader_directive_action = self.config.get(
+            "stream_loader_directive_action", None
+        )
+        self.stream_loader_directive_name = self.config.get(
+            "stream_loader_directive_name", None
+        )
 
     def evaluate(self, message):
         if self.default_data_source:
-            if 'DATA_SOURCE' not in message.keys():
-                message['DATA_SOURCE'] = self.default_data_source
+            if "DATA_SOURCE" not in message.keys():
+                message["DATA_SOURCE"] = self.default_data_source
         if self.stream_loader_directive_name:
             if self.stream_loader_directive_name not in message.keys():
                 message[self.stream_loader_directive_name] = {
@@ -1547,44 +1592,58 @@ class EvaluateDictToJsonMixin():
 
         return json.dumps(message)
 
+
 # -----------------------------------------------------------------------------
 # Class: EvaluateJsonToDictMixin
 # -----------------------------------------------------------------------------
 
 
-class EvaluateJsonToDictMixin():
+class EvaluateJsonToDictMixin:
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "EvaluateJsonToDictMixin"))
+        logging.debug(
+            message_debug(
+                996, threading.current_thread().name, "EvaluateJsonToDictMixin"
+            )
+        )
 
     def evaluate(self, message):
         return json.loads(message)
+
 
 # -----------------------------------------------------------------------------
 # Class: EvaluateNullObjectMixin
 # -----------------------------------------------------------------------------
 
 
-class EvaluateNullObjectMixin():
+class EvaluateNullObjectMixin:
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "EvaluateNullObjectMixin"))
+        logging.debug(
+            message_debug(
+                996, threading.current_thread().name, "EvaluateNullObjectMixin"
+            )
+        )
 
     def evaluate(self, message):
         return message
 
+
 # -----------------------------------------------------------------------------
-# Class: EvaluateMakeSerializeableDictMixin
+# Class: EvaluateMakeSerializableDictMixin
 # -----------------------------------------------------------------------------
 
 
-class EvaluateMakeSerializeableDictMixin():
+class EvaluateMakeSerializableDictMixin:
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "EvaluateMakeSerializeableDictMixin"))
+        logging.debug(
+            message_debug(
+                996,
+                threading.current_thread().name,
+                "EvaluateMakeSerializableDictMixin",
+            )
+        )
 
     def evaluate(self, message):
         new_message = {}
@@ -1596,6 +1655,7 @@ class EvaluateMakeSerializeableDictMixin():
             except Exception:
                 pass
         return new_message
+
 
 # =============================================================================
 # Mixins: Print*
@@ -1612,18 +1672,21 @@ class EvaluateMakeSerializeableDictMixin():
 # -----------------------------------------------------------------------------
 
 
-class PrintAzureQueueMixin():
+class PrintAzureQueueMixin:
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "PrintAzureQueueMixin"))
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "PrintAzureQueueMixin")
+        )
 
         self.connection_string = config.get("azure_queue_connection_string")
         self.queue_name = config.get("azure_queue_name")
         self.servicebus_client = ServiceBusClient.from_connection_string(
-            self.connection_string)
+            self.connection_string
+        )
         self.sender = self.servicebus_client.get_queue_sender(
-            queue_name=self.queue_name)
+            queue_name=self.queue_name
+        )
 
     def print(self, message):
         assert isinstance(message, str)
@@ -1635,25 +1698,27 @@ class PrintAzureQueueMixin():
         self.sender.close()
         self.servicebus_client.close()
 
+
 # -----------------------------------------------------------------------------
 # Class: PrintKafkaMixin
 # -----------------------------------------------------------------------------
 
 
-class PrintKafkaMixin():
+class PrintKafkaMixin:
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "PrintKafkaMixin"))
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "PrintKafkaMixin")
+        )
         self.config = config
         self.kafka_poll_interval = config.get("kafka_poll_interval")
-        self.kafka_topic = config.get('kafka_topic')
+        self.kafka_topic = config.get("kafka_topic")
         self.record_monitor = config.get("record_monitor")
         self.number_of_records_per_print = config.get("records_per_message")
         if self.number_of_records_per_print > 1:
-            self.message_buffer = '['
+            self.message_buffer = "["
         else:
-            self.message_buffer = ''
+            self.message_buffer = ""
         self.num_messages = 0
 
         # default Kafka max message size, but save some space for kafka to use, just in case
@@ -1666,12 +1731,12 @@ class PrintKafkaMixin():
         # Construct Kafka configuration.
 
         kafka_configuration = {
-            'bootstrap.servers': config.get('kafka_bootstrap_server')
+            "bootstrap.servers": config.get("kafka_bootstrap_server")
         }
-        if config.get('kafka_group'):
-            kafka_configuration['group.id'] = config.get('kafka_group')
+        if config.get("kafka_group"):
+            kafka_configuration["group.id"] = config.get("kafka_group")
 
-        kafka_configuration.update(json.loads(self.config.get('kafka_configuration')))
+        kafka_configuration.update(json.loads(self.config.get("kafka_configuration")))
 
         # Create Kafka producer
 
@@ -1679,48 +1744,56 @@ class PrintKafkaMixin():
 
     def on_kafka_delivery(self, error, message):
         logging.debug(
-            message_debug(
-                103,
-                message.topic(),
-                message.value(),
-                message.error(),
-                error))
+            message_debug(103, message.topic(), message.value(), message.error(), error)
+        )
         if error is not None:
             logging.warning(
                 message_warning(
-                    408,
-                    message.topic(),
-                    message.value(),
-                    message.error(),
-                    error))
+                    408, message.topic(), message.value(), message.error(), error
+                )
+            )
 
     def print(self, message):
         assert isinstance(message, str)
 
         # if the record itself is too long to fit in a message, then log the ID with a warning and move on (+2 for the enclosing [])
 
-        new_record_size_in_bytes = len(message.encode('utf-8'))
+        new_record_size_in_bytes = len(message.encode("utf-8"))
         if new_record_size_in_bytes + 2 > self.max_message_size_in_bytes:
-            record_overage = new_record_size_in_bytes + 2 - self.max_message_size_in_bytes
+            record_overage = (
+                new_record_size_in_bytes + 2 - self.max_message_size_in_bytes
+            )
             record = json.loads(message)
             record_id = record.get(self.record_identifier)
             if record_id is not None:
-                logging.warning(message_warning(
-                    311, self.record_identifier, record_id, record_overage))
+                logging.warning(
+                    message_warning(
+                        311, self.record_identifier, record_id, record_overage
+                    )
+                )
             else:
-                logging.warning(message_warning(
-                    312, self.record_identifier, record_overage, self.max_message_size_in_bytes))
+                logging.warning(
+                    message_warning(
+                        312,
+                        self.record_identifier,
+                        record_overage,
+                        self.max_message_size_in_bytes,
+                    )
+                )
             return
 
         # Check if the new record would overflow the message and if so, send the existing messages
 
-        if len(self.message_buffer.encode('utf-8')) + new_record_size_in_bytes + 1 > self.max_message_size_in_bytes:
+        if (
+            len(self.message_buffer.encode("utf-8")) + new_record_size_in_bytes + 1
+            > self.max_message_size_in_bytes
+        ):
             self.send_message_buffer()
 
         # batch the message - if are already messages then add a delimiter first
 
         if self.num_messages > 0:
-            self.message_buffer += ','
+            self.message_buffer += ","
         self.message_buffer += message
         self.num_messages += 1
 
@@ -1741,12 +1814,13 @@ class PrintKafkaMixin():
 
         # Log progress. Using a "cheap" serialization technique.
 
-        output_counter = self.config.get('output_counter')
+        output_counter = self.config.get("output_counter")
         if output_counter % self.record_monitor == 0:
-            if output_counter != self.config.get('output_counter_reported'):
-                self.config['output_counter_reported'] = output_counter
-                logging.info(message_debug(
-                    104, threading.current_thread().name, output_counter))
+            if output_counter != self.config.get("output_counter_reported"):
+                self.config["output_counter_reported"] = output_counter
+                logging.info(
+                    message_debug(104, threading.current_thread().name, output_counter)
+                )
 
         # Poll Kafka for callbacks.
 
@@ -1760,28 +1834,28 @@ class PrintKafkaMixin():
 
     def send_message_buffer(self):
         if self.number_of_records_per_print > 1:
-            self.message_buffer += ']'
+            self.message_buffer += "]"
         self.kafka_producer.produce(
-            self.kafka_topic,
-            self.message_buffer,
-            on_delivery=self.on_kafka_delivery
+            self.kafka_topic, self.message_buffer, on_delivery=self.on_kafka_delivery
         )
         if self.number_of_records_per_print > 1:
-            self.message_buffer = '['
+            self.message_buffer = "["
         else:
-            self.message_buffer = ''
+            self.message_buffer = ""
         self.num_messages = 0
+
 
 # -----------------------------------------------------------------------------
 # Class: PrintRabbitmqMixin
 # -----------------------------------------------------------------------------
 
 
-class PrintRabbitmqMixin():
+class PrintRabbitmqMixin:
 
     def __init__(self, config=None, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "PrintRabbitmqMixin"))
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "PrintRabbitmqMixin")
+        )
 
         rabbitmq_host = config.get("rabbitmq_host")
         rabbitmq_password = config.get("rabbitmq_password")
@@ -1795,9 +1869,9 @@ class PrintRabbitmqMixin():
         self.record_monitor = config.get("record_monitor")
         self.number_of_records_per_print = config.get("records_per_message")
         if self.number_of_records_per_print > 1:
-            self.message_buffer = '['
+            self.message_buffer = "["
         else:
-            self.message_buffer = ''
+            self.message_buffer = ""
         self.num_messages = 0
 
         # default RabbitMQ max message size, but save some space for Rabbit to use, just in case
@@ -1809,39 +1883,41 @@ class PrintRabbitmqMixin():
 
         # Construct Pika objects.
 
-        self.rabbitmq_properties = pika.BasicProperties(
-        )
+        self.rabbitmq_properties = pika.BasicProperties()
         credentials = pika.PlainCredentials(
-            username=rabbitmq_username,
-            password=rabbitmq_password
+            username=rabbitmq_username, password=rabbitmq_password
         )
         rabbitmq_connection_parameters = pika.ConnectionParameters(
             host=rabbitmq_host,
             port=rabbitmq_port,
             credentials=credentials,
-            virtual_host=rabbitmq_virtual_host
+            virtual_host=rabbitmq_virtual_host,
         )
 
         # Open connection to RabbitMQ.
 
         try:
-            self.connection = pika.BlockingConnection(
-                rabbitmq_connection_parameters)
+            self.connection = pika.BlockingConnection(rabbitmq_connection_parameters)
             self.channel = self.connection.channel()
             self.channel.confirm_delivery()
             self.channel.exchange_declare(
-                exchange=self.rabbitmq_exchange, passive=rabbitmq_passive_declare)
+                exchange=self.rabbitmq_exchange, passive=rabbitmq_passive_declare
+            )
             message_queue = self.channel.queue_declare(
-                queue=self.rabbitmq_queue, passive=rabbitmq_passive_declare)
+                queue=self.rabbitmq_queue, passive=rabbitmq_passive_declare
+            )
 
             # if we are actively declaring, then we need to bind. If passive declare, we assume it is already set up
 
             if not rabbitmq_passive_declare:
                 self.channel.queue_bind(
-                    exchange=self.rabbitmq_exchange, routing_key=self.rabbitmq_routing_key, queue=message_queue.method.queue)
-        except (pika.exceptions.AMQPConnectionError) as err:
+                    exchange=self.rabbitmq_exchange,
+                    routing_key=self.rabbitmq_routing_key,
+                    queue=message_queue.method.queue,
+                )
+        except pika.exceptions.AMQPConnectionError as err:
             exit_error(412, err, rabbitmq_host)
-        except (pika.exceptions.ChannelClosedByBroker) as err:
+        except pika.exceptions.ChannelClosedByBroker as err:
             if err.reply_code == 404:
                 exit_error(413, self.rabbitmq_exchange, self.rabbitmq_queue)
             elif err.reply_code == 406:
@@ -1856,28 +1932,42 @@ class PrintRabbitmqMixin():
 
         # if the record itself is too long to fit in a message, then log the ID with a warning and move on (+2 for the enclosing [])
 
-        new_record_size_in_bytes = len(message.encode('utf-8'))
+        new_record_size_in_bytes = len(message.encode("utf-8"))
         if new_record_size_in_bytes + 2 > self.max_message_size_in_bytes:
-            record_overage = new_record_size_in_bytes + 2 - self.max_message_size_in_bytes
+            record_overage = (
+                new_record_size_in_bytes + 2 - self.max_message_size_in_bytes
+            )
             record = json.loads(message)
             record_id = record.get(self.record_identifier)
             if record_id is not None:
-                logging.warning(message_warning(
-                    311, self.record_identifier, record_id, record_overage))
+                logging.warning(
+                    message_warning(
+                        311, self.record_identifier, record_id, record_overage
+                    )
+                )
             else:
-                logging.warning(message_warning(
-                    312, self.record_identifier, record_overage, self.max_message_size_in_bytes))
+                logging.warning(
+                    message_warning(
+                        312,
+                        self.record_identifier,
+                        record_overage,
+                        self.max_message_size_in_bytes,
+                    )
+                )
             return
 
         # Check if the new record would overflow the message and if so, send the existing messages
 
-        if len(self.message_buffer.encode('utf-8')) + new_record_size_in_bytes + 1 > self.max_message_size_in_bytes:
+        if (
+            len(self.message_buffer.encode("utf-8")) + new_record_size_in_bytes + 1
+            > self.max_message_size_in_bytes
+        ):
             self.send_message_buffer()
 
         # batch the message - if are already messages then add a delimiter first
 
         if self.num_messages > 0:
-            self.message_buffer += ','
+            self.message_buffer += ","
         self.message_buffer += message
         self.num_messages += 1
 
@@ -1893,12 +1983,13 @@ class PrintRabbitmqMixin():
             logging.error(message_error(411, err, message))
 
         # Log progress. Using a "cheap" serialization technique.
-        output_counter = self.config.get('output_counter')
+        output_counter = self.config.get("output_counter")
         if output_counter % self.record_monitor == 0:
-            if output_counter != self.config.get('output_counter_reported'):
-                self.config['output_counter_reported'] = output_counter
-                logging.info(message_debug(
-                    104, threading.current_thread().name, output_counter))
+            if output_counter != self.config.get("output_counter_reported"):
+                self.config["output_counter_reported"] = output_counter
+                logging.info(
+                    message_debug(104, threading.current_thread().name, output_counter)
+                )
 
     def close(self):
         if self.num_messages > 0:
@@ -1908,7 +1999,7 @@ class PrintRabbitmqMixin():
 
     def send_message_buffer(self):
         if self.number_of_records_per_print > 1:
-            self.message_buffer += ']'
+            self.message_buffer += "]"
 
         sent = False
 
@@ -1919,28 +2010,30 @@ class PrintRabbitmqMixin():
                     routing_key=self.rabbitmq_routing_key,
                     body=self.message_buffer,
                     properties=self.rabbitmq_properties,
-                    mandatory=True
+                    mandatory=True,
                 )
                 sent = True
             except pika.exceptions.NackError:
                 time.sleep(1)
 
         if self.number_of_records_per_print > 1:
-            self.message_buffer = '['
+            self.message_buffer = "["
         else:
-            self.message_buffer = ''
+            self.message_buffer = ""
         self.num_messages = 0
+
 
 # -----------------------------------------------------------------------------
 # Class: PrintQueueMixin
 # -----------------------------------------------------------------------------
 
 
-class PrintQueueMixin():
+class PrintQueueMixin:
 
     def __init__(self, print_queue=None, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "PrintQueueMixin"))
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "PrintQueueMixin")
+        )
         self.print_queue = print_queue
 
     def print(self, message):
@@ -1950,16 +2043,18 @@ class PrintQueueMixin():
     def close(self):
         self.print_queue.put(QUEUE_SENTINEL)
 
+
 # -----------------------------------------------------------------------------
 # Class: PrintSqsMixin
 # -----------------------------------------------------------------------------
 
 
-class PrintSqsMixin():
+class PrintSqsMixin:
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "PrintSqsMixin"))
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "PrintSqsMixin")
+        )
         config = kwargs.get("config", {})
         self.counter = 0
         self.queue_url = config.get("sqs_queue_url")
@@ -1967,9 +2062,9 @@ class PrintSqsMixin():
         self.sqs_delay_seconds = config.get("sqs_delay_seconds")
         self.number_of_records_per_print = config.get("records_per_message")
         if self.number_of_records_per_print > 1:
-            self.message_buffer = '['
+            self.message_buffer = "["
         else:
-            self.message_buffer = ''
+            self.message_buffer = ""
         self.num_messages = 0
         self.record_identifier = config.get("record_identifier")
 
@@ -1991,11 +2086,14 @@ class PrintSqsMixin():
         # Query queue for max message size, then leave some overhead space in case SQS needs some itself
 
         response = self.sqs.get_queue_attributes(
-            QueueUrl=self.queue_url, AttributeNames=['MaximumMessageSize'])
+            QueueUrl=self.queue_url, AttributeNames=["MaximumMessageSize"]
+        )
         self.max_message_size_in_bytes = response.get(
-            'Attributes', {"MaximumMessageSize": 256 * 1024}).get('MaximumMessageSize')
-        self.max_message_size_in_bytes = int(
-            self.max_message_size_in_bytes) - (32 * 1024)
+            "Attributes", {"MaximumMessageSize": 256 * 1024}
+        ).get("MaximumMessageSize")
+        self.max_message_size_in_bytes = int(self.max_message_size_in_bytes) - (
+            32 * 1024
+        )
 
     def print(self, message):
         self.counter += 1
@@ -2003,31 +2101,44 @@ class PrintSqsMixin():
 
         # if the record itself is too long to fit in a message, then log the ID with a warning and move on (+2 for the enclosing [])
 
-        new_record_size_in_bytes = len(message.encode('utf-8'))
+        new_record_size_in_bytes = len(message.encode("utf-8"))
         if new_record_size_in_bytes + 2 > self.max_message_size_in_bytes:
-            record_overage = new_record_size_in_bytes + 2 - self.max_message_size_in_bytes
+            record_overage = (
+                new_record_size_in_bytes + 2 - self.max_message_size_in_bytes
+            )
             record = json.loads(message)
             record_id = record.get(self.record_identifier)
             if record_id is not None:
-                logging.warning(message_warning(
-                    311, self.record_identifier, record_id, record_overage))
+                logging.warning(
+                    message_warning(
+                        311, self.record_identifier, record_id, record_overage
+                    )
+                )
             else:
-                logging.warning(message_warning(
-                    312, self.record_identifier, record_overage, self.max_message_size_in_bytes))
+                logging.warning(
+                    message_warning(
+                        312,
+                        self.record_identifier,
+                        record_overage,
+                        self.max_message_size_in_bytes,
+                    )
+                )
             return
 
         # Check if the new record would overflow the message and if so, send the existing messages
 
-        if len(self.message_buffer.encode('utf-8')) + new_record_size_in_bytes + 1 > self.max_message_size_in_bytes:
+        if (
+            len(self.message_buffer.encode("utf-8")) + new_record_size_in_bytes + 1
+            > self.max_message_size_in_bytes
+        ):
             self.send_message_buffer()
 
         # batch the message - if are already messages then add a delimiter first
 
         if self.num_messages > 0:
-            self.message_buffer += ','
+            self.message_buffer += ","
         self.message_buffer += message
         self.num_messages += 1
-
 
         if self.number_of_records_per_print == 1:
             self.send_message_buffer()
@@ -2035,8 +2146,9 @@ class PrintSqsMixin():
             self.send_message_buffer()
 
         if self.counter % self.record_monitor == 0:
-            logging.info(message_debug(
-                104, threading.current_thread().name, self.counter))
+            logging.info(
+                message_debug(104, threading.current_thread().name, self.counter)
+            )
 
     def close(self):
         if self.num_messages > 0:
@@ -2044,7 +2156,7 @@ class PrintSqsMixin():
 
     def send_message_buffer(self):
         if self.number_of_records_per_print > 1:
-            self.message_buffer += ']'
+            self.message_buffer += "]"
         self.sqs.send_message(
             QueueUrl=self.queue_url,
             DelaySeconds=self.sqs_delay_seconds,
@@ -2052,21 +2164,23 @@ class PrintSqsMixin():
             MessageBody=(self.message_buffer),
         )
         if self.number_of_records_per_print > 1:
-            self.message_buffer = '['
+            self.message_buffer = "["
         else:
-            self.message_buffer = ''
+            self.message_buffer = ""
         self.num_messages = 0
+
 
 # -----------------------------------------------------------------------------
 # Class: PrintSqsBatchMixin
 # -----------------------------------------------------------------------------
 
 
-class PrintSqsBatchMixin():
+class PrintSqsBatchMixin:
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "PrintSqsMixin"))
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "PrintSqsMixin")
+        )
         config = kwargs.get("config", {})
         self.counter = 0
         self.queue_url = config.get("sqs_queue_url")
@@ -2096,7 +2210,7 @@ class PrintSqsBatchMixin():
                 entry = {
                     "Id": str(len(entries)),
                     "MessageBody": message,
-                    "DelaySeconds": self.sqs_delay_seconds
+                    "DelaySeconds": self.sqs_delay_seconds,
                 }
                 entries.append(entry)
             self.sqs.send_message_batch(
@@ -2105,8 +2219,9 @@ class PrintSqsBatchMixin():
             )
             self.messages = []
         if self.counter % self.record_monitor == 0:
-            logging.info(message_debug(
-                104, threading.current_thread().name, self.counter))
+            logging.info(
+                message_debug(104, threading.current_thread().name, self.counter)
+            )
 
     def close(self):
         entries = []
@@ -2114,7 +2229,7 @@ class PrintSqsBatchMixin():
             entry = {
                 "Id": str(len(entries)),
                 "MessageBody": message,
-                "DelaySeconds": self.sqs_delay_seconds
+                "DelaySeconds": self.sqs_delay_seconds,
             }
             entries.append(entry)
         if len(entries) > 0:
@@ -2124,16 +2239,18 @@ class PrintSqsBatchMixin():
             )
         self.messages = []
 
+
 # -----------------------------------------------------------------------------
 # Class: PrintStdoutMixin
 # -----------------------------------------------------------------------------
 
 
-class PrintStdoutMixin():
+class PrintStdoutMixin:
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            996, threading.current_thread().name, "PrintStdoutMixin"))
+        logging.debug(
+            message_debug(996, threading.current_thread().name, "PrintStdoutMixin")
+        )
         config = kwargs.get("config", {})
         self.counter = 0
         self.record_monitor = config.get("record_monitor")
@@ -2143,11 +2260,13 @@ class PrintStdoutMixin():
         assert isinstance(message, str)
         print(message)
         if self.counter % self.record_monitor == 0:
-            logging.info(message_debug(
-                104, threading.current_thread().name, self.counter))
+            logging.info(
+                message_debug(104, threading.current_thread().name, self.counter)
+            )
 
     def close(self):
         pass
+
 
 # =============================================================================
 # Threads: *Thread
@@ -2166,8 +2285,11 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
 
     def __init__(self, config=None, counter_name=None, governor=None, *args, **kwargs):
         threading.Thread.__init__(self)
-        logging.debug(message_debug(
-            997, threading.current_thread().name, "ReadEvaluatePrintLoopThread"))
+        logging.debug(
+            message_debug(
+                997, threading.current_thread().name, "ReadEvaluatePrintLoopThread"
+            )
+        )
         self.config = config
         self.counter_name = counter_name
         self.governor = governor
@@ -2181,11 +2303,12 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
         assert isinstance(record_json, str)
         record_overage = len(record_json) - self.record_size_max
         record_id = record.get(self.record_identifier)
-        logging.warning(message_warning(
-            310, self.record_identifier, record_id, record_overage))
+        logging.warning(
+            message_warning(310, self.record_identifier, record_id, record_overage)
+        )
 
     def run(self):
-        '''Read-Evaluate-Print Loop (REPL).'''
+        """Read-Evaluate-Print Loop (REPL)."""
 
         # Show that thread is starting in the log.
 
@@ -2204,8 +2327,11 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
                     continue
 
             self.govern()
-            logging.debug(message_debug(
-                902, threading.current_thread().name, self.counter_name, message))
+            logging.debug(
+                message_debug(
+                    902, threading.current_thread().name, self.counter_name, message
+                )
+            )
             self.print(self.evaluate(message))
             self.config[self.counter_name] += 1
 
@@ -2214,6 +2340,7 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
         # Log message for thread exiting.
 
         logging.info(message_info(130, threading.current_thread().name))
+
 
 # =============================================================================
 # Filter* classes created with mixins
@@ -2232,166 +2359,316 @@ class ReadEvaluatePrintLoopThread(threading.Thread):
 # =============================================================================
 
 
-class FilterFileAvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileAvroMixin, EvaluateNullObjectMixin, PrintQueueMixin):
+class FilterFileAvroToDictQueueThread(
+    ReadEvaluatePrintLoopThread,
+    ReadFileAvroMixin,
+    EvaluateNullObjectMixin,
+    PrintQueueMixin,
+):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            997, threading.current_thread().name, "FilterFileAvroToDictQueueThread"))
+        logging.debug(
+            message_debug(
+                997, threading.current_thread().name, "FilterFileAvroToDictQueueThread"
+            )
+        )
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
 
-class FilterFileCsvToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileCsvMixin, EvaluateNullObjectMixin, PrintQueueMixin):
+class FilterFileCsvToDictQueueThread(
+    ReadEvaluatePrintLoopThread,
+    ReadFileCsvMixin,
+    EvaluateNullObjectMixin,
+    PrintQueueMixin,
+):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            997, threading.current_thread().name, "FilterFileCsvToDictQueueThread"))
+        logging.debug(
+            message_debug(
+                997, threading.current_thread().name, "FilterFileCsvToDictQueueThread"
+            )
+        )
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
 
-class FilterFileGzippedJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileGzippedMixin, EvaluateJsonToDictMixin, PrintQueueMixin):
+class FilterFileGzippedJsonToDictQueueThread(
+    ReadEvaluatePrintLoopThread,
+    ReadFileGzippedMixin,
+    EvaluateJsonToDictMixin,
+    PrintQueueMixin,
+):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread(
-        ).name, "FilterFileGzippedJsonToDictQueueThread"))
+        logging.debug(
+            message_debug(
+                997,
+                threading.current_thread().name,
+                "FilterFileGzippedJsonToDictQueueThread",
+            )
+        )
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
 
-class FilterFileJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileMixin, EvaluateJsonToDictMixin, PrintQueueMixin):
+class FilterFileJsonToDictQueueThread(
+    ReadEvaluatePrintLoopThread, ReadFileMixin, EvaluateJsonToDictMixin, PrintQueueMixin
+):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            997, threading.current_thread().name, "FilterFileJsonToDictQueueThread"))
+        logging.debug(
+            message_debug(
+                997, threading.current_thread().name, "FilterFileJsonToDictQueueThread"
+            )
+        )
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
 
-class FilterFileParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadFileParquetMixin, EvaluateMakeSerializeableDictMixin, PrintQueueMixin):
+class FilterFileParquetToDictQueueThread(
+    ReadEvaluatePrintLoopThread,
+    ReadFileParquetMixin,
+    EvaluateMakeSerializableDictMixin,
+    PrintQueueMixin,
+):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            997, threading.current_thread().name, "FilterFileParquetToDictQueueThread"))
+        logging.debug(
+            message_debug(
+                997,
+                threading.current_thread().name,
+                "FilterFileParquetToDictQueueThread",
+            )
+        )
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
 
-class FilterQueueDictToJsonAzureQueueThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintAzureQueueMixin):
+class FilterQueueDictToJsonAzureQueueThread(
+    ReadEvaluatePrintLoopThread,
+    ReadQueueMixin,
+    EvaluateDictToJsonMixin,
+    PrintAzureQueueMixin,
+):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread(
-        ).name, "FilterQueueDictToJsonAzureQueueThread"))
+        logging.debug(
+            message_debug(
+                997,
+                threading.current_thread().name,
+                "FilterQueueDictToJsonAzureQueueThread",
+            )
+        )
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
 
-class FilterQueueDictToJsonKafkaThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintKafkaMixin):
+class FilterQueueDictToJsonKafkaThread(
+    ReadEvaluatePrintLoopThread,
+    ReadQueueMixin,
+    EvaluateDictToJsonMixin,
+    PrintKafkaMixin,
+):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            997, threading.current_thread().name, "FilterQueueDictToJsonKafkaThread"))
+        logging.debug(
+            message_debug(
+                997, threading.current_thread().name, "FilterQueueDictToJsonKafkaThread"
+            )
+        )
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
 
-class FilterQueueDictToJsonRabbitmqThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintRabbitmqMixin):
+class FilterQueueDictToJsonRabbitmqThread(
+    ReadEvaluatePrintLoopThread,
+    ReadQueueMixin,
+    EvaluateDictToJsonMixin,
+    PrintRabbitmqMixin,
+):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread(
-        ).name, "FilterQueueDictToJsonRabbitmqThread"))
+        logging.debug(
+            message_debug(
+                997,
+                threading.current_thread().name,
+                "FilterQueueDictToJsonRabbitmqThread",
+            )
+        )
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
 
-class FilterQueueDictToJsonSqsThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintSqsMixin):
+class FilterQueueDictToJsonSqsThread(
+    ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintSqsMixin
+):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            997, threading.current_thread().name, "FilterQueueDictToJsonSqsThread"))
+        logging.debug(
+            message_debug(
+                997, threading.current_thread().name, "FilterQueueDictToJsonSqsThread"
+            )
+        )
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
 
-class FilterQueueDictToJsonSqsBatchThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintSqsBatchMixin):
+class FilterQueueDictToJsonSqsBatchThread(
+    ReadEvaluatePrintLoopThread,
+    ReadQueueMixin,
+    EvaluateDictToJsonMixin,
+    PrintSqsBatchMixin,
+):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread(
-        ).name, "FilterQueueDictToJsonSqsBatchThread"))
+        logging.debug(
+            message_debug(
+                997,
+                threading.current_thread().name,
+                "FilterQueueDictToJsonSqsBatchThread",
+            )
+        )
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
 
-class FilterQueueDictToJsonStdoutThread(ReadEvaluatePrintLoopThread, ReadQueueMixin, EvaluateDictToJsonMixin, PrintStdoutMixin):
+class FilterQueueDictToJsonStdoutThread(
+    ReadEvaluatePrintLoopThread,
+    ReadQueueMixin,
+    EvaluateDictToJsonMixin,
+    PrintStdoutMixin,
+):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            997, threading.current_thread().name, "FilterQueueDictToJsonStdoutThread"))
+        logging.debug(
+            message_debug(
+                997,
+                threading.current_thread().name,
+                "FilterQueueDictToJsonStdoutThread",
+            )
+        )
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
 
-class FilterS3AvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3AvroMixin, EvaluateNullObjectMixin, PrintQueueMixin):
+class FilterS3AvroToDictQueueThread(
+    ReadEvaluatePrintLoopThread,
+    ReadS3AvroMixin,
+    EvaluateNullObjectMixin,
+    PrintQueueMixin,
+):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            997, threading.current_thread().name, "FilterS3AvroToDictQueueThread"))
+        logging.debug(
+            message_debug(
+                997, threading.current_thread().name, "FilterS3AvroToDictQueueThread"
+            )
+        )
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
 
-class FilterS3CsvToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3CsvMixin, EvaluateNullObjectMixin, PrintQueueMixin):
+class FilterS3CsvToDictQueueThread(
+    ReadEvaluatePrintLoopThread,
+    ReadS3CsvMixin,
+    EvaluateNullObjectMixin,
+    PrintQueueMixin,
+):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            997, threading.current_thread().name, "FilterS3CsvToDictQueueThread"))
+        logging.debug(
+            message_debug(
+                997, threading.current_thread().name, "FilterS3CsvToDictQueueThread"
+            )
+        )
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
 
-class FilterS3JsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3JsonMixin, EvaluateJsonToDictMixin, PrintQueueMixin):
+class FilterS3JsonToDictQueueThread(
+    ReadEvaluatePrintLoopThread,
+    ReadS3JsonMixin,
+    EvaluateJsonToDictMixin,
+    PrintQueueMixin,
+):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            997, threading.current_thread().name, "FilterS3JsonToDictQueueThread"))
+        logging.debug(
+            message_debug(
+                997, threading.current_thread().name, "FilterS3JsonToDictQueueThread"
+            )
+        )
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
 
-class FilterS3ParquetToDictQueueThread(ReadEvaluatePrintLoopThread, ReadS3ParquetMixin, EvaluateMakeSerializeableDictMixin, PrintQueueMixin):
+class FilterS3ParquetToDictQueueThread(
+    ReadEvaluatePrintLoopThread,
+    ReadS3ParquetMixin,
+    EvaluateMakeSerializableDictMixin,
+    PrintQueueMixin,
+):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            997, threading.current_thread().name, "FilterS3ParquetToDictQueueThread"))
+        logging.debug(
+            message_debug(
+                997, threading.current_thread().name, "FilterS3ParquetToDictQueueThread"
+            )
+        )
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
 
-class FilterUrlAvroToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlAvroMixin, EvaluateNullObjectMixin, PrintQueueMixin):
+class FilterUrlAvroToDictQueueThread(
+    ReadEvaluatePrintLoopThread,
+    ReadUrlAvroMixin,
+    EvaluateNullObjectMixin,
+    PrintQueueMixin,
+):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            997, threading.current_thread().name, "FilterUrlAvroToDictQueueThread"))
+        logging.debug(
+            message_debug(
+                997, threading.current_thread().name, "FilterUrlAvroToDictQueueThread"
+            )
+        )
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
 
-class FilterUrlGzippedJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlGzippedMixin, EvaluateNullObjectMixin, PrintQueueMixin):
+class FilterUrlGzippedJsonToDictQueueThread(
+    ReadEvaluatePrintLoopThread,
+    ReadUrlGzippedMixin,
+    EvaluateNullObjectMixin,
+    PrintQueueMixin,
+):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(997, threading.current_thread(
-        ).name, "FilterUrlGzippedJsonToDictQueueThread"))
+        logging.debug(
+            message_debug(
+                997,
+                threading.current_thread().name,
+                "FilterUrlGzippedJsonToDictQueueThread",
+            )
+        )
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
 
 
-class FilterUrlJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlMixin, EvaluateNullObjectMixin, PrintQueueMixin):
+class FilterUrlJsonToDictQueueThread(
+    ReadEvaluatePrintLoopThread, ReadUrlMixin, EvaluateNullObjectMixin, PrintQueueMixin
+):
 
     def __init__(self, *args, **kwargs):
-        logging.debug(message_debug(
-            997, threading.current_thread().name, "FilterUrlJsonToDictQueueThread"))
+        logging.debug(
+            message_debug(
+                997, threading.current_thread().name, "FilterUrlJsonToDictQueueThread"
+            )
+        )
         for base in type(self).__bases__:
             base.__init__(self, *args, **kwargs)
+
 
 # -----------------------------------------------------------------------------
 # *_processor
@@ -2399,12 +2676,12 @@ class FilterUrlJsonToDictQueueThread(ReadEvaluatePrintLoopThread, ReadUrlMixin, 
 
 
 def pipeline_read_write(
-        args=None,
-        options_to_defaults_map=None,
-        read_thread=None,
-        write_thread=None,
-        monitor_thread=None,
-        governor=None,
+    args=None,
+    options_to_defaults_map=None,
+    read_thread=None,
+    write_thread=None,
+    monitor_thread=None,
+    governor=None,
 ):
 
     # Get context from CLI, environment variables, and ini files.
@@ -2429,8 +2706,8 @@ def pipeline_read_write(
 
     # Pull values from configuration.
 
-    threads_per_print = config.get('threads_per_print')
-    read_queue_maxsize = config.get('read_queue_maxsize')
+    threads_per_print = config.get("threads_per_print")
+    read_queue_maxsize = config.get("read_queue_maxsize")
 
     # Create internal Queue.
 
@@ -2447,7 +2724,7 @@ def pipeline_read_write(
             config=config,
             counter_name="input_counter",
             print_queue=read_queue,
-            governor=governor
+            governor=governor,
         )
         thread.name = "Process-0-{0}-0".format(thread.__class__.__name__)
         threads.append(thread)
@@ -2465,10 +2742,9 @@ def pipeline_read_write(
                 config=config,
                 counter_name="output_counter",
                 read_queue=read_queue,
-                governor=governor
+                governor=governor,
             )
-            thread.name = "Process-0-{0}-{1}".format(
-                thread.__class__.__name__, i)
+            thread.name = "Process-0-{0}-{1}".format(thread.__class__.__name__, i)
             threads.append(thread)
             thread.start()
 
@@ -2496,6 +2772,7 @@ def pipeline_read_write(
 
     logging.info(exit_template(config))
 
+
 # -----------------------------------------------------------------------------
 # dohelper_* functions
 #   Common function signature: do_XXX(args)
@@ -2503,7 +2780,7 @@ def pipeline_read_write(
 
 
 def dohelper_avro(args, write_thread):
-    ''' Read file of AVRO, print to write_thread. '''
+    """Read file of AVRO, print to write_thread."""
 
     # Get context variables.
 
@@ -2514,9 +2791,9 @@ def dohelper_avro(args, write_thread):
     # Determine Read thread.
 
     read_thread = FilterFileAvroToDictQueueThread
-    if parsed_file_name.scheme in ['http', 'https']:
+    if parsed_file_name.scheme in ["http", "https"]:
         read_thread = FilterUrlAvroToDictQueueThread
-    elif parsed_file_name.scheme in ['s3']:
+    elif parsed_file_name.scheme in ["s3"]:
         read_thread = FilterS3AvroToDictQueueThread
 
     # Cascading defaults.
@@ -2535,12 +2812,12 @@ def dohelper_avro(args, write_thread):
         read_thread=read_thread,
         write_thread=write_thread,
         monitor_thread=MonitorThread,
-        governor=governor
+        governor=governor,
     )
 
 
 def dohelper_csv(args, write_thread):
-    ''' Read file of CSV, print to write_thread. '''
+    """Read file of CSV, print to write_thread."""
 
     # Get context variables.
 
@@ -2551,7 +2828,7 @@ def dohelper_csv(args, write_thread):
     # Determine Read thread.
 
     read_thread = FilterFileCsvToDictQueueThread
-    if parsed_file_name.scheme in ['s3']:
+    if parsed_file_name.scheme in ["s3"]:
         read_thread = FilterS3CsvToDictQueueThread
 
     # Cascading defaults.
@@ -2570,12 +2847,12 @@ def dohelper_csv(args, write_thread):
         read_thread=read_thread,
         write_thread=write_thread,
         monitor_thread=MonitorThread,
-        governor=governor
+        governor=governor,
     )
 
 
 def dohelper_gzipped_json(args, write_thread):
-    ''' Read file of JSON, print to write_thread. '''
+    """Read file of JSON, print to write_thread."""
 
     # Get context variables.
 
@@ -2586,7 +2863,7 @@ def dohelper_gzipped_json(args, write_thread):
     # Determine Read thread.
 
     read_thread = FilterFileGzippedJsonToDictQueueThread  # Default.
-    if parsed_file_name.scheme in ['http', 'https']:
+    if parsed_file_name.scheme in ["http", "https"]:
         read_thread = FilterUrlGzippedJsonToDictQueueThread
 
     # Cascading defaults.
@@ -2605,12 +2882,12 @@ def dohelper_gzipped_json(args, write_thread):
         read_thread=read_thread,
         write_thread=write_thread,
         monitor_thread=MonitorThread,
-        governor=governor
+        governor=governor,
     )
 
 
 def dohelper_json(args, write_thread):
-    ''' Read file of JSON, print to write_thread. '''
+    """Read file of JSON, print to write_thread."""
 
     # Get context variables.
 
@@ -2621,9 +2898,9 @@ def dohelper_json(args, write_thread):
     # Determine Read thread.
 
     read_thread = FilterFileJsonToDictQueueThread  # Default.
-    if parsed_file_name.scheme in ['http', 'https']:
+    if parsed_file_name.scheme in ["http", "https"]:
         read_thread = FilterUrlJsonToDictQueueThread
-    elif parsed_file_name.scheme in ['s3']:
+    elif parsed_file_name.scheme in ["s3"]:
         read_thread = FilterS3JsonToDictQueueThread
 
     # Cascading defaults.
@@ -2642,12 +2919,12 @@ def dohelper_json(args, write_thread):
         read_thread=read_thread,
         write_thread=write_thread,
         monitor_thread=MonitorThread,
-        governor=governor
+        governor=governor,
     )
 
 
 def dohelper_parquet(args, write_thread):
-    ''' Read file of Parquet, print to write_thread. '''
+    """Read file of Parquet, print to write_thread."""
 
     # Get context variables.
 
@@ -2658,7 +2935,7 @@ def dohelper_parquet(args, write_thread):
     # Determine Read thread.
 
     read_thread = FilterFileParquetToDictQueueThread
-    if parsed_file_name.scheme in ['s3']:
+    if parsed_file_name.scheme in ["s3"]:
         read_thread = FilterS3ParquetToDictQueueThread
 
     # Cascading defaults.
@@ -2677,8 +2954,9 @@ def dohelper_parquet(args, write_thread):
         read_thread=read_thread,
         write_thread=write_thread,
         monitor_thread=MonitorThread,
-        governor=governor
+        governor=governor,
     )
+
 
 # -----------------------------------------------------------------------------
 # do_* functions
@@ -2687,79 +2965,79 @@ def dohelper_parquet(args, write_thread):
 
 
 def do_avro_to_azure_queue(args):
-    ''' Read file of JSON, print to Azure Queue. '''
+    """Read file of JSON, print to Azure Queue."""
     write_thread = FilterQueueDictToJsonAzureQueueThread
     dohelper_avro(args, write_thread)
 
 
 def do_avro_to_kafka(args):
-    ''' Read file of JSON, print to Kafka. '''
+    """Read file of JSON, print to Kafka."""
     write_thread = FilterQueueDictToJsonKafkaThread
     dohelper_avro(args, write_thread)
 
 
 def do_avro_to_rabbitmq(args):
-    ''' Read file of JSON, print to RabbitMQ. '''
+    """Read file of JSON, print to RabbitMQ."""
     write_thread = FilterQueueDictToJsonRabbitmqThread
     dohelper_avro(args, write_thread)
 
 
 def do_avro_to_sqs(args):
-    ''' Read file of AVRO, print to AWS SQS. '''
+    """Read file of AVRO, print to AWS SQS."""
     write_thread = FilterQueueDictToJsonSqsThread
     dohelper_avro(args, write_thread)
 
 
 def do_avro_to_sqs_batch(args):
-    ''' Read file of AVRO, print to AWS SQS batch. '''
+    """Read file of AVRO, print to AWS SQS batch."""
     write_thread = FilterQueueDictToJsonSqsBatchThread
     dohelper_avro(args, write_thread)
 
 
 def do_avro_to_stdout(args):
-    ''' Read file of AVRO, print to STDOUT. '''
+    """Read file of AVRO, print to STDOUT."""
     write_thread = FilterQueueDictToJsonStdoutThread
     dohelper_avro(args, write_thread)
 
 
 def do_csv_to_azure_queue(args):
-    ''' Read file of CSV, print to Azure Queue. '''
+    """Read file of CSV, print to Azure Queue."""
     write_thread = FilterQueueDictToJsonAzureQueueThread
     dohelper_csv(args, write_thread)
 
 
 def do_csv_to_kafka(args):
-    ''' Read file of CSV, print to Kafka. '''
+    """Read file of CSV, print to Kafka."""
     write_thread = FilterQueueDictToJsonKafkaThread
     dohelper_csv(args, write_thread)
 
 
 def do_csv_to_rabbitmq(args):
-    ''' Read file of CSV, print to RabbitMQ. '''
+    """Read file of CSV, print to RabbitMQ."""
     write_thread = FilterQueueDictToJsonRabbitmqThread
     dohelper_csv(args, write_thread)
 
 
 def do_csv_to_sqs(args):
-    ''' Read file of CSV, print to AWS SQS. '''
+    """Read file of CSV, print to AWS SQS."""
     write_thread = FilterQueueDictToJsonSqsThread
     dohelper_csv(args, write_thread)
 
 
 def do_csv_to_sqs_batch(args):
-    ''' Read file of CSV, print to AWS SQS batch. '''
+    """Read file of CSV, print to AWS SQS batch."""
     write_thread = FilterQueueDictToJsonSqsBatchThread
     dohelper_csv(args, write_thread)
 
 
 def do_csv_to_stdout(args):
-    ''' Read file of CSV, print to STDOUT. '''
+    """Read file of CSV, print to STDOUT."""
     write_thread = FilterQueueDictToJsonStdoutThread
     dohelper_csv(args, write_thread)
 
 
 def do_docker_acceptance_test(args):
-    ''' For use with Docker acceptance testing. '''
+    """For use with Docker acceptance testing."""
 
     # Get context from CLI, environment variables, and ini files.
 
@@ -2775,115 +3053,115 @@ def do_docker_acceptance_test(args):
 
 
 def do_gzipped_json_to_azure_queue(args):
-    ''' Read file of JSON, print to Azure Queue. '''
+    """Read file of JSON, print to Azure Queue."""
     write_thread = FilterQueueDictToJsonAzureQueueThread
     dohelper_gzipped_json(args, write_thread)
 
 
 def do_gzipped_json_to_kafka(args):
-    ''' Read file of JSON, print to Kafka. '''
+    """Read file of JSON, print to Kafka."""
     write_thread = FilterQueueDictToJsonKafkaThread
     dohelper_gzipped_json(args, write_thread)
 
 
 def do_gzipped_json_to_rabbitmq(args):
-    ''' Read file of JSON, print to RabbitMQ. '''
+    """Read file of JSON, print to RabbitMQ."""
     write_thread = FilterQueueDictToJsonRabbitmqThread
     dohelper_gzipped_json(args, write_thread)
 
 
 def do_gzipped_json_to_sqs(args):
-    ''' Read file of JSON, print to AWS SQS. '''
+    """Read file of JSON, print to AWS SQS."""
     write_thread = FilterQueueDictToJsonSqsThread
     dohelper_gzipped_json(args, write_thread)
 
 
 def do_gzipped_json_to_sqs_batch(args):
-    ''' Read file of JSON, print to AWS SQS batch. '''
+    """Read file of JSON, print to AWS SQS batch."""
     write_thread = FilterQueueDictToJsonSqsBatchThread
     dohelper_gzipped_json(args, write_thread)
 
 
 def do_gzipped_json_to_stdout(args):
-    ''' Read file of JSON, print to STDOUT. '''
+    """Read file of JSON, print to STDOUT."""
     write_thread = FilterQueueDictToJsonStdoutThread
     dohelper_gzipped_json(args, write_thread)
 
 
 def do_json_to_azure_queue(args):
-    ''' Read file of JSON, print to Azure Queue. '''
+    """Read file of JSON, print to Azure Queue."""
     write_thread = FilterQueueDictToJsonAzureQueueThread
     dohelper_json(args, write_thread)
 
 
 def do_json_to_kafka(args):
-    ''' Read file of JSON, print to Kafka. '''
+    """Read file of JSON, print to Kafka."""
     write_thread = FilterQueueDictToJsonKafkaThread
     dohelper_json(args, write_thread)
 
 
 def do_json_to_rabbitmq(args):
-    ''' Read file of JSON, print to RabbitMQ. '''
+    """Read file of JSON, print to RabbitMQ."""
     write_thread = FilterQueueDictToJsonRabbitmqThread
     dohelper_json(args, write_thread)
 
 
 def do_json_to_sqs(args):
-    ''' Read file of JSON, print to AWS SQS. '''
+    """Read file of JSON, print to AWS SQS."""
     write_thread = FilterQueueDictToJsonSqsThread
     dohelper_json(args, write_thread)
 
 
 def do_json_to_sqs_batch(args):
-    ''' Read file of JSON, print to AWS SQS batch. '''
+    """Read file of JSON, print to AWS SQS batch."""
     write_thread = FilterQueueDictToJsonSqsBatchThread
     dohelper_json(args, write_thread)
 
 
 def do_json_to_stdout(args):
-    ''' Read file of JSON, print to STDOUT. '''
+    """Read file of JSON, print to STDOUT."""
     write_thread = FilterQueueDictToJsonStdoutThread
     dohelper_json(args, write_thread)
 
 
 def do_parquet_to_azure_queue(args):
-    ''' Read file of Parquet, print to Azure Queue. '''
+    """Read file of Parquet, print to Azure Queue."""
     write_thread = FilterQueueDictToJsonAzureQueueThread
     dohelper_parquet(args, write_thread)
 
 
 def do_parquet_to_kafka(args):
-    ''' Read file of Parquet, print to Kafka. '''
+    """Read file of Parquet, print to Kafka."""
     write_thread = FilterQueueDictToJsonKafkaThread
     dohelper_parquet(args, write_thread)
 
 
 def do_parquet_to_rabbitmq(args):
-    ''' Read file of Parquet, print to RabbitMQ. '''
+    """Read file of Parquet, print to RabbitMQ."""
     write_thread = FilterQueueDictToJsonRabbitmqThread
     dohelper_parquet(args, write_thread)
 
 
 def do_parquet_to_sqs(args):
-    ''' Read file of Parquet, print to AWS SQS. '''
+    """Read file of Parquet, print to AWS SQS."""
     write_thread = FilterQueueDictToJsonSqsThread
     dohelper_parquet(args, write_thread)
 
 
 def do_parquet_to_sqs_batch(args):
-    ''' Read file of Parquet, print to AWS SQS batch. '''
+    """Read file of Parquet, print to AWS SQS batch."""
     write_thread = FilterQueueDictToJsonSqsBatchThread
     dohelper_parquet(args, write_thread)
 
 
 def do_parquet_to_stdout(args):
-    ''' Read file of Parquet, print to STDOUT. '''
+    """Read file of Parquet, print to STDOUT."""
     write_thread = FilterQueueDictToJsonStdoutThread
     dohelper_parquet(args, write_thread)
 
 
 def do_sleep(args):
-    ''' Sleep.  Used for debugging. '''
+    """Sleep.  Used for debugging."""
 
     # Get context from CLI, environment variables, and ini files.
 
@@ -2895,7 +3173,7 @@ def do_sleep(args):
 
     # Pull values from configuration.
 
-    sleep_time_in_seconds = config.get('sleep_time_in_seconds')
+    sleep_time_in_seconds = config.get("sleep_time_in_seconds")
 
     # Sleep
 
@@ -2915,9 +3193,10 @@ def do_sleep(args):
 
 
 def do_version(args):
-    ''' Log version information. '''
+    """Log version information."""
 
     logging.info(message_info(294, __version__, __updated__))
+
 
 # -----------------------------------------------------------------------------
 # Main
@@ -2935,7 +3214,7 @@ if __name__ == "__main__":
         "fatal": logging.FATAL,
         "warning": logging.WARNING,
         "error": logging.ERROR,
-        "critical": logging.CRITICAL
+        "critical": logging.CRITICAL,
     }
 
     log_level_parameter = os.getenv("SENZING_LOG_LEVEL", "info").lower()
@@ -2953,6 +3232,7 @@ if __name__ == "__main__":
     try:
         import senzing_governor
         from senzing_governor import Governor
+
         logging.info(message_info(180, senzing_governor.__file__))
     except ImportError:
         pass
@@ -2969,8 +3249,8 @@ if __name__ == "__main__":
     else:
         parser.print_help()
         if len(os.getenv("SENZING_DOCKER_LAUNCHED", "")) > 0:
-            args = argparse.Namespace(subcommand='sleep')
-            subcommand = 'sleep'
+            args = argparse.Namespace(subcommand="sleep")
+            subcommand = "sleep"
             do_sleep(args)
         exit_silently()
 
@@ -2982,7 +3262,7 @@ if __name__ == "__main__":
 
     # Transform subcommand from CLI parameter to function name string.
 
-    subcommand_function_name = "do_{0}".format(subcommand.replace('-', '_'))
+    subcommand_function_name = "do_{0}".format(subcommand.replace("-", "_"))
 
     # Test to see if function exists in the code.
 

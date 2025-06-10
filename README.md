@@ -1,25 +1,20 @@
 # stream-producer
 
-If you are beginning your journey with
-[Senzing](https://senzing.com/),
-please start with
-[Senzing Quick Start guides](https://docs.senzing.com/quickstart/).
+If you are beginning your journey with [Senzing],
+please start with [Senzing Quick Start guides].
 
-You are in the
-[Senzing Garage](https://github.com/senzing-garage)
-where projects are "tinkered" on.
+You are in the [Senzing Garage] where projects are "tinkered" on.
 Although this GitHub repository may help you understand an approach to using Senzing,
 it's not considered to be "production ready" and is not considered to be part of the Senzing product.
 Heck, it may not even be appropriate for your application of Senzing!
 
 ## Synopsis
 
-Populate a queue with records to be consumed by
-[stream-loader](https://github.com/Senzing/stream-loader).
+Populate a queue with records to be consumed by [stream-loader].
 
 ## Overview
 
-The [stream-produder.py](stream-producer.py) python script reads files of different formats
+The [stream-producer.py] python script reads files of different formats
 (JSON, CSV, Parquet, Avro) and publishes it to a queue (RabbitMQ, Kafka, AWS SQS).
 The `senzing/stream-producer` docker image is a wrapper for use in docker formations (e.g. docker-compose, kubernetes).
 
@@ -72,27 +67,24 @@ optional arguments:
 
 ### Contents
 
-1. [Demonstrate using Docker](#demonstrate-using-docker)
-1. [Demonstrate using docker-compose](#demonstrate-using-docker-compose)
-1. [Demonstrate using Command Line Interface](#demonstrate-using-command-line-interface)
-    1. [Prerequisites for CLI](#prerequisites-for-cli)
-    1. [Download](#download)
-    1. [Run command](#run-command)
-1. [Configuration](#configuration)
-1. [AWS configuration](#aws-configuration)
-1. [References](#references)
+1. [Demonstrate using Docker]
+1. [Demonstrate using docker-compose]
+1. [Demonstrate using Command Line Interface]
+   1. [Prerequisites for CLI])
+   1. [Download]
+   1. [Run command]
+1. [Configuration]
+1. [AWS configuration]
+1. [References]
 
 ### Preamble
 
-At [Senzing](http://senzing.com),
-we strive to create GitHub documentation in a
-"[don't make me think](https://github.com/Senzing/knowledge-base/blob/main/WHATIS/dont-make-me-think.md)" style.
-For the most part, instructions are copy and paste.
+At [Senzing], we strive to create GitHub documentation in a
+"[don't make me think]" style. For the most part, instructions are copy and paste.
 Whenever thinking is needed, it's marked with a "thinking" icon :thinking:.
 Whenever customization is needed, it's marked with a "pencil" icon :pencil2:.
 If the instructions are not clear, please let us know by opening a new
-[Documentation issue](https://github.com/Senzing/template-python/issues/new?template=documentation_request.md)
-describing where we can improve.   Now on with the show...
+[Documentation issue] describing where we can improve. Now on with the show...
 
 ### Legend
 
@@ -107,7 +99,7 @@ describing where we can improve.   Now on with the show...
 - **Space:** This repository and demonstration require 6 GB free disk space.
 - **Time:** Budget 40 minutes to get the demonstration up-and-running, depending on CPU and network speeds.
 - **Background knowledge:** This repository assumes a working knowledge of:
-  - [Docker](https://github.com/Senzing/knowledge-base/blob/main/WHATIS/docker.md)
+  - [Docker]
 
 ## Demonstrate using Docker
 
@@ -115,47 +107,45 @@ describing where we can improve.   Now on with the show...
    This command will show help.
    Example:
 
-    ```console
-    docker run \
-      --rm \
-      senzing/stream-producer --help
+   ```console
+   docker run \
+     --rm \
+     senzing/stream-producer --help
 
-    ```
+   ```
 
-1. For more examples of use, see [Examples of Docker](docs/examples.md#examples-of-docker).
+1. For more examples of use, see [Examples of Docker].
 
 ## Demonstrate using docker-compose
 
-1. Deploy the
-   [Backing Services](https://github.com/Senzing/knowledge-base/blob/main/HOWTO/deploy-rabbitmq-postgresql-backing-services.md#using-docker-compose)
-   required by the Stream Loader.
+1. Deploy the [Backing Services] required by the Stream Loader.
 
 1. Specify a directory to place artifacts in.
    Example:
 
-    ```console
-    export SENZING_VOLUME=~/my-senzing
-    mkdir -p ${SENZING_VOLUME}
+   ```console
+   export SENZING_VOLUME=~/my-senzing
+   mkdir -p ${SENZING_VOLUME}
 
-    ```
+   ```
 
 1. Download `docker-compose.yaml` file.
    Example:
 
-    ```console
-    curl -X GET \
-      --output ${SENZING_VOLUME}/docker-compose.yaml \
-      https://raw.githubusercontent.com/Senzing/stream-producer/main/docker-compose.yaml
+   ```console
+   curl -X GET \
+     --output ${SENZING_VOLUME}/docker-compose.yaml \
+     https://raw.githubusercontent.com/Senzing/stream-producer/main/docker-compose.yaml
 
-    ```
+   ```
 
 1. Bring up docker-compose stack.
    Example:
 
-    ```console
-    docker-compose -f ${SENZING_VOLUME}/docker-compose.yaml up
+   ```console
+   docker-compose -f ${SENZING_VOLUME}/docker-compose.yaml up
 
-    ```
+   ```
 
 ## Demonstrate using Command Line Interface
 
@@ -167,48 +157,48 @@ These are "one-time tasks" which may already have been completed.
 1. Install Python prerequisites.
    Example:
 
-    ```console
-    pip3 install -r https://raw.githubusercontent.com/Senzing/stream-producer/main/requirements.txt
+   ```console
+   pip3 install -r https://raw.githubusercontent.com/Senzing/stream-producer/main/requirements.txt
 
-    ```
+   ```
 
-    1. See [requirements.txt](requirements.txt) for list.
-        1. [Installation hints](https://github.com/Senzing/knowledge-base/blob/main/HOWTO/install-python-dependencies.md)
+   1. See [requirements.txt] for list.
+      1. [Installation hints]
 
 ### Download
 
 1. Get a local copy of
-   [stream-producer.py](stream-producer.py).
+   [stream-producer.py].
    Example:
 
-    1. :pencil2: Specify where to download file.
-       Example:
+   1. :pencil2: Specify where to download file.
+      Example:
 
-        ```console
-        export SENZING_DOWNLOAD_FILE=~/stream-producer.py
+      ```console
+      export SENZING_DOWNLOAD_FILE=~/stream-producer.py
 
-        ```
+      ```
 
-    1. Download file.
-       Example:
+   1. Download file.
+      Example:
 
-        ```console
-        curl -X GET \
-          --output ${SENZING_DOWNLOAD_FILE} \
-          https://raw.githubusercontent.com/Senzing/stream-producer/main/stream-producer.py
+      ```console
+      curl -X GET \
+        --output ${SENZING_DOWNLOAD_FILE} \
+        https://raw.githubusercontent.com/Senzing/stream-producer/main/stream-producer.py
 
-        ```
+      ```
 
-    1. Make file executable.
-       Example:
+   1. Make file executable.
+      Example:
 
-        ```console
-        chmod +x ${SENZING_DOWNLOAD_FILE}
+      ```console
+      chmod +x ${SENZING_DOWNLOAD_FILE}
 
-        ```
+      ```
 
 1. :thinking: **Alternative:** The entire git repository can be downloaded by following instructions at
-   [Clone repository](docs/development.md#clone-repository)
+   [Clone repository]
 
 ### Run command
 
@@ -220,33 +210,66 @@ These are "one-time tasks" which may already have been completed.
 
    ```
 
-1. For more examples of use, see [Examples of CLI](docs/examples.md#examples-of-cli).
+1. For more examples of use, see [Examples of CLI].
 
 ## Configuration
 
 Configuration values specified by environment variable or command line parameter.
 
-- **[SENZING_NETWORK](https://github.com/Senzing/knowledge-base/blob/main/lists/environment-variables.md#senzing_network)**
+- **[SENZING_NETWORK]**
 
 ## AWS configuration
 
-[stream-producer.py](stream-producer.py) uses
-[AWS SDK for Python (Boto3)](https://aws.amazon.com/sdk-for-python/)
-to access AWS services.
-This library may be configured via environment variables  or `~/.aws/config` file.
+[stream-producer.py] uses [AWS SDK for Python (Boto3)] to access AWS services.
+This library may be configured via environment variables or `~/.aws/config` file.
 
 Example environment variables for configuration:
 
-- **[AWS_ACCESS_KEY_ID](https://github.com/Senzing/knowledge-base/blob/main/lists/environment-variables.md#aws_access_key_id)**
-- **[AWS_SECRET_ACCESS_KEY](https://github.com/Senzing/knowledge-base/blob/main/lists/environment-variables.md#aws_secret_access_key)**
-- **[AWS_DEFAULT_REGION](https://github.com/Senzing/knowledge-base/blob/main/lists/environment-variables.md#aws_default_region)**
+- **[AWS_ACCESS_KEY_ID]**
+- **[AWS_SECRET_ACCESS_KEY]**
+- **[AWS_DEFAULT_REGION]**
 
 ## References
 
-1. Boto3 [Configuration](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html)
-1. Boto3 [Credentials](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html)
-1. [Development](docs/development.md)
-1. [Errors](docs/errors.md)
-1. [Examples](docs/examples.md)
+1. [Boto3 Configuration]
+1. Boto3 [Credentials]
+1. [Development]
+1. [Errors]
+1. [Examples]
 1. Related artifacts:
-    1. [DockerHub](https://hub.docker.com/r/senzing/stream-producer)
+   1. [DockerHub]
+
+[AWS configuration]: #aws-configuration
+[AWS SDK for Python (Boto3)]: https://aws.amazon.com/sdk-for-python/
+[AWS_ACCESS_KEY_ID]: https://github.com/Senzing/knowledge-base/blob/main/lists/environment-variables.md#aws_access_key_id
+[AWS_DEFAULT_REGION]: https://github.com/Senzing/knowledge-base/blob/main/lists/environment-variables.md#aws_default_region
+[AWS_SECRET_ACCESS_KEY]: https://github.com/Senzing/knowledge-base/blob/main/lists/environment-variables.md#aws_secret_access_key
+[Backing Services]: https://github.com/Senzing/knowledge-base/blob/main/HOWTO/deploy-rabbitmq-postgresql-backing-services.md#using-docker-compose
+[Clone repository]: docs/development.md#clone-repository
+[Configuration]: #configuration
+[Boto3 Configuration]: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html
+[Credentials]: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html
+[Demonstrate using Command Line Interface]: #demonstrate-using-command-line-interface
+[Demonstrate using docker-compose]: #demonstrate-using-docker-compose
+[Demonstrate using Docker]: #demonstrate-using-docker
+[Development]: docs/development.md
+[Docker]: https://github.com/Senzing/knowledge-base/blob/main/WHATIS/docker.md
+[DockerHub]: https://hub.docker.com/r/senzing/stream-producer
+[Documentation issue]: https://github.com/Senzing/template-python/issues/new?template=documentation_request.md
+[don't make me think]: https://github.com/Senzing/knowledge-base/blob/main/WHATIS/dont-make-me-think.md
+[Download]: #download
+[Errors]: docs/errors.md
+[Examples of CLI]: docs/examples.md#examples-of-cli
+[Examples of Docker]: docs/examples.md#examples-of-docker
+[Examples]: docs/examples.md
+[Installation hints]: https://github.com/Senzing/knowledge-base/blob/main/HOWTO/install-python-dependencies.md
+[Prerequisites for CLI]: #prerequisites-for-cli
+[References]: #references
+[requirements.txt]: requirements.txt
+[Run command]: #run-command
+[Senzing Garage]: https://github.com/senzing-garage
+[Senzing Quick Start guides]: https://docs.senzing.com/quickstart/
+[SENZING_NETWORK]: https://github.com/Senzing/knowledge-base/blob/main/lists/environment-variables.md#senzing_network
+[Senzing]: https://senzing.com/
+[stream-loader]: https://github.com/Senzing/stream-loader
+[stream-producer.py]: stream-producer.py

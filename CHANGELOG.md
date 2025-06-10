@@ -248,7 +248,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added in 1.4.1
 
 - RabbitMQ virtual host is now a settable parameter.
-- Removed suppor for adding records to a queue from a websocket. Loading records via websocket has been moved to the Senzing API server.
+- Removed support for adding records to a queue from a websocket. Loading records via websocket has been moved to the Senzing API server.
 - Stream-producer no longer hangs if it cannot connect to the messaging server when first starting
 
 ## [1.4.0] - 2021-03-12
@@ -269,7 +269,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added in 1.3.2
 
 - Implemented reading csv files in chunks to reduce memory usage when loading large files. Use SENZING_CSV_ROWS_IN_CHUNK (default 10000) to set the number of rows per chunk.
-- Programmable csv delimieter.  Use SENZING_CSV_DELIMITER (default is ',')
+- Programmable csv delimiter. Use SENZING_CSV_DELIMITER (default is ',')
 - Fixed [issue #49](https://github.com/Senzing/stream-producer/issues/49) to handle CSV input files with empty values.
 
 ## [1.3.1] - 2021-01-20
@@ -306,14 +306,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added in 1.2.1
 
-- Monitoring metrics:  input_counter_rate_interval, input_counter_rate_total, output_counter_rate_interval, output_counter_rate_total
+- Monitoring metrics: input_counter_rate_interval, input_counter_rate_total, output_counter_rate_interval, output_counter_rate_total
 - Exit metric: rate
 
 ## [1.2.0] - 2020-07-24
 
 ### Added in 1.2.0
 
-- Subcommands:  avro-to-sqs-batch, csv-to-sqs-batch, json-to-sqs-batch, and parquet-to-sqs-batch
+- Subcommands: avro-to-sqs-batch, csv-to-sqs-batch, json-to-sqs-batch, and parquet-to-sqs-batch
 
 ## [1.1.1] - 2020-06-23
 

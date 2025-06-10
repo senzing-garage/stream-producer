@@ -1,0 +1,58 @@
+{
+  // Version of the setting file.  Always 0.2
+  "version": "0.2",
+  // language - current active spelling language
+  "language": "en",
+  // words - list of words to be always considered correct
+  "words": [
+    "alnum",
+    "analysing",
+    "avsc",
+    "bitnami",
+    "Boto",
+    "BROKERCONNECT",
+    "buildx",
+    "CCLA",
+    "chunksize",
+    "CODEOWNER",
+    "CONTEXTPATH",
+    "dockerhub",
+    "dohelper",
+    "fastavro",
+    "fastparquet",
+    "ICLA",
+    "Jsos",
+    "kafdrop",
+    "librdkafka",
+    "Microbatching",
+    "mypy",
+    "obsidiandynamics",
+    "preconfigured",
+    "pyarrow",
+    "pydev",
+    "pydevproject",
+    "pylint",
+    "rabbitmq",
+    "rootfs",
+    "Senzing",
+    "servicebus",
+    "shellcheck",
+    "stackoverflow",
+    "streamproducer",
+    "toplevel",
+    "vararg",
+    "watchlist"
+  ],
+  "ignorePaths": [
+    ".git/**",
+    ".gitignore",
+    ".mypy_cache/**",
+    "rootfs/data/customers.json",
+    "rootfs/data/reference.json",
+    "rootfs/data/watchlist.json",
+    "tests/simple/cities.csv",
+    "tests/simple/simple.csv",
+    "tests/simple/twitter.avsc",
+    "tests/websocket-client/test-dataset.json"
+  ]
+}
